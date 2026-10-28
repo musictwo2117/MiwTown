@@ -37,7 +37,7 @@
     #drawer .db{padding:12px 16px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px}
     #drawer h3{font:500 13px 'Fredoka';margin:0 0 6px;color:var(--soft);letter-spacing:.3px}
     .xp{height:6px;background:#fff;border-radius:99px;overflow:hidden;margin-top:6px}.xp i{display:block;height:100%;background:linear-gradient(90deg,#ffd27a,#ff9fb5);border-radius:99px}
-    .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
     .act{font:600 12.5px 'Nunito';color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:transform .15s}
     .act span{font-size:20px}.act:hover{transform:translateY(-2px)}
     .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -111,7 +111,18 @@
     .heart{position:absolute;pointer-events:none;font-size:22px;animation:float 1.2s ease-out forwards}
     @keyframes float{from{opacity:1;transform:translate(-50%,0) scale(.6)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),-90px) scale(1.2)}}
     .toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:#4b3442;color:#fff;font:600 13px 'Nunito';border-radius:99px;padding:8px 16px;z-index:9;animation:pop .2s ease-out}
-    @media (max-width:1180px){#tools button:not(.primary) .txt,#tools a .txt{display:none}}
+    .act.on{border-color:#ff9fb5;background:#fff0f5}
+    #alerts{position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;z-index:8;pointer-events:none}
+    .alert{pointer-events:auto;display:flex;gap:10px;align-items:center;font:600 13px 'Nunito';color:var(--ink);background:#fff;border:2px solid var(--s);border-radius:16px;padding:7px 8px 7px 12px;box-shadow:0 6px 18px rgba(160,80,115,.2);cursor:pointer;animation:drop .25s ease-out;max-width:min(420px,calc(100vw - 32px))}
+    .alert span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .alert button{border:0;background:#fff4f7;color:var(--soft);width:24px;height:24px;border-radius:50%;cursor:pointer;flex:none}
+    .alert.out{opacity:0;transform:translateY(-8px);transition:.3s}
+    @keyframes drop{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+    #following{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;font:600 13px 'Fredoka';color:#fff;background:rgba(75,52,66,.85);border-radius:99px;padding:6px 6px 6px 14px;z-index:6}
+    #following button{border:0;background:rgba(255,255,255,.2);color:#fff;border-radius:99px;padding:3px 10px;cursor:pointer;font:600 12px 'Nunito'}
+    .flash{position:fixed;inset:0;background:#fff;z-index:20;pointer-events:none;animation:flash .5s ease-out forwards}
+    @keyframes flash{from{opacity:.85}to{opacity:0}}
+    @media (max-width:1180px){#alerts{top:74px}#tools button:not(.primary) .txt,#tools a .txt{display:none}}
     @media (max-width:760px){#drawer{top:auto;height:72vh;bottom:0;right:0;left:0;width:auto;border-radius:20px 20px 0 0}}
   ` }));
 
@@ -220,6 +231,9 @@
     look.onclick = () => openPicker(me.id);
     const ren = el('button', { className: 'act' }, el('span', {}, '✏️'), 'Rename');
     ren.onclick = () => { view.renaming = true; render(); };
+    const watching = followId === me.id;
+    const fol = el('button', { className: 'act' + (watching ? ' on' : ''), title: 'Keep the camera on this friend' }, el('span', {}, '🎯'), watching ? 'Following' : 'Follow');
+    fol.onclick = () => { watching ? unfollow() : followAgent(me.id); render(); };
 
     // message box
     const canTalk = me.sessionId && me.cwd;
@@ -253,7 +267,7 @@
       })),
       el('p', { className: 'hint' }, 'Level up by working and resting. New things unlock at Lv 2, 3, 5, 7 and 10.'));
     return [head, el('div', { className: 'db' },
-      el('div', { className: 'acts' }, pet, look, ren),
+      el('div', { className: 'acts' }, pet, look, ren, fol),
       todayCard(me),
       wardrobe,
       talk,
@@ -294,7 +308,7 @@
     if (view.kind === 'place') return JSON.stringify([view, whoIsAt(places[view.i]).map(a => [a.id, a.name, a.state, a.msg, a.walking, a.species, xpStore[a.id]])]);
     const me = agents.get(view.id);
     if (!me) return 'gone';
-    return JSON.stringify([view, me.name, me.state, me.msg, me.species, me.history?.length, xpStore[me.id], me.sessionId, wearOf(me), Math.floor(Date.now() / 60000),
+    return JSON.stringify([view, me.name, me.state, me.msg, me.species, me.history?.length, xpStore[me.id], me.sessionId, wearOf(me), Math.floor(Date.now() / 60000), followId === me.id,
       jobs.filter(j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId))]);
   }
   let shown = '';
@@ -679,6 +693,132 @@
   };
   // browsers only play sound after a click, so a remembered "on" starts with your first tap
   if (soundOn) addEventListener('pointerdown', () => soundOn && startAudio(), { once: true });
+
+  // ---------- heads-up when a friend gets stuck, needs you, or finishes ----------
+  const alerts = el('div', { id: 'alerts' });
+  document.body.append(alerts);
+  const BASE_TITLE = document.title;
+  const BELL_KEY = 'miw-town-bell';
+  let bellOn = false;
+  try { bellOn = localStorage.getItem(BELL_KEY) === 'on' && window.Notification && Notification.permission === 'granted'; } catch {}
+  const bellBtn = el('button', { id: 'tBell', title: 'Desktop notifications when a friend needs you' });
+  const paintBell = () => { bellBtn.replaceChildren(bellOn ? '🔔' : '🔕', el('span', { className: 'txt' }, 'Alerts')); bellBtn.setAttribute('aria-pressed', String(bellOn)); };
+  paintBell();
+  tools.insertBefore(bellBtn, sndBtn);
+  bellBtn.onclick = async () => {
+    if (!bellOn && window.Notification && Notification.permission !== 'granted') {
+      if (await Notification.requestPermission() !== 'granted') { toast('Notifications are blocked in this browser.'); return; }
+    }
+    bellOn = !bellOn && !!window.Notification;
+    try { localStorage.setItem(BELL_KEY, bellOn ? 'on' : 'off'); } catch {}
+    paintBell();
+    toast(bellOn ? 'You’ll get a notification when a friend needs you.' : 'Desktop notifications off.');
+  };
+
+  const ding = (notes) => {
+    if (!ac || !soundOn) return;
+    const now = ac.currentTime;
+    notes.forEach((f, i) => blip(now + i * 0.12, f, f, 0.35, 0.08));
+  };
+  function heyYou(me, kind, text) {
+    const a = el('div', { className: 'alert', style: `--s:${STATE_COLOR[me.state]}` }, el('span', {}, text));
+    const x = el('button', { title: 'Dismiss' }, '✕');
+    const gone = () => { a.classList.add('out'); setTimeout(() => a.remove(), 300); };
+    x.onclick = e => { e.stopPropagation(); gone(); };
+    a.onclick = () => { gone(); openAgent(me.id); followAgent(me.id); };
+    a.append(x); alerts.prepend(a);
+    while (alerts.childElementCount > 3) alerts.lastChild.remove();
+    setTimeout(gone, kind === 'done' ? 6000 : 15000);
+    ding(kind === 'done' ? [880, 1320] : kind === 'stuck' ? [520, 390] : [660, 880, 660]);
+    if (bellOn && document.hidden) {
+      try { const n = new Notification(BASE_TITLE, { body: text, tag: me.id }); n.onclick = () => { focus(); openAgent(me.id); n.close(); }; } catch {}
+    }
+  }
+  const needsYou = me => me.state === 'error' || (me.state === 'idle' && /waiting for you/i.test(me.msg || ''));
+  const seen = new Map();
+  setInterval(() => {
+    let n = 0;
+    for (const me of agents.values()) {
+      if (me.id.startsWith('demo')) continue;
+      const busy = me.state !== 'idle' && me.state !== 'error', need = needsYou(me);
+      if (need) n++;
+      const before = seen.get(me.id);
+      seen.set(me.id, { busy, need, state: me.state });
+      if (!before) continue; // first sighting: don't shout about the past
+      if (need && !before.need) heyYou(me, me.state === 'error' ? 'stuck' : 'wait', me.state === 'error' ? `🐞 ${me.name} is stuck${me.msg ? ': ' + me.msg : ''}` : `🙋 ${me.name} is waiting for you`);
+      else if (!need && before.busy && me.state === 'idle') heyYou(me, 'done', `✅ ${me.name} finished`);
+    }
+    for (const id of seen.keys()) if (!agents.has(id)) seen.delete(id);
+    document.title = n ? `(${n}) ${BASE_TITLE}` : BASE_TITLE;
+  }, 1000);
+
+  // ---------- follow cam: keep one friend in the middle of the view ----------
+  let followId = null, zoomTo = null;
+  const pill = el('div', { id: 'following', hidden: true });
+  document.body.append(pill);
+  window.followAgent = id => {
+    const me = agents.get(id); if (!me) return;
+    followId = id; zoomTo = Math.min(controls.maxZoom, Math.max(camera.zoom, 1.8));
+    const stop = el('button', {}, 'Stop');
+    stop.onclick = unfollow;
+    pill.replaceChildren(`🎯 Following ${me.name}`, stop); pill.hidden = false;
+  };
+  function unfollow() { followId = null; zoomTo = null; pill.hidden = true; if (view && view.kind === 'agent') render(); }
+  const shift = new THREE.Vector3();
+  animated.push(() => {
+    if (!followId) return;
+    const me = agents.get(followId);
+    if (!me) { unfollow(); return; }
+    // slide the target and the camera together, so the angle you picked stays the same
+    shift.copy(me.cat.g.position).sub(controls.target).multiplyScalar(0.08);
+    controls.target.add(shift); camera.position.add(shift);
+    if (zoomTo != null) {
+      camera.zoom += (zoomTo - camera.zoom) * 0.08; camera.updateProjectionMatrix();
+      if (Math.abs(zoomTo - camera.zoom) < 0.01) zoomTo = null;
+    }
+  });
+  // turning the view or resetting it lets go; zooming in and out keeps following
+  renderer.domElement.addEventListener('pointerdown', e => { if (e.button === 0 && followId) { const s = [e.clientX, e.clientY]; const up = ev => { if (Math.hypot(ev.clientX - s[0], ev.clientY - s[1]) > 5) unfollow(); removeEventListener('pointerup', up); }; addEventListener('pointerup', up); } });
+  renderer.domElement.addEventListener('wheel', () => { zoomTo = null; }, { passive: true });
+  document.getElementById('tCam').addEventListener('click', unfollow);
+
+  // ---------- photo: save a framed picture of the scene, names included ----------
+  const camBtn = el('button', { id: 'tPhoto', title: 'Take a photo' }, '📸', el('span', { className: 'txt' }, 'Photo'));
+  tools.insertBefore(camBtn, document.getElementById('tCam'));
+  camBtn.onclick = () => {
+    renderer.render(scene, camera);
+    const src = renderer.domElement, W = src.width, H = src.height, k = W / innerWidth;
+    const pad = Math.round(W * 0.025), foot = Math.round(Math.max(64 * k, H * 0.1));
+    const c = el('canvas', { width: W + pad * 2, height: H + pad + foot }), g = c.getContext('2d');
+    g.fillStyle = '#fffaf5'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(src, pad, pad);
+    // name tags, drawn the way the page shows them
+    if (!document.getElementById('labels').classList.contains('hide-names')) {
+      g.font = `700 ${Math.round(12 * k)}px Nunito, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (const me of agents.values()) {
+        const p = me.cat.g.position, [x, y] = toScreen(new THREE.Vector3(p.x, p.y - 0.25, p.z));
+        const w = g.measureText(me.name).width + 16 * k, h = 20 * k, X = pad + x * k, Y = pad + y * k + 14 * k;
+        if (X < pad || X > pad + W || Y < pad || Y > pad + H) continue;
+        g.fillStyle = 'rgba(75,52,66,.82)'; g.beginPath(); g.roundRect ? g.roundRect(X - w / 2, Y - h / 2, w, h, h / 2) : g.rect(X - w / 2, Y - h / 2, w, h); g.fill();
+        g.fillStyle = '#fff'; g.fillText(me.name, X, Y + k);
+      }
+    }
+    const now = new Date(), when = now.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const list = [...agents.values()], working = list.filter(a => a.state !== 'idle' && a.state !== 'error').length;
+    g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillStyle = '#4b3442';
+    g.font = `600 ${Math.round(foot * 0.34)}px Fredoka, sans-serif`;
+    g.fillText(`🥨 ${BASE_TITLE}`, pad, pad + H + foot / 2);
+    g.textAlign = 'right'; g.fillStyle = '#9b8592'; g.font = `600 ${Math.round(foot * 0.22)}px Nunito, sans-serif`;
+    g.fillText(`${list.length} friend${list.length === 1 ? '' : 's'} · ${working} working · ${when}`, pad + W, pad + H + foot / 2);
+    document.body.append(Object.assign(el('div', { className: 'flash' }), { onanimationend() { this.remove(); } }));
+    ding([1200, 1600]);
+    c.toBlob(b => {
+      const stamp = now.toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).slice(0, 16).replace(/[: ]/g, '-');
+      const a = el('a', { href: URL.createObjectURL(b), download: `miws-town-${stamp}.png` });
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast('📸 Saved to your downloads');
+    }, 'image/png');
+  };
 
   // ---------- speech bubbles that move a little, by state ----------
   window.setBubble = (me, text, kind) => {
