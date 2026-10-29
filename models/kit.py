@@ -433,10 +433,35 @@ def bake_ao(rays=32, reach=0.35, strength=0.55):
             attr.data[v.index].color = (k, k, k, 1)
         me.color_attributes.active_color = attr
 
-def finish(ao=True, reach=0.35, view=1.0, strength=0.55):
-    """Bake, optionally render previews (view scales the camera out for bigger things), and export."""
+def join_by_material(root):
+    """Fuse every mesh under root that shares a material into one, so the page draws a piece of furniture in a
+    handful of calls instead of hundreds. Only for things with no moving parts."""
+    bpy.context.view_layer.update()
+    inv = root.matrix_world.inverted()
+    groups = {}
+    for o in root.children_recursive:
+        if o.type == 'MESH': groups.setdefault(o.data.materials[0].name, []).append(o)
+    for name, objs in groups.items():
+        if len(objs) < 2: continue
+        bm = bmesh.new()
+        for o in objs:
+            n0 = len(bm.verts)
+            bm.from_mesh(o.data)
+            bm.verts.ensure_lookup_table()
+            bmesh.ops.transform(bm, matrix=inv @ o.matrix_world, verts=bm.verts[n0:])
+        me = bpy.data.meshes.new(name)
+        bm.to_mesh(me); bm.free()
+        me.materials.append(objs[0].data.materials[0])
+        if 'ao' in me.color_attributes: me.color_attributes.active_color = me.color_attributes['ao']
+        for o in objs: bpy.data.objects.remove(o)
+        link(bpy.data.objects.new(name, me), root)
+
+def finish(ao=True, reach=0.35, view=1.0, strength=0.55, join=None):
+    """Bake, optionally render previews (view scales the camera out for bigger things), and export.
+    join: a root whose meshes get fused per material after baking."""
     at_rest()
     if ao: bake_ao(reach=reach, strength=strength)
+    if join: join_by_material(join)
     if PREVIEW: _preview(view)
     at_rest()
     bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', export_apply=True, export_yup=True,
@@ -454,7 +479,7 @@ def _preview(view=1.0):
     sun.data.energy = 3.0; sun.rotation_euler = (0.8, 0.2, -0.6)
     scene.collection.objects.link(sun)
     floor = bpy.data.meshes.new('floor')
-    bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=4 * view); bm.to_mesh(floor); bm.free()
+    bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=4 * (6 if view == 'auto' else view)); bm.to_mesh(floor); bm.free()
     floor.materials.append(material('floor', '#f6d9de'))
     link(bpy.data.objects.new('floor', floor))
     cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam'))
@@ -465,9 +490,17 @@ def _preview(view=1.0):
         try: scene.render.engine = eng; break
         except TypeError: pass
     views = {'front': (-0.9, -3.1, 1.3), 'side': (2.8, 1.6, 1.4), 'back': (-1.2, 3.0, 1.6)}
-    aim = Vector((0, 0, 0.65 * view))
+    aim, centre = Vector((0, 0, 0.65 * (1 if view == 'auto' else view))), Vector()
+    if view == 'auto':   # frame whatever was built, wherever it sits
+        pts = [o.matrix_world @ Vector(c) for o in scene.objects if o.type == 'MESH' and o.name != 'floor' for c in o.bound_box]
+        lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+        hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+        centre = (lo + hi) / 2
+        view = max((hi - lo).length / 1.6, 0.5)
+        aim = centre
+        floor_obj = bpy.data.objects['floor']; floor_obj.location = (centre.x, centre.y, 0)
     for tag, pos in views.items():
-        cam.location = Vector(pos) * view
+        cam.location = centre + Vector(pos) * view
         cam.rotation_euler = (aim - cam.location).to_track_quat('-Z', 'Y').to_euler()
         scene.render.filepath = PREVIEW.replace('.png', f'_{tag}.png')
         bpy.ops.render.render(write_still=True)
