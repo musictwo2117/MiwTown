@@ -41,4 +41,11 @@ for f in feet:
     blob(f'foot{f.name[-2:]}', f, (0, -0.04, -0.03), (0.09, 0.12, 0.04), ORANGE)
     toes(f, ORANGE, 0.035, 0.06, 0.13)
 
+# pivots for animation: flippers flap from the shoulder, the scarf end swings, eyes blink
+flippers = [group(f'flipper_pivot_{s}', body, (sd * 0.3, 0.0, 0.48), [f'flipper_{s}']) for s, sd in (('L', -1), ('R', 1))]
+animate(body, head, tail, feet,
+        limbs=[(flippers[0], 1, 0.45, 0), (flippers[1], 1, -0.45, 0)],
+        ears=[(bpy.data.objects['scarf_end'], 0, 0.3)],
+        eyes=[eye_group(head, s) for s in 'LR'])
+
 finish()

@@ -993,6 +993,8 @@ function stepAgent(me, dt, t) {
   }
   if (me.state !== 'idle' || walking) body.scale.y = 1;
   tail.rotation.z = Math.sin(s * (walking || me.state !== 'idle' ? 8 : 2)) * 0.5;
+  // Blender-sculpted characters play their own walk, idle and blink clips on top
+  if (me.cat.pose) me.cat.pose(walking, dt);
 }
 
 // ---------- labels ----------

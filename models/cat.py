@@ -52,4 +52,12 @@ blob('tail_tip', tail, (0, 0.39, 0.41), (0.052, 0.052, 0.052), CREAM)
 for f in feet:
     blob(f'sock{f.name[-2:]}', f, (0, -0.03, -0.01), (0.1, 0.12, 0.06), CREAM)
 
+# pivots for animation: ears at their base, paws at the shoulder, eyes for blinking
+ears = [group(f'ear_pivot_{s}', head, bpy.data.objects[f'ear_{s}'].location.copy(), [f'ear_{s}', f'ear_in_{s}']) for s in 'LR']
+paws = [group(f'paw_pivot_{s}', body, (sd * 0.15, -0.22, 0.32), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+animate(body, head, tail, feet,
+        limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
+        ears=[(e, 0, 0.18) for e in ears],
+        eyes=[eye_group(head, s) for s in 'LR'])
+
 finish()

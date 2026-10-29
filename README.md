@@ -24,6 +24,27 @@ Each Claude Code session moves in as a little character. When it reads files it 
 | 📮 Syncing | Post Office | Router nook |
 | 🐞 Stuck | Bug Clinic | Bug rug |
 
+## Sculpted in Blender
+
+The characters and the town's buildings are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
+
+![The seven characters sculpted in Blender: an orange tabby cat, a white bunny, a bear, a frog, a chick, a penguin in a pink scarf, and Miw with orange braids, pink glasses and a polka-dot dress](docs/characters.jpg)
+
+![The town's nine buildings sculpted in Blender: the ladybug Bug Clinic, the Pretzel Café, the Cat Home, the book-stack Library, the Code Factory, the mailbox Post Office, the mushroom Cozy Cottage, the Thinking Tower and the notebook Writing Studio](docs/buildings.jpg)
+
+- **Soft and rounded.** Big heads, chubby bodies and bevelled edges everywhere, with ambient occlusion baked into each vertex, so creases and undersides go softly darker like a clay toy.
+- **Animated in Blender too.** Every character has a walk cycle with a real stride, plus idle sways, ear twitches and blinks. Moving parts of buildings (the telescope dome, the pencil, the gears, the envelope sign) are named nodes the town animates.
+- **Always something to show.** The town draws its built-in shapes first and swaps each model in as it loads, so it still works if a model is missing.
+
+To change a model, edit its script and rebuild. The scripts are tested with Blender 5.1 (set `BLENDER` if it isn't at `/Applications/Blender.app`):
+
+```bash
+sh models/build.sh            # everything
+sh models/build.sh cat cafe   # just these
+```
+
+Characters are `models/<name>.py`; the buildings all come from `models/town.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+
 ## Features
 
 - **Live from Claude Code hooks.** No polling of your terminal. Claude Code tells the town what it's doing.
@@ -97,6 +118,8 @@ The server listens on `127.0.0.1` only, and:
 | `room.html` | The 3D cat room |
 | `panel.js` | Shared UI: task drawer, agent cards, wardrobe, timelines, places, festivals, sound, bubbles |
 | `scenery.js` | Shared 3D bits: pretzels, floating islands, icing, and merging static scenery to keep it fast |
+| `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
+| `models/` | Blender scripts for the characters and buildings, the `.glb` files they make, and `build.sh` |
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
 
 Built with [three.js](https://threejs.org) r128.

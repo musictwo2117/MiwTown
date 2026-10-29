@@ -8,25 +8,62 @@
   const own = m => '#' + m.color.clone().convertLinearToSRGB().getHexString();
   const SMALL = /^(eye|shine|mouth|nose|blush|stripe|dot|glasses|lips|tongue|button|frogspot)$/;
   const mats = {};
-  const mat = c => mats[c] || (mats[c] = new THREE.MeshLambertMaterial({ color: c }));
+  // meshes with baked soft shadows (a per-vertex "ao" color from Blender) get a material that multiplies it in
+  const mat = (c, ao) => mats[c + ao] || (mats[c + ao] = new THREE.MeshLambertMaterial({ color: c, vertexColors: ao }));
   const templates = {};
 
   window.loadModel = (name, onReady) => {
     if (!THREE.GLTFLoader) return;
-    new THREE.GLTFLoader().load(`models/${name}.glb`, gltf => { templates[name] = gltf.scene; onReady && onReady(name); },
+    new THREE.GLTFLoader().load(`models/${name}.glb`, gltf => { templates[name] = gltf; onReady && onReady(name); },
       undefined, err => console.warn(`models/${name}.glb didn't load, keeping the built-in look`, err));
   };
 
   window.makeModel = (name, color) => {
     const t = templates[name];
     if (!t) return null;
-    const g = t.clone(true), find = n => g.getObjectByName(n);
+    const g = t.scene.clone(true), find = n => g.getObjectByName(n);
     g.traverse(o => {
       if (!o.isMesh) return;
       const n = o.material.name;
-      o.material = mat(n === 'skin' ? color : n === 'stripe' ? shade(color) : own(o.material));
+      o.material = mat(n === 'skin' ? color : n === 'stripe' ? shade(color) : own(o.material), !!o.geometry.attributes.color);
       o.castShadow = !SMALL.test(n); o.receiveShadow = false;
     });
-    return { g, body: find('body'), head: find('head'), tail: find('tail'), feet: [find('foot_L'), find('foot_R')] };
+    return { g, body: find('body'), head: find('head'), tail: find('tail'), feet: [find('foot_L'), find('foot_R')], pose: poser(g, t.animations) };
   };
+
+  // Buildings and furniture: every material keeps its Blender color (with baked shadows), except the names in
+  // `special` (window glass, glowing bulbs...) which the page supplies so they can light up at night.
+  window.makeScenery = (name, special = {}) => {
+    const t = templates[name];
+    if (!t) return null;
+    const g = t.scene.clone(true);
+    g.traverse(o => {
+      if (!o.isMesh) return;
+      o.material = special[o.material.name] || mat(own(o.material), !!o.geometry.attributes.color);
+      o.castShadow = o.receiveShadow = true;
+    });
+    return { g, find: n => g.getObjectByName(n) };
+  };
+
+  // Clips from Blender: "walk" takes over body, head, tail, feet and limbs while walking; "idle" sways limbs and ears
+  // the rest of the time (body and head stay with the page's state poses); "blink" always runs.
+  // Call pose() after the page has posed the character, so a playing clip has the last word.
+  function poser(g, clips) {
+    if (!clips.length) return null;
+    const mixer = new THREE.AnimationMixer(g);
+    const act = name => { const c = clips.find(c => c.name === name); return c ? mixer.clipAction(c) : null; };
+    const walk = act('walk'), idle = act('idle'), blink = act('blink');
+    // start each character's loops somewhere different, so a crowd doesn't blink in unison
+    [idle, blink].forEach(a => { if (a) { a.play(); a.time = Math.random() * a.getClip().duration; } });
+    let walking = false;
+    return (isWalking, dt) => {
+      if (isWalking !== walking) {
+        walking = isWalking;
+        // stopping a clip puts the nodes it moved back to their rest pose
+        if (walking) { idle && idle.stop(); walk && walk.play(); }
+        else { walk && walk.stop(); idle && idle.play(); }
+      }
+      mixer.update(dt);
+    };
+  }
 })();

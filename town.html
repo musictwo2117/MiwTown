@@ -747,6 +747,76 @@ const CAT_HOME = pathPoint(CAT_HOME_TH).add(outward(CAT_HOME_TH).multiplyScalar(
   CAT_HOME.group = g;
 }
 
+// ---------- Blender-sculpted buildings (models/town.py) ----------
+// Each one swaps in for its code-built twin above once its model loads; the rig brings its named parts to life.
+const SCULPTED = [
+  [() => PLACES.idle.group, 'cottage', (n, g) => {
+    const p = n('smoke').position; puffs(g, p.x, p.y, p.z, 3, 3200);
+    const heart = n('heart');
+    animated.push(t => { heart.position.y = 3.25 + Math.sin(t / 500) * 0.12; heart.rotation.y = t / 1400; });
+  }],
+  [() => PLACES.thinking.group, 'tower', n => {
+    const dome = n('dome'), idea = n('idea'), bulb = n('bulb');
+    animated.push(t => { dome.rotation.y = Math.sin(t / 2600) * 0.7; idea.position.y = Math.sin(t / 700) * 0.1; bulb.rotation.y = t / 1800; });
+  }],
+  [() => PLACES.writing.group, 'studio', (n, g) => {
+    const pencil = n('pencil');
+    animated.push(t => { pencil.rotation.z = 0.12 + Math.sin(t / 380) * 0.06; pencil.rotation.y = Math.sin(t / 900) * 0.1; });
+    for (let i = 0; i < 3; i++) {
+      const page = mesh(box(0.32, 0.02, 0.42), '#ffffff', { cast: false }); g.add(page);
+      animated.push(t => { const a = t / 1800 + i * 2.1; page.position.set(Math.cos(a) * 1.9, 2.0 + Math.sin(t / 600 + i) * 0.35, Math.sin(a) * 1.5); page.rotation.set(Math.sin(t / 500 + i) * 0.6, a, Math.cos(t / 700 + i) * 0.5); });
+    }
+  }],
+  [() => PLACES.researching.group, 'library', n => {
+    const open = n('open');
+    animated.push(t => { open.rotation.z = Math.sin(t / 1600) * 0.03; });
+  }],
+  [() => PLACES.executing.group, 'factory', (n, g) => {
+    const big = n('gear_big'), small = n('gear_small');
+    animated.push(t => { big.rotation.z = t / 900; small.rotation.z = -t / 900 * 1.6; });
+    ['smoke_0', 'smoke_1'].forEach((s, i) => { const p = n(s).position; puffs(g, p.x, p.y, p.z, 4, 2400 + i * 500); });
+    const lines = [0, 1, 2].map(k => { const m = new THREE.Mesh(box(0.4 - k * 0.08, 0.04, 0.02), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(-0.7 + k * 0.04, 1.27 - k * 0.1, 0.97); g.add(m); return m; });
+    animated.push(t => lines.forEach((m, k) => { m.visible = (Math.floor(t / 300) + k) % 4 !== 0; }));
+    for (let i = 0; i < 3; i++) {
+      const crate = mesh(box(0.26, 0.22, 0.26), '#ffc98a', {}); g.add(crate);
+      animated.push(t => { const k = ((t / 3000) + i / 3) % 1; crate.position.set(-1.2 + k * 2.4, 0.62, 1.5); });
+    }
+  }],
+  [() => PLACES.syncing.group, 'postoffice', (n, g) => {
+    const flag = n('flag'), env = n('env');
+    animated.push(t => { flag.rotation.y = Math.sin(t / 400) * 0.25; env.rotation.y = t / 2200; env.position.y = 3.15 + Math.sin(t / 700) * 0.08; });
+    for (let i = 0; i < 3; i++) {
+      const plane = new THREE.Group();
+      plane.add(mesh(cone(0.18, 0.5, 3), '#ffffff', { rx: PI / 2, s: [1, 1, 0.25], cast: false }));
+      g.add(plane);
+      animated.push(t => { const a = t / 1500 + i * 2.1, r = 2.0 + i * 0.25; plane.position.set(Math.cos(a) * r, 2.5 + Math.sin(t / 500 + i) * 0.25 + i * 0.25, Math.sin(a) * r); plane.rotation.set(0, -a, Math.sin(t / 500 + i) * 0.3); });
+    }
+  }],
+  [() => PLACES.error.group, 'clinic', (n, g) => {
+    const head = n('head'), sign = n('sign');
+    animated.push(t => { head.rotation.z = Math.sin(t / 700) * 0.08; sign.rotation.y = Math.sin(t / 1300) * 0.5; });
+    for (let i = 0; i < 2; i++) {
+      const bug = new THREE.Group();
+      bug.add(mesh(sph(0.12, 10), '#3b2a35', { s: [1, 0.6, 1.3] }));
+      bug.add(mesh(sph(0.07, 8), '#3b2a35', { z: 0.15 }));
+      g.add(bug);
+      animated.push(t => { const a = t / (1100 + i * 400) + i * 3; bug.position.set(Math.cos(a) * 1.9, 0.2, Math.sin(a) * 1.9); bug.rotation.y = -a; });
+    }
+  }],
+  [() => CAFE.group, 'cafe', (n, g) => {
+    const p = n('steam').position; puffs(g, p.x, p.y, p.z, 3, 2400);
+    const sign = makePretzel(); sign.scale.setScalar(0.32); n('sign').add(sign);
+    animated.push(t => { sign.rotation.y = Math.sin(t / 1300) * 0.35; });
+  }],
+  [() => CAT_HOME.group, 'cathome', () => {}],
+];
+SCULPTED.forEach(([groupOf, name, rig]) => loadModel(name, () => {
+  const g = groupOf(), m = makeScenery(name, { window: windowMat, glow, bulb: bulbMat });
+  while (g.children.length) g.remove(g.children[0]);
+  g.add(m.g);
+  rig(m.find, m.g);
+}));
+
 // ---------- little springs that spill over the island edge as waterfalls ----------
 // soft water shaders: the pond shimmers and ripples, the stream flows toward the edge
 const WATER_VERT = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
@@ -1315,6 +1385,8 @@ function stepAgent(me, dt, t) {
   }
   if (me.state !== 'idle' || walking) body.scale.y = 1;
   tail.rotation.z = Math.sin(s * (walking || me.state !== 'idle' ? 8 : 2)) * 0.5;
+  // Blender-sculpted characters play their own walk, idle and blink clips on top
+  if (me.cat.pose) me.cat.pose(walking, dt);
 }
 
 // ---------- labels ----------

@@ -36,4 +36,12 @@ for f in feet:
     blob(f'foot{f.name[-2:]}', f, (0, -0.03, -0.005), (0.105, 0.13, 0.068), SKIN)
     blob(f'pad{f.name[-2:]}', f, (0, -0.15, 0.0), (0.06, 0.02, 0.04), PINK)
 
+# pivots for animation: ears at their base, paws at the shoulder, eyes for blinking
+ears = [group(f'ear_pivot_{s}', head, bpy.data.objects[f'ear_{s}'].location.copy(), [f'ear_{s}', f'ear_in_{s}']) for s in 'LR']
+paws = [group(f'paw_pivot_{s}', body, (sd * 0.17, -0.21, 0.33), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+animate(body, head, tail, feet,
+        limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
+        ears=[(e, 1, 0.12) for e in ears],
+        eyes=[eye_group(head, s) for s in 'LR'])
+
 finish()
