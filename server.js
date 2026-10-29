@@ -211,9 +211,13 @@ http.createServer((req, res) => {
     res.setHeader('cache-control', 'no-store');
     return res.end(html);
   }
-  if ((url === '/panel.js' || url === '/scenery.js') && req.method === 'GET') {
+  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js') && req.method === 'GET') {
     res.setHeader('content-type', 'text/javascript; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
+    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
+  }
+  if (/^\/models\/[a-z]+\.glb$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {
+    res.setHeader('content-type', 'model/gltf-binary');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
   }
 
