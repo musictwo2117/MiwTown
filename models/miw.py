@@ -90,4 +90,15 @@ for f in feet:
     blob(f'toe{f.name[-2:]}', f, (0, -0.07, -0.01), (0.085, 0.1, 0.06), BOOT)
     blob(f'sole{f.name[-2:]}', f, (0, -0.04, -0.06), (0.09, 0.14, 0.018), SOLE)
 
+# pivots for animation: arms swing from the shoulder, braids sway, eyes blink, and the legs go with the boots
+arms = [group(f'arm_pivot_{s}', body, (sd * 0.14, 0.0, 0.7), [f'arm_{s}', f'hand_{s}', f'sleeve_{s}']) for s, sd in (('L', -1), ('R', 1))]
+braids = [group(f'braid_pivot_{s}', head, (sd * 0.33, 0.07, -0.2), [*(f'braid_{s}{i}' for i in range(5)), f'braid_tip_{s}', f'bow_{s}']) for s, sd in (('L', -1), ('R', 1))]
+for f in feet:
+    leg = bpy.data.objects[f'leg{f.name[-2:]}']
+    leg.parent = f
+    leg.location = leg.location - f.location
+animate(body, head, tail, feet,
+        limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0), (braids[0], 1, 0.12, 0), (braids[1], 1, 0.12, 0)],
+        eyes=[eye_group(head, s) for s in 'LR'])
+
 finish()

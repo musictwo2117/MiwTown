@@ -37,4 +37,12 @@ for f in feet:
     blob(f'foot{f.name[-2:]}', f, (0, -0.02, -0.02), (0.06, 0.07, 0.04), ORANGE)
     toes(f, ORANGE, 0.035, 0.06, 0.1)
 
+# pivots for animation: wings flap from the shoulder, the tuft bounces, eyes blink
+wings = [group(f'wing_pivot_{s}', body, (sd * 0.3, 0.0, 0.46), [f'wing_{s}']) for s, sd in (('L', -1), ('R', 1))]
+tuft = group('tuft_pivot', head, h.at(math.pi * 0.95, 1.25)[0], [f'tuft_{j}' for j in range(3)])
+animate(body, head, tail, feet,
+        limbs=[(wings[0], 1, 0.55, 0), (wings[1], 1, -0.55, 0)],
+        ears=[(tuft, 0, 0.3)],
+        eyes=[eye_group(head, s) for s in 'LR'])
+
 finish()

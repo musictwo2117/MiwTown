@@ -44,4 +44,13 @@ for f in feet:
     for k, dx in enumerate((-0.07, 0, 0.07)):
         blob(f'toe{f.name[-2:]}{k}', f, (dx, -0.14 + abs(dx) * 0.4, -0.02), (0.035, 0.035, 0.03), FROG)
 
+# pivots for animation: each eye bulb (holding its blinking eye) bobs, paws swing
+blinks = [eye_group(head, s, extra=[f'white_{s}']) for s in 'LR']
+bulbs = [group(f'bulb_pivot_{s}', head, bpy.data.objects[f'bulb_{s}'].location.copy() - Vector((0, 0, 0.1)), [f'bulb_{s}', f'blink_{s}']) for s in 'LR']
+paws = [group(f'paw_pivot_{s}', body, (sd * 0.18, -0.21, 0.3), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+animate(body, head, tail, feet,
+        limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
+        ears=[(b, 0, 0.12) for b in bulbs],
+        eyes=blinks)
+
 finish()

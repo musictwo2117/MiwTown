@@ -44,4 +44,11 @@ blob('puff', tail, (0, 0, 0), (0.11, 0.1, 0.1), CREAM)
 for f in feet:
     blob(f'foot{f.name[-2:]}', f, (0, -0.05, -0.012), (0.095, 0.15, 0.058), CREAM)
 
+# pivots for animation: the ear nodes already sit at their base
+paws = [group(f'paw_pivot_{s}', body, (sd * 0.14, -0.22, 0.31), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+animate(body, head, tail, feet,
+        limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
+        ears=[(bpy.data.objects[f'ear_{s}'], 0, 0.22) for s in 'LR'],
+        eyes=[eye_group(head, s) for s in 'LR'])
+
 finish()

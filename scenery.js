@@ -207,11 +207,22 @@
         });
         const n = parts.reduce((s, g) => s + g.attributes.position.count, 0);
         const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3);
+        // vertex colors (the soft shadows baked into Blender models) come along when the material uses them
+        const col = mat.vertexColors ? new Float32Array(n * 3).fill(1) : null;
         let off = 0;
-        for (const g of parts) { pos.set(g.attributes.position.array, off * 3); nor.set(g.attributes.normal.array, off * 3); off += g.attributes.position.count; g.dispose(); }
+        for (const g of parts) {
+          pos.set(g.attributes.position.array, off * 3); nor.set(g.attributes.normal.array, off * 3);
+          const c = col && g.attributes.color;
+          if (c) {
+            const k = !c.normalized ? 1 : c.array instanceof Uint16Array ? 1 / 65535 : c.array instanceof Uint8Array ? 1 / 255 : 1;
+            for (let i = 0; i < c.count; i++) { col[(off + i) * 3] = c.getX(i) * k; col[(off + i) * 3 + 1] = c.getY(i) * k; col[(off + i) * 3 + 2] = c.getZ(i) * k; }
+          }
+          off += g.attributes.position.count; g.dispose();
+        }
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
         geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+        if (col) geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
         geo.computeBoundingSphere();
         const m = new THREE.Mesh(geo, mat);
         m.castShadow = items.some(o => o.castShadow); m.receiveShadow = items.some(o => o.receiveShadow);
