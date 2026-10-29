@@ -26,7 +26,7 @@ Each Claude Code session moves in as a little character. When it reads files it 
 
 ## Sculpted in Blender
 
-The characters and the town's buildings are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
+The characters, the town's buildings and the Cat Room's furniture are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
 
 ![The seven characters sculpted in Blender: an orange tabby cat, a white bunny, a bear, a frog, a chick, a penguin in a pink scarf, and Miw with orange braids, pink glasses and a polka-dot dress](docs/characters.jpg)
 
@@ -34,7 +34,8 @@ The characters and the town's buildings are modelled in [Blender](https://www.bl
 
 - **Soft and rounded.** Big heads, chubby bodies and bevelled edges everywhere, with ambient occlusion baked into each vertex, so creases and undersides go softly darker like a clay toy.
 - **Animated in Blender too.** Every character has a walk cycle with a real stride, plus idle sways, ear twitches and blinks. Moving parts of buildings (the telescope dome, the pencil, the gears, the envelope sign) are named nodes the town animates.
-- **Always something to show.** The town draws its built-in shapes first and swaps each model in as it loads, so it still works if a model is missing.
+- **Always something to show.** The pages draw their built-in shapes first and swap each model in as it loads, so they still work if a model is missing.
+- **Light on the browser.** Each piece of furniture is fused into one mesh per color before export, so the room has far fewer meshes to draw.
 
 To change a model, edit its script and rebuild. The scripts are tested with Blender 5.1 (set `BLENDER` if it isn't at `/Applications/Blender.app`):
 
@@ -43,7 +44,7 @@ sh models/build.sh            # everything
 sh models/build.sh cat cafe   # just these
 ```
 
-Characters are `models/<name>.py`; the buildings all come from `models/town.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+Characters are `models/<name>.py`; the buildings all come from `models/town.py` and the furniture from `models/room.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
 
 ## Features
 
@@ -119,7 +120,7 @@ The server listens on `127.0.0.1` only, and:
 | `panel.js` | Shared UI: task drawer, agent cards, wardrobe, timelines, places, festivals, sound, bubbles |
 | `scenery.js` | Shared 3D bits: pretzels, floating islands, icing, and merging static scenery to keep it fast |
 | `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
-| `models/` | Blender scripts for the characters and buildings, the `.glb` files they make, and `build.sh` |
+| `models/` | Blender scripts for the characters, buildings and furniture, the `.glb` files they make, and `build.sh` |
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
 
 Built with [three.js](https://threejs.org) r128.

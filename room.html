@@ -261,9 +261,21 @@ const clouds = [];
 const starMat = new THREE.PointsMaterial();
 const rand = rng(42);
 const BOOKS = ['#ff9fb5', '#8fc1f0', '#ffd27a', '#b9a6f5', '#9fd49a', '#ffb38a', '#f49a91'];
+// Blender-sculpted furniture (models/room.py): piece() remembers what a block of code built; once that
+// furniture's model loads, the model takes its place. It's built in the same coordinates, so it drops in at
+// the parent's origin. Until then the code-built version shows, kept out of the static merge so it can go.
+const PIECES = new Map();
+function piece(name, parent, build) {
+  const before = new Set(parent.children);
+  build();
+  const built = parent.children.filter(c => !before.has(c));
+  built.forEach(o => { o.userData.noMerge = true; });
+  if (!PIECES.has(name)) PIECES.set(name, { parent, built: [] });
+  PIECES.get(name).built.push(...built);
+}
 
 // bookshelf on the left wall
-{
+piece('bookshelf', LEFT, () => {
   const g = new THREE.Group(); g.position.set(-6.5, 0, -3.5);
   g.add(mesh(box(0.12, 3.5, 3.1), '#c99a74', { x: -0.42, y: 1.75 }));
   [-1, 1].forEach(sd => g.add(mesh(box(0.95, 3.5, 0.14), '#e2b088', { y: 1.75, z: sd * 1.48 })));
@@ -279,9 +291,9 @@ const BOOKS = ['#ff9fb5', '#8fc1f0', '#ffd27a', '#b9a6f5', '#9fd49a', '#ffb38a',
     }
   }
   LEFT.add(g);
-}
+});
 // whiteboard on the back wall
-{
+piece('whiteboard', LEFT, () => {
   LEFT.add(mesh(box(3.3, 2.0, 0.12), '#d7d9e3', { x: -3, y: 2.5, z: -6.92 }));
   LEFT.add(mesh(box(3.05, 1.78, 0.06), '#ffffff', { x: -3, y: 2.5, z: -6.84, cast: false }));
   [[-3.8, 3.0, 1.0, '#8fc1f0'], [-3.5, 2.7, 1.6, '#8fc1f0'], [-3.9, 2.4, 0.8, '#f49a91']].forEach(([x, y, w, c]) => LEFT.add(mesh(box(w, 0.06, 0.02), c, { x: x + w / 2 - 0.3, y, z: -6.8, cast: false })));
@@ -289,7 +301,7 @@ const BOOKS = ['#ff9fb5', '#8fc1f0', '#ffd27a', '#b9a6f5', '#9fd49a', '#ffb38a',
   LEFT.add(mesh(box(0.5, 0.5, 0.03), '#ffc4d6', { x: -1.95, y: 2.2, z: -6.79, rz: 0.1, cast: false }));
   [0.25, 0.45, 0.35].forEach((h, i) => LEFT.add(mesh(box(0.18, h, 0.02), '#9fd49a', { x: -3.9 + i * 0.28, y: 1.85 + h / 2, z: -6.8, cast: false })));
   LEFT.add(mesh(box(2.6, 0.08, 0.18), '#c7c9d3', { x: -3, y: 1.48, z: -6.82 }));
-}
+});
 // window + router table
 let skyMat, sunMoon;
 {
@@ -303,20 +315,26 @@ let skyMat, sunMoon;
   scene.add(mesh(box(2.35, 0.08, 0.08), '#ffffff', { x: 2.6, y: 2.75, z: -6.8, cast: false }));
   scene.add(mesh(box(3.0, 0.12, 0.45), '#fff4ea', { x: 2.6, y: 1.65, z: -6.75 }));
   [-0.55, 0.55].forEach(dx => scene.add(mesh(box(0.9, 1.9, 0.06), '#ffc4d6', { x: 2.6 + dx * 2.9, y: 2.75, z: -6.78, cast: false })));
-  scene.add(mesh(box(2.0, 0.1, 0.95), '#d8a77d', { x: 2.6, y: 1.0, z: -6.3 }));
-  [[-0.9, -0.38], [0.9, -0.38], [-0.9, 0.38], [0.9, 0.38]].forEach(([dx, dz]) => scene.add(mesh(box(0.08, 0.95, 0.08), '#b88a62', { x: 2.6 + dx, y: 0.5, z: -6.3 + dz })));
-  scene.add(mesh(box(0.85, 0.2, 0.5), '#b5ccff', { x: 2.6, y: 1.15, z: -6.35 }));
-  [-0.3, 0.3].forEach(dx => scene.add(mesh(cyl(0.025, 0.025, 0.55, 6), '#6f7aa0', { x: 2.6 + dx, y: 1.5, z: -6.5, rz: dx * 0.6 })));
+  piece('routertable', scene, () => {
+    scene.add(mesh(box(2.0, 0.1, 0.95), '#d8a77d', { x: 2.6, y: 1.0, z: -6.3 }));
+    [[-0.9, -0.38], [0.9, -0.38], [-0.9, 0.38], [0.9, 0.38]].forEach(([dx, dz]) => scene.add(mesh(box(0.08, 0.95, 0.08), '#b88a62', { x: 2.6 + dx, y: 0.5, z: -6.3 + dz })));
+    scene.add(mesh(box(0.85, 0.2, 0.5), '#b5ccff', { x: 2.6, y: 1.15, z: -6.35 }));
+    [-0.3, 0.3].forEach(dx => scene.add(mesh(cyl(0.025, 0.025, 0.55, 6), '#6f7aa0', { x: 2.6 + dx, y: 1.5, z: -6.5, rz: dx * 0.6 })));
+  });
   const leds = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(2.35 + i * 0.16, 1.17, -6.09); scene.add(m); return m; });
   animated.push(t => leds.forEach((m, i) => m.material.color.set((Math.floor(t / 250) + i) % 3 ? (i % 2 ? '#ffe08a' : '#7cff9a') : '#3b4566')));
 }
 // server rack in the back-right corner
 {
-  scene.add(mesh(box(1.3, 3.3, 1.15), '#9a94c2', { x: 5.9, y: 1.65, z: -6.1 }));
+  piece('serverrack', scene, () => {
+    scene.add(mesh(box(1.3, 3.3, 1.15), '#9a94c2', { x: 5.9, y: 1.65, z: -6.1 }));
+    for (let i = 0; i < 6; i++) {
+      scene.add(mesh(box(1.05, 0.36, 0.03), '#6f6a9c', { x: 5.9, y: 0.45 + i * 0.47, z: -5.52, cast: false }));
+      scene.add(mesh(box(0.45, 0.04, 0.02), '#b3aed6', { x: 5.7, y: 0.45 + i * 0.47, z: -5.5, cast: false }));
+    }
+  });
   const lights = [];
   for (let i = 0; i < 6; i++) {
-    scene.add(mesh(box(1.05, 0.36, 0.03), '#6f6a9c', { x: 5.9, y: 0.45 + i * 0.47, z: -5.52, cast: false }));
-    scene.add(mesh(box(0.45, 0.04, 0.02), '#b3aed6', { x: 5.7, y: 0.45 + i * 0.47, z: -5.5, cast: false }));
     [0, 1].forEach(k => { const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(6.2 + k * 0.13, 0.45 + i * 0.47, -5.49); scene.add(m); lights.push(m); });
   }
   animated.push(t => lights.forEach((m, i) => m.material.color.set(i % 2 ? (Math.sin(t / 90 + i) > 0.6 ? '#ff7a7a' : '#5a2a3a') : (Math.sin(t / 180 + i * 1.7) > 0 ? '#7cff9a' : '#245a35'))));
@@ -325,22 +343,24 @@ let skyMat, sunMoon;
 // desk, laptop and stool
 {
   const D = { x: 2.4, z: -0.6 };
-  scene.add(mesh(box(3.0, 0.14, 1.35), '#e2b088', { x: D.x, y: 1.1, z: D.z }));
-  [[-1.35, -0.55], [1.35, -0.55], [-1.35, 0.55], [1.35, 0.55]].forEach(([dx, dz]) => scene.add(mesh(box(0.1, 1.05, 0.1), '#c4926a', { x: D.x + dx, y: 0.53, z: D.z + dz })));
-  scene.add(mesh(box(1.05, 0.05, 0.7), '#e6e8f0', { x: D.x, y: 1.2, z: D.z - 0.05 }));
-  scene.add(mesh(box(1.05, 0.7, 0.05), '#ffc4d6', { x: D.x, y: 1.55, z: D.z + 0.28, rx: 0.12 }));
-  [-0.07, 0.07].forEach(dx => scene.add(mesh(sph(0.06, 10), '#ff7b9c', { x: D.x + dx, y: 1.6, z: D.z + 0.33, cast: false })));
-  scene.add(mesh(cone(0.085, 0.12, 4), '#ff7b9c', { x: D.x, y: 1.52, z: D.z + 0.33, rx: PI, ry: PI / 4, cast: false }));
-  scene.add(mesh(cyl(0.12, 0.1, 0.25, 14), '#8fc1f0', { x: D.x - 1.05, y: 1.3, z: D.z + 0.2 }));
-  scene.add(mesh(new THREE.TorusGeometry(0.07, 0.02, 6, 10), '#8fc1f0', { x: D.x - 0.9, y: 1.3, z: D.z + 0.2, ry: PI / 2 }));
-  scene.add(mesh(cyl(0.13, 0.11, 0.2, 10), '#f49a91', { x: D.x + 1.1, y: 1.27, z: D.z - 0.25 }));
-  scene.add(mesh(sph(0.2, 10), '#9fd49a', { x: D.x + 1.1, y: 1.5, z: D.z - 0.25 }));
-  scene.add(mesh(cyl(0.38, 0.38, 0.12, 18), '#b9a6f5', { x: D.x, y: 0.5, z: -1.85 }));
-  scene.add(mesh(cyl(0.06, 0.06, 0.45, 8), '#8a7a80', { x: D.x, y: 0.22, z: -1.85 }));
+  piece('desk', scene, () => {
+    scene.add(mesh(box(3.0, 0.14, 1.35), '#e2b088', { x: D.x, y: 1.1, z: D.z }));
+    [[-1.35, -0.55], [1.35, -0.55], [-1.35, 0.55], [1.35, 0.55]].forEach(([dx, dz]) => scene.add(mesh(box(0.1, 1.05, 0.1), '#c4926a', { x: D.x + dx, y: 0.53, z: D.z + dz })));
+    scene.add(mesh(box(1.05, 0.05, 0.7), '#e6e8f0', { x: D.x, y: 1.2, z: D.z - 0.05 }));
+    scene.add(mesh(box(1.05, 0.7, 0.05), '#ffc4d6', { x: D.x, y: 1.55, z: D.z + 0.28, rx: 0.12 }));
+    [-0.07, 0.07].forEach(dx => scene.add(mesh(sph(0.06, 10), '#ff7b9c', { x: D.x + dx, y: 1.6, z: D.z + 0.33, cast: false })));
+    scene.add(mesh(cone(0.085, 0.12, 4), '#ff7b9c', { x: D.x, y: 1.52, z: D.z + 0.33, rx: PI, ry: PI / 4, cast: false }));
+    scene.add(mesh(cyl(0.12, 0.1, 0.25, 14), '#8fc1f0', { x: D.x - 1.05, y: 1.3, z: D.z + 0.2 }));
+    scene.add(mesh(new THREE.TorusGeometry(0.07, 0.02, 6, 10), '#8fc1f0', { x: D.x - 0.9, y: 1.3, z: D.z + 0.2, ry: PI / 2 }));
+    scene.add(mesh(cyl(0.13, 0.11, 0.2, 10), '#f49a91', { x: D.x + 1.1, y: 1.27, z: D.z - 0.25 }));
+    scene.add(mesh(sph(0.2, 10), '#9fd49a', { x: D.x + 1.1, y: 1.5, z: D.z - 0.25 }));
+    scene.add(mesh(cyl(0.38, 0.38, 0.12, 18), '#b9a6f5', { x: D.x, y: 0.5, z: -1.85 }));
+    scene.add(mesh(cyl(0.06, 0.06, 0.45, 8), '#8a7a80', { x: D.x, y: 0.22, z: -1.85 }));
+  });
   const L = new THREE.PointLight(0xbfd9ff, 0, 3.5, 2); L.position.set(D.x, 1.7, D.z - 0.6); scene.add(L); lampLights.push(L);
 }
 // sofa against the left wall
-{
+piece('sofa', LEFT, () => {
   const z = 2.6;
   LEFT.add(mesh(box(1.45, 0.5, 3.5), '#f49ab0', { x: -6.2, y: 0.35, z }));
   LEFT.add(mesh(box(0.42, 1.25, 3.5), '#f08aa4', { x: -6.75, y: 0.95, z }));
@@ -348,17 +368,21 @@ let skyMat, sunMoon;
   [-0.85, 0.85].forEach(dz => LEFT.add(mesh(box(1.15, 0.2, 1.6), '#ffc0cf', { x: -6.05, y: 0.68, z: z + dz })));
   LEFT.add(mesh(box(0.25, 0.55, 0.6), '#ffe08a', { x: -6.45, y: 1.05, z: z - 1.1, ry: 0.3, rz: 0.15 }));
   [-1.6, 1.6].forEach(dz => LEFT.add(mesh(cyl(0.06, 0.05, 0.12, 8), '#b88a62', { x: -5.6, y: 0.06, z: z + dz })));
-}
+});
 // floor lamp, plant, wall clock, heart picture
 {
-  LEFT.add(mesh(cyl(0.35, 0.4, 0.08, 18), '#8a7a80', { x: -6.2, y: 0.04, z: 5.3 }));
-  LEFT.add(mesh(cyl(0.04, 0.04, 2.5, 8), '#8a7a80', { x: -6.2, y: 1.3, z: 5.3 }));
-  LEFT.add(mesh(cyl(0.3, 0.55, 0.6, 20, 1), '', { x: -6.2, y: 2.75, z: 5.3, mat: windowMat }));
-  LEFT.add(mesh(sph(0.13, 10), '', { x: -6.2, y: 2.5, z: 5.3, mat: bulbMat, cast: false }));
+  piece('floorlamp', LEFT, () => {
+    LEFT.add(mesh(cyl(0.35, 0.4, 0.08, 18), '#8a7a80', { x: -6.2, y: 0.04, z: 5.3 }));
+    LEFT.add(mesh(cyl(0.04, 0.04, 2.5, 8), '#8a7a80', { x: -6.2, y: 1.3, z: 5.3 }));
+    LEFT.add(mesh(cyl(0.3, 0.55, 0.6, 20, 1), '', { x: -6.2, y: 2.75, z: 5.3, mat: windowMat }));
+    LEFT.add(mesh(sph(0.13, 10), '', { x: -6.2, y: 2.5, z: 5.3, mat: bulbMat, cast: false }));
+  });
   const L = new THREE.PointLight(0xffc97a, 0, 9, 1.6); L.position.set(-6.0, 2.4, 5.1); LEFT.add(L); lampLights.push(L);
 
-  LEFT.add(mesh(cyl(0.35, 0.28, 0.6, 14), '#f49a91', { x: -6.3, y: 0.3, z: -6.3 }));
-  [[0, 1.0, 0, 0.45], [0.25, 1.45, 0.1, 0.35], [-0.2, 1.35, -0.15, 0.32]].forEach(([dx, y, dz, r]) => LEFT.add(mesh(sph(r, 12), '#9fd49a', { x: -6.3 + dx, y, z: -6.3 + dz })));
+  piece('cornerplant', LEFT, () => {
+    LEFT.add(mesh(cyl(0.35, 0.28, 0.6, 14), '#f49a91', { x: -6.3, y: 0.3, z: -6.3 }));
+    [[0, 1.0, 0, 0.45], [0.25, 1.45, 0.1, 0.35], [-0.2, 1.35, -0.15, 0.32]].forEach(([dx, y, dz, r]) => LEFT.add(mesh(sph(r, 12), '#9fd49a', { x: -6.3 + dx, y, z: -6.3 + dz })));
+  });
 
   LEFT.add(mesh(cyl(0.6, 0.6, 0.1, 28), '#ffffff', { x: -6.95, y: 3.2, z: 0.4, rz: PI / 2 }));
   LEFT.add(mesh(cyl(0.52, 0.52, 0.02, 28), '#fff6e8', { x: -6.89, y: 3.2, z: 0.4, rz: PI / 2, cast: false }));
@@ -376,8 +400,10 @@ let skyMat, sunMoon;
 {
   scene.add(mesh(cyl(2.4, 2.4, 0.04, 40), '#ffd6e0', { x: 0.2, y: 0.13, z: 2.2, cast: false, recv: true }));
   scene.add(mesh(cyl(1.8, 1.8, 0.045, 40), '#ffe9ef', { x: 0.2, y: 0.135, z: 2.2, cast: false, recv: true }));
-  scene.add(mesh(new THREE.TorusGeometry(0.55, 0.2, 10, 24), '#c3b6ec', { x: -1.8, y: 0.3, z: 5.6, rx: PI / 2 }));
-  scene.add(mesh(cyl(0.55, 0.55, 0.1, 20), '#e6dcff', { x: -1.8, y: 0.17, z: 5.6, cast: false }));
+  piece('catbed', scene, () => {
+    scene.add(mesh(new THREE.TorusGeometry(0.55, 0.2, 10, 24), '#c3b6ec', { x: -1.8, y: 0.3, z: 5.6, rx: PI / 2 }));
+    scene.add(mesh(cyl(0.55, 0.55, 0.1, 20), '#e6dcff', { x: -1.8, y: 0.17, z: 5.6, cast: false }));
+  });
   const yarn = mesh(sph(0.22, 12), '#8fc1f0', { x: -0.3, y: 0.33, z: 6.1 });
   scene.add(yarn); animated.push(t => { yarn.rotation.y = t / 2000; });
 
@@ -398,51 +424,61 @@ let skyMat, sunMoon;
   // mint tiles behind the counter
   for (let i = 0; i < 12; i++) for (let j = 0; j < 4; j++)
     EAST.add(mesh(box(0.38, 0.38, 0.02), (i + j) % 2 ? '#c9eedf' : '#e9faf3', { x: 8.0 + i * 0.4, y: 1.35 + j * 0.4, z: -6.98, cast: false }));
-  EAST.add(mesh(box(5.0, 1.05, 1.0), '#fff6ef', { x: 10.5, y: 0.6, z: -6.45 }));
-  EAST.add(mesh(box(5.1, 0.1, 1.08), '#f7c6d4', { x: 10.5, y: 1.15, z: -6.43 }));
-  [8.6, 9.8, 11.0, 12.2].forEach(x => { EAST.add(mesh(box(1.05, 0.8, 0.03), '#ffeae2', { x, y: 0.58, z: -5.94, cast: false })); EAST.add(mesh(box(0.25, 0.05, 0.05), '#d9a0b0', { x, y: 0.88, z: -5.91, cast: false })); });
-  // sink and faucet
-  EAST.add(mesh(box(1.0, 0.04, 0.6), '#b9c6d6', { x: 9.0, y: 1.21, z: -6.4, cast: false }));
-  EAST.add(mesh(cyl(0.04, 0.04, 0.45, 8), '#c7ccd8', { x: 9.0, y: 1.42, z: -6.8 }));
-  EAST.add(mesh(cyl(0.035, 0.035, 0.3, 8), '#c7ccd8', { x: 9.0, y: 1.62, z: -6.65, rx: PI / 2 }));
-  // stove with a bubbling pot
-  [-0.3, 0.3].forEach(dx => EAST.add(mesh(cyl(0.22, 0.22, 0.03, 18), '#4b3442', { x: 11.6 + dx, y: 1.22, z: -6.4, cast: false })));
-  EAST.add(mesh(cyl(0.25, 0.22, 0.32, 18), '#ff9fb5', { x: 11.3, y: 1.4, z: -6.4 }));
-  EAST.add(mesh(cyl(0.26, 0.26, 0.04, 18), '#ffc4d6', { x: 11.3, y: 1.58, z: -6.4 }));
+  piece('kitchen', EAST, () => {
+    EAST.add(mesh(box(5.0, 1.05, 1.0), '#fff6ef', { x: 10.5, y: 0.6, z: -6.45 }));
+    EAST.add(mesh(box(5.1, 0.1, 1.08), '#f7c6d4', { x: 10.5, y: 1.15, z: -6.43 }));
+    [8.6, 9.8, 11.0, 12.2].forEach(x => { EAST.add(mesh(box(1.05, 0.8, 0.03), '#ffeae2', { x, y: 0.58, z: -5.94, cast: false })); EAST.add(mesh(box(0.25, 0.05, 0.05), '#d9a0b0', { x, y: 0.88, z: -5.91, cast: false })); });
+    // sink and faucet
+    EAST.add(mesh(box(1.0, 0.04, 0.6), '#b9c6d6', { x: 9.0, y: 1.21, z: -6.4, cast: false }));
+    EAST.add(mesh(cyl(0.04, 0.04, 0.45, 8), '#c7ccd8', { x: 9.0, y: 1.42, z: -6.8 }));
+    EAST.add(mesh(cyl(0.035, 0.035, 0.3, 8), '#c7ccd8', { x: 9.0, y: 1.62, z: -6.65, rx: PI / 2 }));
+    // stove with a bubbling pot
+    [-0.3, 0.3].forEach(dx => EAST.add(mesh(cyl(0.22, 0.22, 0.03, 18), '#4b3442', { x: 11.6 + dx, y: 1.22, z: -6.4, cast: false })));
+    EAST.add(mesh(cyl(0.25, 0.22, 0.32, 18), '#ff9fb5', { x: 11.3, y: 1.4, z: -6.4 }));
+    EAST.add(mesh(cyl(0.26, 0.26, 0.04, 18), '#ffc4d6', { x: 11.3, y: 1.58, z: -6.4 }));
+  });
   for (let i = 0; i < 3; i++) {
     const puff = new THREE.Mesh(sph(0.1, 10), new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true }));
     EAST.add(puff);
     animated.push(t => { const k = ((t / 1800) + i / 3) % 1; puff.position.set(11.3 + Math.sin(k * 5 + i) * 0.1, 1.7 + k * 1.1, -6.4); puff.scale.setScalar(0.6 + k); puff.material.opacity = 0.8 * (1 - k); });
   }
   // shelf with jars
-  EAST.add(mesh(box(2.4, 0.08, 0.35), '#e2b088', { x: 10.2, y: 3.2, z: -6.8 }));
-  ['#ffd27a', '#9fd49a', '#ff9fb5', '#8fc1f0'].forEach((c, i) => {
-    EAST.add(mesh(cyl(0.13, 0.13, 0.32, 12), c, { x: 9.3 + i * 0.6, y: 3.4, z: -6.8 }));
-    EAST.add(mesh(cyl(0.14, 0.14, 0.06, 12), '#ffffff', { x: 9.3 + i * 0.6, y: 3.59, z: -6.8 }));
+  piece('kitchen', EAST, () => {
+    EAST.add(mesh(box(2.4, 0.08, 0.35), '#e2b088', { x: 10.2, y: 3.2, z: -6.8 }));
+    ['#ffd27a', '#9fd49a', '#ff9fb5', '#8fc1f0'].forEach((c, i) => {
+      EAST.add(mesh(cyl(0.13, 0.13, 0.32, 12), c, { x: 9.3 + i * 0.6, y: 3.4, z: -6.8 }));
+      EAST.add(mesh(cyl(0.14, 0.14, 0.06, 12), '#ffffff', { x: 9.3 + i * 0.6, y: 3.59, z: -6.8 }));
+    });
   });
   // fridge with a heart magnet
-  EAST.add(mesh(box(1.35, 3.0, 1.1), '#c9ecdf', { x: 14.0, y: 1.6, z: -6.35 }));
-  EAST.add(mesh(box(1.3, 0.03, 0.02), '#a6d8c6', { x: 14.0, y: 2.3, z: -5.79, cast: false }));
-  [1.2, 2.8].forEach(y => EAST.add(mesh(box(0.06, 0.5, 0.06), '#ffffff', { x: 13.5, y, z: -5.75 })));
-  [-0.05, 0.05].forEach(dx => EAST.add(mesh(sph(0.06, 8), '#ff7b9c', { x: 14.2 + dx, y: 2.62, z: -5.78, cast: false })));
-  EAST.add(mesh(cone(0.08, 0.1, 4), '#ff7b9c', { x: 14.2, y: 2.55, z: -5.78, rx: PI, ry: PI / 4, cast: false }));
-  // little round table with two stools and donuts
-  EAST.add(mesh(cyl(0.95, 0.95, 0.1, 28), '#fff6ef', { x: 10.5, y: 1.0, z: -2.6 }));
-  EAST.add(mesh(cyl(0.08, 0.1, 0.95, 10), '#e2b088', { x: 10.5, y: 0.5, z: -2.6 }));
-  EAST.add(mesh(cyl(0.45, 0.5, 0.06, 18), '#e2b088', { x: 10.5, y: 0.08, z: -2.6 }));
-  [9.45, 11.55].forEach(x => {
-    EAST.add(mesh(cyl(0.34, 0.34, 0.12, 18), '#ffd27a', { x, y: 0.5, z: -2.6 }));
-    EAST.add(mesh(cyl(0.05, 0.05, 0.44, 8), '#e2b088', { x, y: 0.22, z: -2.6 }));
+  piece('fridge', EAST, () => {
+    EAST.add(mesh(box(1.35, 3.0, 1.1), '#c9ecdf', { x: 14.0, y: 1.6, z: -6.35 }));
+    EAST.add(mesh(box(1.3, 0.03, 0.02), '#a6d8c6', { x: 14.0, y: 2.3, z: -5.79, cast: false }));
+    [1.2, 2.8].forEach(y => EAST.add(mesh(box(0.06, 0.5, 0.06), '#ffffff', { x: 13.5, y, z: -5.75 })));
+    [-0.05, 0.05].forEach(dx => EAST.add(mesh(sph(0.06, 8), '#ff7b9c', { x: 14.2 + dx, y: 2.62, z: -5.78, cast: false })));
+    EAST.add(mesh(cone(0.08, 0.1, 4), '#ff7b9c', { x: 14.2, y: 2.55, z: -5.78, rx: PI, ry: PI / 4, cast: false }));
   });
-  EAST.add(mesh(cyl(0.3, 0.26, 0.04, 18), '#ffffff', { x: 10.5, y: 1.07, z: -2.6 }));
+  // little round table with two stools and donuts
+  piece('diningtable', EAST, () => {
+    EAST.add(mesh(cyl(0.95, 0.95, 0.1, 28), '#fff6ef', { x: 10.5, y: 1.0, z: -2.6 }));
+    EAST.add(mesh(cyl(0.08, 0.1, 0.95, 10), '#e2b088', { x: 10.5, y: 0.5, z: -2.6 }));
+    EAST.add(mesh(cyl(0.45, 0.5, 0.06, 18), '#e2b088', { x: 10.5, y: 0.08, z: -2.6 }));
+    [9.45, 11.55].forEach(x => {
+      EAST.add(mesh(cyl(0.34, 0.34, 0.12, 18), '#ffd27a', { x, y: 0.5, z: -2.6 }));
+      EAST.add(mesh(cyl(0.05, 0.05, 0.44, 8), '#e2b088', { x, y: 0.22, z: -2.6 }));
+    });
+    EAST.add(mesh(cyl(0.3, 0.26, 0.04, 18), '#ffffff', { x: 10.5, y: 1.07, z: -2.6 }));
+  });
   // a plate of warm mini pretzels
   [[-0.09, 0.02, 0.4], [0.1, -0.06, -0.5]].forEach(([dx, dz, ry]) => {
     const p = makePretzel(); p.scale.setScalar(0.16); p.position.set(10.5 + dx, 1.12, -2.6 + dz); p.rotation.set(-PI / 2, 0, ry); EAST.add(p);
   });
   // pendant lamp over the table
-  EAST.add(mesh(cyl(0.01, 0.01, 1.4, 4), '#8a7a80', { x: 10.5, y: 3.9, z: -2.6, cast: false }));
-  EAST.add(mesh(cone(0.4, 0.35, 18, 1, true), '#ffc4d6', { x: 10.5, y: 3.05, z: -2.6, cast: false }));
-  EAST.add(mesh(sph(0.12, 10), '', { x: 10.5, y: 2.9, z: -2.6, mat: bulbMat, cast: false }));
+  piece('diningtable', EAST, () => {
+    EAST.add(mesh(cyl(0.01, 0.01, 1.4, 4), '#8a7a80', { x: 10.5, y: 3.9, z: -2.6, cast: false }));
+    EAST.add(mesh(cone(0.4, 0.35, 18, 1, true), '#ffc4d6', { x: 10.5, y: 3.05, z: -2.6, cast: false }));
+    EAST.add(mesh(sph(0.12, 10), '', { x: 10.5, y: 2.9, z: -2.6, mat: bulbMat, cast: false }));
+  });
   const L = new THREE.PointLight(0xffc97a, 0, 6, 1.8); L.position.set(10.5, 2.7, -2.6); EAST.add(L); lampLights.push(L);
 }
 // ---------- bathroom (front right, behind a low wall) ----------
@@ -456,12 +492,14 @@ let skyMat, sunMoon;
   EAST.add(mesh(box(6.5, 0.1, 0.3), '#c3e3dd', { x: 11.8, y: H + 0.05, z: 1.0 }));
   [[8.6, 2.05, 2.1], [8.6, 5.85, 2.3]].forEach(([x, z, d]) => EAST.add(mesh(box(0.3, 0.1, d + 0.05), '#c3e3dd', { x, y: H + 0.05, z })));
   // bathtub full of bubbles, with a rubber duck
-  EAST.add(mesh(box(3.0, 0.22, 1.6), '#fffaf6', { x: 12.6, y: 0.22, z: 5.2 }));
-  [-1, 1].forEach(sd => EAST.add(mesh(box(3.0, 0.8, 0.16), '#fffaf6', { x: 12.6, y: 0.5, z: 5.2 + sd * 0.72 })));
-  [-1, 1].forEach(sd => EAST.add(mesh(box(0.16, 0.8, 1.3), '#fffaf6', { x: 12.6 + sd * 1.42, y: 0.5, z: 5.2 })));
-  EAST.add(mesh(box(2.7, 0.05, 1.3), '#a6dcf5', { x: 12.6, y: 0.66, z: 5.2, cast: false }));
-  [[-1.35, -0.65], [1.35, -0.65], [-1.35, 0.65], [1.35, 0.65]].forEach(([dx, dz]) => EAST.add(mesh(sph(0.08, 8), '#ffd27a', { x: 12.6 + dx, y: 0.1, z: 5.2 + dz })));
-  EAST.add(mesh(cyl(0.04, 0.04, 0.5, 8), '#c7ccd8', { x: 14.0, y: 1.15, z: 5.2 }));
+  piece('bathtub', EAST, () => {
+    EAST.add(mesh(box(3.0, 0.22, 1.6), '#fffaf6', { x: 12.6, y: 0.22, z: 5.2 }));
+    [-1, 1].forEach(sd => EAST.add(mesh(box(3.0, 0.8, 0.16), '#fffaf6', { x: 12.6, y: 0.5, z: 5.2 + sd * 0.72 })));
+    [-1, 1].forEach(sd => EAST.add(mesh(box(0.16, 0.8, 1.3), '#fffaf6', { x: 12.6 + sd * 1.42, y: 0.5, z: 5.2 })));
+    EAST.add(mesh(box(2.7, 0.05, 1.3), '#a6dcf5', { x: 12.6, y: 0.66, z: 5.2, cast: false }));
+    [[-1.35, -0.65], [1.35, -0.65], [-1.35, 0.65], [1.35, 0.65]].forEach(([dx, dz]) => EAST.add(mesh(sph(0.08, 8), '#ffd27a', { x: 12.6 + dx, y: 0.1, z: 5.2 + dz })));
+    EAST.add(mesh(cyl(0.04, 0.04, 0.5, 8), '#c7ccd8', { x: 14.0, y: 1.15, z: 5.2 }));
+  });
   const bub = rng(3);
   for (let i = 0; i < 26; i++) {
     const b = mesh(sph(0.1 + bub() * 0.12, 10), '#ffffff', { cast: false });
@@ -473,19 +511,25 @@ let skyMat, sunMoon;
   duck.add(mesh(sph(0.1, 10), '#ffd23f', { x: 0.1, y: 0.15 }));
   duck.add(mesh(cone(0.04, 0.09, 8), '#ffa94d', { x: 0.21, y: 0.14, rz: -PI / 2, cast: false }));
   EAST.add(duck); animated.push(t => { duck.position.set(13.4 + Math.sin(t / 2500) * 0.3, 0.8 + Math.sin(t / 500) * 0.03, 5.0); duck.rotation.y = Math.sin(t / 2500) * 0.6; });
-  EAST.add(mesh(box(1.4, 0.03, 0.8), '#ffc4d6', { x: 12.4, y: 0.15, z: 6.5, cast: false }));
+  piece('bathtub', EAST, () => {
+    EAST.add(mesh(box(1.4, 0.03, 0.8), '#ffc4d6', { x: 12.4, y: 0.15, z: 6.5, cast: false }));
+  });
   // toilet
-  EAST.add(mesh(box(0.7, 0.8, 0.3), '#ffffff', { x: 14.55, y: 0.9, z: 2.1, ry: PI / 2 }));
-  EAST.add(mesh(cyl(0.3, 0.22, 0.45, 18), '#ffffff', { x: 14.15, y: 0.35, z: 2.1 }));
-  EAST.add(mesh(cyl(0.33, 0.33, 0.06, 18), '#ffc4d6', { x: 14.15, y: 0.6, z: 2.1 }));
+  piece('toilet', EAST, () => {
+    EAST.add(mesh(box(0.7, 0.8, 0.3), '#ffffff', { x: 14.55, y: 0.9, z: 2.1, ry: PI / 2 }));
+    EAST.add(mesh(cyl(0.3, 0.22, 0.45, 18), '#ffffff', { x: 14.15, y: 0.35, z: 2.1 }));
+    EAST.add(mesh(cyl(0.33, 0.33, 0.06, 18), '#ffc4d6', { x: 14.15, y: 0.6, z: 2.1 }));
+  });
   // sink with a round mirror on the low wall
-  EAST.add(mesh(cyl(0.1, 0.14, 0.75, 12), '#ffffff', { x: 10.6, y: 0.48, z: 1.45 }));
-  EAST.add(mesh(cyl(0.38, 0.28, 0.2, 18), '#ffffff', { x: 10.6, y: 0.95, z: 1.45 }));
-  EAST.add(mesh(cyl(0.45, 0.45, 0.06, 28), '#ffc4d6', { x: 10.6, y: 1.65, z: 1.12, rx: PI / 2 }));
-  EAST.add(mesh(cyl(0.38, 0.38, 0.02, 28), '#e6f6ff', { x: 10.6, y: 1.65, z: 1.16, rx: PI / 2, cast: false }));
-  EAST.add(mesh(cyl(0.025, 0.025, 0.9, 8), '#c7ccd8', { x: 12.6, y: 1.75, z: 1.2, rz: PI / 2, cast: false }));
-  EAST.add(mesh(box(0.6, 0.6, 0.06), '#ffc4d6', { x: 12.6, y: 1.45, z: 1.18, cast: false }));
-  EAST.add(mesh(box(0.6, 0.05, 0.07), '#ffffff', { x: 12.6, y: 1.25, z: 1.18, cast: false }));
+  piece('washbasin', EAST, () => {
+    EAST.add(mesh(cyl(0.1, 0.14, 0.75, 12), '#ffffff', { x: 10.6, y: 0.48, z: 1.45 }));
+    EAST.add(mesh(cyl(0.38, 0.28, 0.2, 18), '#ffffff', { x: 10.6, y: 0.95, z: 1.45 }));
+    EAST.add(mesh(cyl(0.45, 0.45, 0.06, 28), '#ffc4d6', { x: 10.6, y: 1.65, z: 1.12, rx: PI / 2 }));
+    EAST.add(mesh(cyl(0.38, 0.38, 0.02, 28), '#e6f6ff', { x: 10.6, y: 1.65, z: 1.16, rx: PI / 2, cast: false }));
+    EAST.add(mesh(cyl(0.025, 0.025, 0.9, 8), '#c7ccd8', { x: 12.6, y: 1.75, z: 1.2, rz: PI / 2, cast: false }));
+    EAST.add(mesh(box(0.6, 0.6, 0.06), '#ffc4d6', { x: 12.6, y: 1.45, z: 1.18, cast: false }));
+    EAST.add(mesh(box(0.6, 0.05, 0.07), '#ffffff', { x: 12.6, y: 1.25, z: 1.18, cast: false }));
+  });
 }
 
 // ---------- bedroom (front left annex) ----------
@@ -506,34 +550,42 @@ let skyMat, sunMoon;
   [[-2.3, 9.8], [-0.9, 10.9], [-1.4, 9.4], [-2.0, 11.2]].forEach(([x, z]) => LEFT.add(mesh(cone(0.16, 0.02, 5), '#fff1b0', { x, y: 0.16, z, cast: false })));
   // the bed, headboard against the wall
   const B = { x: -5.3, z: 10.4 };
-  LEFT.add(mesh(box(3.3, 0.45, 2.5), '#e2b088', { x: B.x, y: 0.35, z: B.z }));
-  LEFT.add(mesh(box(0.25, 1.6, 2.6), '#e2b088', { x: -6.85, y: 0.9, z: B.z }));
-  LEFT.add(mesh(cyl(1.25, 1.25, 0.25, 40), '#e2b088', { x: -6.85, y: 1.45, z: B.z, rz: PI / 2 }));
-  LEFT.add(mesh(box(3.1, 0.34, 2.35), '#fffaf6', { x: B.x + 0.05, y: 0.72, z: B.z }));
-  LEFT.add(mesh(box(2.3, 0.16, 2.5), '#ffb3c8', { x: B.x + 0.5, y: 0.9, z: B.z }));
-  LEFT.add(mesh(box(0.35, 0.18, 2.52), '#fff1f5', { x: B.x - 0.6, y: 0.92, z: B.z }));
-  for (let i = 0; i < 6; i++) LEFT.add(mesh(sph(0.07, 8), '#ffffff', { x: B.x + 0.0 + (i % 3) * 0.6, y: 0.97, z: B.z - 0.6 + Math.floor(i / 3) * 1.2, s: [1, 0.4, 1], cast: false }));
-  [-0.6, 0.6].forEach(dz => LEFT.add(mesh(sph(0.42, 14), '#fff6fa', { x: -6.3, y: 1.05, z: B.z + dz, s: [0.8, 0.45, 1.25] })));
+  piece('bed', LEFT, () => {
+    LEFT.add(mesh(box(3.3, 0.45, 2.5), '#e2b088', { x: B.x, y: 0.35, z: B.z }));
+    LEFT.add(mesh(box(0.25, 1.6, 2.6), '#e2b088', { x: -6.85, y: 0.9, z: B.z }));
+    LEFT.add(mesh(cyl(1.25, 1.25, 0.25, 40), '#e2b088', { x: -6.85, y: 1.45, z: B.z, rz: PI / 2 }));
+    LEFT.add(mesh(box(3.1, 0.34, 2.35), '#fffaf6', { x: B.x + 0.05, y: 0.72, z: B.z }));
+    LEFT.add(mesh(box(2.3, 0.16, 2.5), '#ffb3c8', { x: B.x + 0.5, y: 0.9, z: B.z }));
+    LEFT.add(mesh(box(0.35, 0.18, 2.52), '#fff1f5', { x: B.x - 0.6, y: 0.92, z: B.z }));
+    for (let i = 0; i < 6; i++) LEFT.add(mesh(sph(0.07, 8), '#ffffff', { x: B.x + 0.0 + (i % 3) * 0.6, y: 0.97, z: B.z - 0.6 + Math.floor(i / 3) * 1.2, s: [1, 0.4, 1], cast: false }));
+    [-0.6, 0.6].forEach(dz => LEFT.add(mesh(sph(0.42, 14), '#fff6fa', { x: -6.3, y: 1.05, z: B.z + dz, s: [0.8, 0.45, 1.25] })));
+  });
   // plush bear on the pillow
-  const plush = new THREE.Group(); plush.position.set(-6.2, 1.3, B.z + 1.05); plush.rotation.y = PI / 2;
-  plush.add(mesh(sph(0.16, 12), '#d8a77d', { y: -0.05 }));
-  plush.add(mesh(sph(0.13, 12), '#d8a77d', { y: 0.17 }));
-  [-1, 1].forEach(sd => plush.add(mesh(sph(0.05, 8), '#d8a77d', { x: sd * 0.1, y: 0.28 })));
-  plush.add(mesh(sph(0.05, 8), '#fff4e0', { y: 0.14, z: 0.11 }));
-  LEFT.add(plush);
+  piece('bed', LEFT, () => {
+    const plush = new THREE.Group(); plush.position.set(-6.2, 1.3, B.z + 1.05); plush.rotation.y = PI / 2;
+    plush.add(mesh(sph(0.16, 12), '#d8a77d', { y: -0.05 }));
+    plush.add(mesh(sph(0.13, 12), '#d8a77d', { y: 0.17 }));
+    [-1, 1].forEach(sd => plush.add(mesh(sph(0.05, 8), '#d8a77d', { x: sd * 0.1, y: 0.28 })));
+    plush.add(mesh(sph(0.05, 8), '#fff4e0', { y: 0.14, z: 0.11 }));
+    LEFT.add(plush);
+  });
   // nightstand with a moon lamp
-  LEFT.add(mesh(box(0.9, 0.8, 0.8), '#fff6ef', { x: -6.45, y: 0.45, z: 12.4 }));
-  LEFT.add(mesh(box(0.7, 0.04, 0.04), '#d9a0b0', { x: -6.45, y: 0.55, z: 12.82, cast: false }));
-  LEFT.add(mesh(sph(0.22, 16), '', { x: -6.45, y: 1.1, z: 12.4, mat: windowMat }));
+  piece('nightstand', LEFT, () => {
+    LEFT.add(mesh(box(0.9, 0.8, 0.8), '#fff6ef', { x: -6.45, y: 0.45, z: 12.4 }));
+    LEFT.add(mesh(box(0.7, 0.04, 0.04), '#d9a0b0', { x: -6.45, y: 0.55, z: 12.82, cast: false }));
+    LEFT.add(mesh(sph(0.22, 16), '', { x: -6.45, y: 1.1, z: 12.4, mat: windowMat }));
+  });
   const L = new THREE.PointLight(0xffd9a0, 0, 6, 1.8); L.position.set(-6.0, 1.5, 12.0); LEFT.add(L); lampLights.push(L);
   // window above the bed, sharing the sky colour with the living room window
   LEFT.add(mesh(box(0.16, 1.5, 2.0), '#ffffff', { x: -6.92, y: 3.0, z: B.z }));
   LEFT.add(mesh(box(0.04, 1.25, 1.75), '', { x: -6.84, y: 3.0, z: B.z, mat: skyMat, cast: false }));
   LEFT.add(mesh(box(0.06, 1.25, 0.06), '#ffffff', { x: -6.8, y: 3.0, z: B.z, cast: false }));
   // wardrobe and slippers
-  LEFT.add(mesh(box(1.0, 2.6, 1.8), '#fde4d4', { x: -6.4, y: 1.4, z: 8.3 }));
-  LEFT.add(mesh(box(0.03, 2.3, 0.02), '#e9bfa8', { x: -5.89, y: 1.45, z: 8.3, cast: false }));
-  [-0.15, 0.15].forEach(dz => LEFT.add(mesh(sph(0.05, 8), '#ffffff', { x: -5.86, y: 1.5, z: 8.3 + dz, cast: false })));
+  piece('wardrobe', LEFT, () => {
+    LEFT.add(mesh(box(1.0, 2.6, 1.8), '#fde4d4', { x: -6.4, y: 1.4, z: 8.3 }));
+    LEFT.add(mesh(box(0.03, 2.3, 0.02), '#e9bfa8', { x: -5.89, y: 1.45, z: 8.3, cast: false }));
+    [-0.15, 0.15].forEach(dz => LEFT.add(mesh(sph(0.05, 8), '#ffffff', { x: -5.86, y: 1.5, z: 8.3 + dz, cast: false })));
+  });
   [-0.18, 0.18].forEach(dz => LEFT.add(mesh(sph(0.14, 10), '#ffc4d6', { x: -3.4, y: 0.17, z: 11.3 + dz, s: [1.6, 0.5, 0.8] })));
   // a little star mobile that slowly turns
   const mobile = new THREE.Group(); mobile.position.set(-4.4, 2.9, B.z); LEFT.add(mobile);
@@ -549,13 +601,15 @@ let skyMat, sunMoon;
 {
   for (let i = 0; i < 8; i++) scene.add(mesh(box(0.95, 0.12, 4.3), i % 2 ? '#e3c3a2' : '#d9b48e', { x: 6.5 + i * 0.975, y: 0.06, z: 9.25, cast: false, recv: true }));
   // low planter boxes between the bathroom and the balcony, so the bathroom stays in view
-  for (let i = 0; i < 4; i++) {
-    const x = 8.2 + i * 1.6;
-    scene.add(mesh(box(1.45, 0.5, 0.45), '#fff6ef', { x, y: 0.3, z: 7.2 }));
-    scene.add(mesh(box(1.35, 0.06, 0.36), '#a8724e', { x, y: 0.56, z: 7.2, cast: false }));
-    for (let k = 0; k < 4; k++) scene.add(mesh(sph(0.15 + (k % 2) * 0.04, 10), k % 3 ? '#9fd49a' : '#8ccf8a', { x: x - 0.5 + k * 0.33, y: 0.68, z: 7.2 }));
-    [-0.35, 0.3].forEach((dx, k) => scene.add(mesh(sph(0.07, 8), ['#ff9fb5', '#ffd27a', '#c3a3f0', '#ffffff'][(i + k) % 4], { x: x + dx, y: 0.86, z: 7.25, cast: false })));
-  }
+  piece('planters', scene, () => {
+    for (let i = 0; i < 4; i++) {
+      const x = 8.2 + i * 1.6;
+      scene.add(mesh(box(1.45, 0.5, 0.45), '#fff6ef', { x, y: 0.3, z: 7.2 }));
+      scene.add(mesh(box(1.35, 0.06, 0.36), '#a8724e', { x, y: 0.56, z: 7.2, cast: false }));
+      for (let k = 0; k < 4; k++) scene.add(mesh(sph(0.15 + (k % 2) * 0.04, 10), k % 3 ? '#9fd49a' : '#8ccf8a', { x: x - 0.5 + k * 0.33, y: 0.68, z: 7.2 }));
+      [-0.35, 0.3].forEach((dx, k) => scene.add(mesh(sph(0.07, 8), ['#ff9fb5', '#ffd27a', '#c3a3f0', '#ffffff'][(i + k) % 4], { x: x + dx, y: 0.86, z: 7.25, cast: false })));
+    }
+  });
   // white railing along the open sides, with fairy lights that glow at night
   const rail = (x, z, w, d) => scene.add(mesh(box(w, 0.08, d), '#ffffff', { x, y: 0.95, z }));
   rail(9.9, 11.45, 7.8, 0.1); rail(13.75, 9.3, 0.1, 4.3);
@@ -563,24 +617,30 @@ let skyMat, sunMoon;
   for (let z = 7.6; z < 11.4; z += 0.55) scene.add(mesh(box(0.07, 0.85, 0.07), '#ffffff', { x: 13.75, y: 0.5, z }));
   for (let i = 0; i < 16; i++) scene.add(mesh(sph(0.055, 8), '', { x: 6.3 + i * 0.47, y: 1.05 - Math.abs(Math.sin(i * 0.9)) * 0.08, z: 11.5, mat: bulbMat, cast: false }));
   // a big leafy plant in the corner, a little lemon tree and some small pots
-  scene.add(mesh(cyl(0.42, 0.32, 0.7, 16), '#f49a91', { x: 13.1, y: 0.4, z: 10.8 }));
-  [[0, 1.2, 0, 0.55], [0.3, 1.65, -0.1, 0.42], [-0.25, 1.55, 0.15, 0.4], [0.05, 2.0, 0.05, 0.32]].forEach(([dx, y, dz, r]) => scene.add(mesh(sph(r, 14), '#7cc68a', { x: 13.1 + dx, y, z: 10.8 + dz })));
-  scene.add(mesh(cyl(0.3, 0.24, 0.5, 14), '#c3e3dd', { x: 6.7, y: 0.3, z: 10.9 }));
-  scene.add(mesh(cyl(0.04, 0.05, 0.6, 6), '#b88a62', { x: 6.7, y: 0.8, z: 10.9 }));
-  scene.add(mesh(sph(0.45, 14), '#9fd49a', { x: 6.7, y: 1.3, z: 10.9 }));
-  [[6.45, 1.2, 11.2], [6.95, 1.45, 10.95], [6.6, 1.55, 10.6], [6.9, 1.1, 10.6]].forEach(([x, y, z]) => scene.add(mesh(sph(0.08, 8), '#ffd23f', { x, y, z, cast: false })));
-  [[8.0, 11.05, '#ffc4d6'], [12.0, 11.05, '#b5ccff'], [13.3, 8.0, '#ffd27a']].forEach(([x, z, c]) => {
-    scene.add(mesh(cyl(0.18, 0.14, 0.3, 12), c, { x, y: 0.27, z }));
-    scene.add(mesh(sph(0.22, 10), '#8ccf8a', { x, y: 0.55, z }));
+  piece('balconyplants', scene, () => {
+    scene.add(mesh(cyl(0.42, 0.32, 0.7, 16), '#f49a91', { x: 13.1, y: 0.4, z: 10.8 }));
+    [[0, 1.2, 0, 0.55], [0.3, 1.65, -0.1, 0.42], [-0.25, 1.55, 0.15, 0.4], [0.05, 2.0, 0.05, 0.32]].forEach(([dx, y, dz, r]) => scene.add(mesh(sph(r, 14), '#7cc68a', { x: 13.1 + dx, y, z: 10.8 + dz })));
+    scene.add(mesh(cyl(0.3, 0.24, 0.5, 14), '#c3e3dd', { x: 6.7, y: 0.3, z: 10.9 }));
+    scene.add(mesh(cyl(0.04, 0.05, 0.6, 6), '#b88a62', { x: 6.7, y: 0.8, z: 10.9 }));
+    scene.add(mesh(sph(0.45, 14), '#9fd49a', { x: 6.7, y: 1.3, z: 10.9 }));
+    [[6.45, 1.2, 11.2], [6.95, 1.45, 10.95], [6.6, 1.55, 10.6], [6.9, 1.1, 10.6]].forEach(([x, y, z]) => scene.add(mesh(sph(0.08, 8), '#ffd23f', { x, y, z, cast: false })));
+    [[8.0, 11.05, '#ffc4d6'], [12.0, 11.05, '#b5ccff'], [13.3, 8.0, '#ffd27a']].forEach(([x, z, c]) => {
+      scene.add(mesh(cyl(0.18, 0.14, 0.3, 12), c, { x, y: 0.27, z }));
+      scene.add(mesh(sph(0.22, 10), '#8ccf8a', { x, y: 0.55, z }));
+    });
   });
   // two squishy bean bags and a little table with mugs
-  [[9.2, '#ffc4d6'], [10.8, '#b5ccff']].forEach(([x, c]) => scene.add(mesh(sph(0.55, 18), c, { x, y: 0.3, z: 9.7, s: [1.1, 0.55, 1.1] })));
-  scene.add(mesh(cyl(0.3, 0.3, 0.06, 18), '#fff6ef', { x: 10.0, y: 0.5, z: 10.5 }));
-  scene.add(mesh(cyl(0.05, 0.07, 0.4, 8), '#e2b088', { x: 10.0, y: 0.28, z: 10.5 }));
-  [[-0.1, '#ff9fb5'], [0.12, '#8fc1f0']].forEach(([dx, c]) => scene.add(mesh(cyl(0.06, 0.05, 0.12, 10), c, { x: 10.0 + dx, y: 0.59, z: 10.5 })));
+  piece('beanbags', scene, () => {
+    [[9.2, '#ffc4d6'], [10.8, '#b5ccff']].forEach(([x, c]) => scene.add(mesh(sph(0.55, 18), c, { x, y: 0.3, z: 9.7, s: [1.1, 0.55, 1.1] })));
+    scene.add(mesh(cyl(0.3, 0.3, 0.06, 18), '#fff6ef', { x: 10.0, y: 0.5, z: 10.5 }));
+    scene.add(mesh(cyl(0.05, 0.07, 0.4, 8), '#e2b088', { x: 10.0, y: 0.28, z: 10.5 }));
+    [[-0.1, '#ff9fb5'], [0.12, '#8fc1f0']].forEach(([dx, c]) => scene.add(mesh(cyl(0.06, 0.05, 0.12, 10), c, { x: 10.0 + dx, y: 0.59, z: 10.5 })));
+  });
   // watering can
-  scene.add(mesh(cyl(0.16, 0.18, 0.28, 12), '#9fdcc8', { x: 12.7, y: 0.26, z: 8.0 }));
-  scene.add(mesh(cyl(0.025, 0.035, 0.35, 6), '#9fdcc8', { x: 12.5, y: 0.38, z: 8.0, rz: 0.9 }));
+  piece('balconyplants', scene, () => {
+    scene.add(mesh(cyl(0.16, 0.18, 0.28, 12), '#9fdcc8', { x: 12.7, y: 0.26, z: 8.0 }));
+    scene.add(mesh(cyl(0.025, 0.035, 0.35, 6), '#9fdcc8', { x: 12.5, y: 0.38, z: 8.0, rz: 0.9 }));
+  });
   // rain over the balcony
   const N = 120, pos = new Float32Array(N * 6), geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -596,6 +656,12 @@ let skyMat, sunMoon;
     geo.attributes.position.needsUpdate = true;
   });
 }
+
+// swap each piece of furniture for its Blender model as it loads
+PIECES.forEach(({ parent, built }, name) => loadModel(name, () => {
+  built.forEach(o => parent.remove(o));
+  parent.add(makeScenery(name, { window: windowMat, bulb: bulbMat }).g);
+}));
 
 // ---------- the whole home sits on its own little floating island, with a garden round the edge ----------
 const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
