@@ -26,11 +26,15 @@ Each Claude Code session moves in as a little character. When it reads files it 
 
 ## Sculpted in Blender
 
-The characters, the town's buildings and the Cat Room's furniture are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
+The characters, the town's buildings, the Cat Room's furniture and the little props dotted around the town are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
 
 ![The seven characters sculpted in Blender: an orange tabby cat, a white bunny, a bear, a frog, a chick, a penguin in a pink scarf, and Miw with orange braids, pink glasses and a polka-dot dress](docs/characters.jpg)
 
 ![The town's nine buildings sculpted in Blender: the ladybug Bug Clinic, the Pretzel Café, the Cat Home, the book-stack Library, the Code Factory, the mailbox Post Office, the mushroom Cozy Cottage, the Thinking Tower and the notebook Writing Studio](docs/buildings.jpg)
+
+![The Cat Room's furniture sculpted in Blender: a bookshelf, floor lamp, whiteboard, server rack, kitchen counter, fridge, wardrobe, bed, dining table, bathtub, sofa, desk, router table, bean bags, cat bed, washbasin, toilet, nightstand and plants](docs/furniture.jpg)
+
+![Props used all over the town: a flower, a round tree, a lamp post with a pink ribbon and a two-tier tree](docs/props.jpg)
 
 - **Soft and rounded.** Big heads, chubby bodies and bevelled edges everywhere, with ambient occlusion baked into each vertex, so creases and undersides go softly darker like a clay toy.
 - **Animated in Blender too.** Every character has a walk cycle with a real stride, plus idle sways, ear twitches and blinks. Moving parts of buildings (the telescope dome, the pencil, the gears, the envelope sign) are named nodes the town animates.
@@ -44,7 +48,7 @@ sh models/build.sh            # everything
 sh models/build.sh cat cafe   # just these
 ```
 
-Characters are `models/<name>.py`; the buildings all come from `models/town.py` and the furniture from `models/room.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, and the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy). Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
 
 ## Features
 
@@ -55,7 +59,6 @@ Characters are `models/<name>.py`; the buildings all come from `models/town.py` 
 - **Follow and photos.** 🎯 Follow keeps the camera on one friend as it walks around. 📸 Photo saves a framed picture of the scene, name tags included.
 - **Levels and a wardrobe.** Agents earn XP as they work and rest. They unlock a bow (Lv 2), scarf (Lv 3), flower crown (Lv 5), party hat (Lv 7), and crown (Lv 10).
 - **Real Bangkok time and weather.** Day and night follow Thai time. Clouds, rain, and storms follow the real weather from [Open-Meteo](https://open-meteo.com).
-- **Festivals.** Halloween (Oct 24 – Nov 1) brings pumpkins, ghosts, bats, and witch hats.
 - **Little touches.** Animated speech bubbles, friends waving when they meet, butterflies, a hot-air balloon, and optional ambient sound (🔇 by default). Tap any building or room to see who's there.
 
 ## Requirements
@@ -88,7 +91,6 @@ Add these to the URL:
 |---|---|
 | `?hour=21` | Pretend it's 9 pm (any hour 0–23) |
 | `?weather=rain` | Force the weather: `clear`, `cloudy`, `rain`, or `storm` |
-| `?festival=halloween` | Turn a festival on (`?festival=none` turns it off) |
 
 If the server isn't reachable, the page runs a demo with a few made-up agents.
 
@@ -117,10 +119,10 @@ The server listens on `127.0.0.1` only, and:
 | `hook.js` | Claude Code hook that turns hook events into states |
 | `town.html` | The 3D town |
 | `room.html` | The 3D cat room |
-| `panel.js` | Shared UI: task drawer, agent cards, wardrobe, timelines, places, festivals, sound, bubbles |
+| `panel.js` | Shared UI: task drawer, agent cards, wardrobe, timelines, places, sound, bubbles |
 | `scenery.js` | Shared 3D bits: pretzels, floating islands, icing, and merging static scenery to keep it fast |
 | `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
-| `models/` | Blender scripts for the characters, buildings and furniture, the `.glb` files they make, and `build.sh` |
+| `models/` | Blender scripts for the characters, buildings, furniture and props, the `.glb` files they make, and `build.sh` |
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
 
 Built with [three.js](https://threejs.org) r128.

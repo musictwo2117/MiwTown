@@ -949,22 +949,34 @@ function freeSpot(minEdge = 0.86) {
   return null;
 }
 const LEAF = ['#9fd49a', '#8ccf8a', '#b5e3a1', '#ffc4d6'];
+const TREES = [], FLOWERS = [];
 for (let i = 0; i < 22; i++) {
   const s = freeSpot(); if (!s) break;
   const [x, z] = s, t = new THREE.Group(), sc = 0.6 + rand() * 0.45;
   t.add(mesh(cyl(0.1, 0.14, 0.7, 8), '#c9a27e', { y: 0.35 }));
-  const c = LEAF[Math.floor(rand() * LEAF.length)];
+  const c = LEAF[Math.floor(rand() * LEAF.length)], tall = rand() > 0.4;
   t.add(mesh(sph(0.55, 14), c, { y: 1.05 }));
-  if (rand() > 0.4) t.add(mesh(sph(0.38, 12), c, { y: 1.5, x: 0.12 }));
+  if (tall) t.add(mesh(sph(0.38, 12), c, { y: 1.5, x: 0.12 }));
   t.position.set(x, 0.15, z); t.scale.setScalar(sc);
-  scene.add(t); busy.push(t.position);
+  scene.add(t); busy.push(t.position); TREES.push({ t, c, tall });
 }
 const FLOWER = ['#ff9fb5', '#ffffff', '#ffd27a', '#c3a3f0'];
 for (let i = 0; i < 60; i++) {
   const x = (rand() * 2 - 1) * 12.5, z = (rand() * 2 - 1) * 10;
   if (Math.hypot(x / 13, z / 10.4) > 0.95 || Math.abs(Math.hypot(x / A, z / B) - 1) < 0.15 || inPool(x, z)) continue;
-  scene.add(mesh(sph(0.08, 6), FLOWER[i % 4], { x, y: 0.2, z, cast: false }));
+  const f = mesh(sph(0.08, 6), FLOWER[i % 4], { x, y: 0.2, z, cast: false });
+  scene.add(f); FLOWERS.push({ f, c: FLOWER[i % 4], turn: i * 2.4 });
 }
+// Blender-sculpted props (models/props.py) take over each tree and flower, in the same colors
+['tree', 'treetall'].forEach(name => loadModel(name, () => TREES.filter(r => (r.tall ? 'treetall' : 'tree') === name).forEach(({ t, c }) => {
+  while (t.children.length) t.remove(t.children[0]);
+  t.add(makeScenery(name, {}, { leaf: c }).g);
+})));
+loadModel('flower', () => FLOWERS.forEach(({ f, c, turn }) => {
+  const m = makeScenery('flower', {}, { petal: c }).g;
+  m.position.set(f.position.x, 0.15, f.position.z); m.rotation.y = turn; m.scale.setScalar(1.3);
+  scene.remove(f); scene.add(m);
+}));
 // ---------- tiny floating islets bobbing around the town ----------
 [[-11, 4.5, -11, 1.6], [10, 5.5, -12.5, 1.3], [-16.5, 1.0, 4, 1.15]].forEach(([x, y, z, sc], i) => {
   const g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(sc); scene.add(g);
@@ -1023,13 +1035,16 @@ for (let i = 0; i < 7; i++) {
   });
 }
 
-const lampLights = [];
+const lampLights = [], POSTS = [];
 [0.05, 0.68, 1.27, 1.84].forEach((k, i) => {
   const th = k * PI * 2 / 2 + 0.2, p = pathPoint(th).add(outward(th).multiplyScalar(-0.95));
-  scene.add(mesh(cyl(0.05, 0.07, 1.4, 8), '#8a7a80', { x: p.x, y: 0.85, z: p.z }));
-  scene.add(mesh(sph(0.17, 12), '', { x: p.x, y: 1.62, z: p.z, mat: bulbMat }));
+  const post = new THREE.Group(); post.position.set(p.x, 0.15, p.z); scene.add(post);
+  post.add(mesh(cyl(0.05, 0.07, 1.4, 8), '#8a7a80', { y: 0.7 }));
+  post.add(mesh(sph(0.17, 12), '', { y: 1.47, mat: bulbMat }));
+  POSTS.push(post);
   const L = new THREE.PointLight(0xffc97a, 0, 6, 2); L.position.set(p.x, 1.7, p.z); scene.add(L); lampLights.push(L);
 });
+loadModel('lamppost', () => POSTS.forEach(post => { while (post.children.length) post.remove(post.children[0]); post.add(makeScenery('lamppost', { bulb: bulbMat }).g); }));
 
 // clouds
 const clouds = [];
@@ -1427,14 +1442,6 @@ const placeLabels = Object.entries(PLACES).map(([k, P]) => {
   labels.append(el); placeLabels.push([el, { labelPos: new THREE.Vector3(POOL.x, 2.2, POOL.z), icon: '🏊', name: 'Pool', rest: 1,
     desc: 'A swim to cool off. Popular on sunny days, empty when it rains.' }]);
 }
-// spots for festive decorations (see panel.js): [x, y, z, size]
-const FESTIVE = {
-  // by the road between buildings: [angle / PI, side] (+1 outer, -1 inner), clear of doorsteps, the bridge and the café terrace
-  pumpkins: [[1.0, -1], [0.4, 1], [0.68, 1], [0.97, 1], [1.27, 1], [1.56, 1], [1.84, 1]].map(([k, side]) => { const p = pathPoint(PI * k).add(outward(PI * k).multiplyScalar(side)); return [p.x, 0.15, p.z, 1.1]; })
-    .concat([[POOL.x - 1.6, 0.3, POOL.z + 1.6, 0.9], [CAFE.x + 1.2, 0.15, CAFE.z + 1.0, 0.8]]),
-  ghosts: [[-2.5, 3.6, 1.5], [3.0, 4.2, -2.5], [5.5, 3.2, 4.0]],
-  bats: { x: CENTER.x, y: 6, z: CENTER.z, r: 10, n: 7 },
-};
 // guide rows
 const rowEls = {};
 Object.entries(PLACES).forEach(([k, P]) => {
