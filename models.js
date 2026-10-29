@@ -12,10 +12,25 @@
   const mat = (c, ao) => mats[c + ao] || (mats[c + ao] = new THREE.MeshLambertMaterial({ color: c, vertexColors: ao }));
   const templates = {};
 
+  // whenModelsLoaded(cb) runs cb once every model asked for so far has loaded (or failed), or after maxMs at most:
+  // the pages wait for it before merging still scenery, so the Blender pieces get merged too
+  let pending = 0;
+  const waiters = [];
+  const settle = () => { if (--pending === 0) waiters.splice(0).forEach(f => f()); };
+  window.whenModelsLoaded = (cb, maxMs = 6000) => {
+    if (!pending) return cb();
+    let done = false;
+    const go = () => { if (!done) { done = true; cb(); } };
+    waiters.push(go); setTimeout(go, maxMs);
+  };
+
   window.loadModel = (name, onReady) => {
     if (!THREE.GLTFLoader) return;
-    new THREE.GLTFLoader().load(`models/${name}.glb`, gltf => { templates[name] = gltf; onReady && onReady(name); },
-      undefined, err => console.warn(`models/${name}.glb didn't load, keeping the built-in look`, err));
+    pending++;
+    new THREE.GLTFLoader().load(`models/${name}.glb`, gltf => {
+      templates[name] = gltf;
+      try { onReady && onReady(name); } finally { settle(); }
+    }, undefined, err => { console.warn(`models/${name}.glb didn't load, keeping the built-in look`, err); settle(); });
   };
 
   window.makeModel = (name, color) => {
@@ -31,15 +46,17 @@
     return { g, body: find('body'), head: find('head'), tail: find('tail'), feet: [find('foot_L'), find('foot_R')], pose: poser(g, t.animations) };
   };
 
-  // Buildings and furniture: every material keeps its Blender color (with baked shadows), except the names in
-  // `special` (window glass, glowing bulbs...) which the page supplies so they can light up at night.
-  window.makeScenery = (name, special = {}) => {
+  // Buildings, furniture and props: every material keeps its Blender color (with baked shadows), except the names
+  // in `special` (window glass, glowing bulbs...) which the page supplies so they can light up at night, and the
+  // names in `colors` (a tree's "leaf", a flower's "petal"), which take the color given for this copy.
+  window.makeScenery = (name, special = {}, colors = {}) => {
     const t = templates[name];
     if (!t) return null;
     const g = t.scene.clone(true);
     g.traverse(o => {
       if (!o.isMesh) return;
-      o.material = special[o.material.name] || mat(own(o.material), !!o.geometry.attributes.color);
+      const n = o.material.name;
+      o.material = special[n] || mat(colors[n] || own(o.material), !!o.geometry.attributes.color);
       o.castShadow = o.receiveShadow = true;
     });
     return { g, find: n => g.getObjectByName(n) };

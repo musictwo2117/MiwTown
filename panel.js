@@ -258,10 +258,10 @@
     const worn = wearOf(me);
     const wardrobe = el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, '👗 Wardrobe'),
-      el('div', { className: 'wear' }, [{ key: 'none', icon: '🙅', name: 'Nothing', lv: 1 }, ...WEAR.filter(w => !w.festival || w.festival === festival())].map(w => {
+      el('div', { className: 'wear' }, [{ key: 'none', icon: '🙅', name: 'Nothing', lv: 1 }, ...WEAR].map(w => {
         const open = w.lv <= lv;
-        const b = el('button', { className: 'wi' + (worn === w.key ? ' on' : ''), disabled: !open, title: w.festival ? `${w.name}: this week only` : open ? w.name : `Unlocks at Lv ${w.lv}` },
-          el('span', {}, open ? w.icon : '🔒'), open ? w.name : `Lv ${w.lv}`, w.festival ? el('span', { className: 'tag' }, 'This week') : null);
+        const b = el('button', { className: 'wi' + (worn === w.key ? ' on' : ''), disabled: !open, title: open ? w.name : `Unlocks at Lv ${w.lv}` },
+          el('span', {}, open ? w.icon : '🔒'), open ? w.name : `Lv ${w.lv}`);
         b.onclick = () => { setWear(me.id, w.key); dressUp(me); render(); };
         return b;
       })),
@@ -332,21 +332,17 @@
     { key: 'flowers', icon: '🌸', name: 'Flower crown', lv: 5 },
     { key: 'party', icon: '🥳', name: 'Party hat', lv: 7 },
     { key: 'crown', icon: '👑', name: 'Crown', lv: 10 },
-    { key: 'witch', icon: '🧙', name: 'Witch hat', lv: 1, festival: 'halloween' },
   ];
   const WEAR_KEY = 'miw-town-wear';
   const readWear = () => { try { return JSON.parse(localStorage.getItem(WEAR_KEY) || '{}'); } catch { return {}; } };
   const setWear = (id, key) => { const m = readWear(); m[id] = key; try { localStorage.setItem(WEAR_KEY, JSON.stringify(m)); } catch {} };
   // an agent wears what you picked while it's unlocked, otherwise the newest thing it has unlocked
-  // during a festival everyone gets its special item, unless you picked something else
   function wearOf(me) {
-    const pick = readWear()[me.id], lv = lvl(xpStore[me.id] || 0), f = festival();
-    const ok = WEAR.filter(w => w.lv <= lv && (!w.festival || w.festival === f));
+    const pick = readWear()[me.id], lv = lvl(xpStore[me.id] || 0);
+    const ok = WEAR.filter(w => w.lv <= lv);
     if (pick === 'none') return 'none';
     if (ok.some(w => w.key === pick)) return pick;
-    const special = ok.find(w => w.festival);
-    if (special) return special.key;
-    return ([...ok].reverse().find(w => !w.festival) || { key: 'none' }).key;
+    return (ok[ok.length - 1] || { key: 'none' }).key;
   }
   const wMats = {};
   const wMat = (c, extra) => { const k = c + JSON.stringify(extra || {}); return wMats[k] || (wMats[k] = new THREE.MeshLambertMaterial({ color: c, ...extra })); };
@@ -390,15 +386,6 @@
       for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; part(c, new THREE.ConeGeometry(0.045, 0.1, 6), '#ffd23f', [Math.sin(a) * 0.15, 0.1, Math.cos(a) * 0.15]); }
       part(c, new THREE.SphereGeometry(0.035, 8, 6), '#ff7b9c', [0, 0, 0.16]);
     }
-    if (key === 'witch') {
-      const h = grp(cat.head); h.position.set(0.02, top + 0.02, -0.02); h.rotation.set(-0.08, 0, -0.12);
-      part(h, new THREE.CylinderGeometry(0.34, 0.34, 0.03, 24), '#5b3f8c');
-      part(h, new THREE.CylinderGeometry(0.19, 0.2, 0.06, 20), '#ff9a3c', [0, 0.04, 0]);
-      part(h, new THREE.BoxGeometry(0.08, 0.06, 0.02), '#ffd23f', [0, 0.04, 0.19]);
-      const tip = new THREE.Group(); tip.position.y = 0.06; h.add(tip);
-      part(tip, new THREE.ConeGeometry(0.18, 0.3, 20), '#6a4a9c', [0, 0.15, 0]);
-      part(tip, new THREE.ConeGeometry(0.09, 0.2, 14), '#6a4a9c', [0.05, 0.36, -0.02], [0, 0, -0.5]);
-    }
     return made;
   }
   function dressUp(me) {
@@ -413,7 +400,7 @@
     for (const me of agents.values()) {
       const lv = lvl(xpStore[me.id] || 0);
       if (me.seenLv && lv > me.seenLv) {
-        const item = WEAR.find(w => !w.festival && w.lv > me.seenLv && w.lv <= lv);
+        const item = WEAR.find(w => w.lv > me.seenLv && w.lv <= lv);
         burst(me, ['🎉', '✨', '⭐', '🎊']);
         toast(item ? `🎉 ${me.name} reached Lv ${lv} and unlocked a ${item.name.toLowerCase()} ${item.icon}` : `🎉 ${me.name} reached Lv ${lv}!`);
         if (item) setWear(me.id, item.key);
@@ -558,85 +545,10 @@
     return [head, el('div', { className: 'db' }, el('div', {}, el('h3', {}, here.length ? `Here now · ${here.length}` : 'Here now'), list))];
   }
 
-  // ---------- festivals: decorations that switch on by date (Bangkok time); try ?festival=halloween or ?festival=none ----------
-  // add more here later (Loy Krathong, Christmas…): a date range, a wardrobe item, and a decor builder
-  const FESTIVALS = { halloween: { from: [10, 24], to: [11, 1], hello: '🎃 Happy Halloween week! Everyone dressed up.' } };
-  let festCache = [0, null];
-  function festival() {
-    if (Date.now() - festCache[0] < 60000) return festCache[1];
-    const q = new URLSearchParams(location.search).get('festival');
-    let f = null;
-    if (q !== null) f = FESTIVALS[q] ? q : null;
-    else {
-      const p = bkk({ month: 'numeric', day: 'numeric' }).formatToParts(new Date());
-      const md = +p.find(x => x.type === 'month').value * 100 + +p.find(x => x.type === 'day').value;
-      f = Object.keys(FESTIVALS).find(k => { const a = FESTIVALS[k].from[0] * 100 + FESTIVALS[k].from[1], b = FESTIVALS[k].to[0] * 100 + FESTIVALS[k].to[1]; return a <= b ? md >= a && md <= b : md >= a || md <= b; }) || null;
-    }
-    festCache = [Date.now(), f];
-    return f;
-  }
-  const glowMat = new THREE.MeshBasicMaterial({ color: '#ffd36b' });
-  function pumpkin() {
-    const g = new THREE.Group();
-    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; part(g, new THREE.SphereGeometry(0.17, 12, 10), i % 2 ? '#ff9a3c' : '#ff8c2e', [Math.cos(a) * 0.1, 0.17, Math.sin(a) * 0.1]).scale.set(0.85, 0.95, 0.85); }
-    part(g, new THREE.CylinderGeometry(0.03, 0.045, 0.12, 8), '#7a8a3a', [0, 0.36, 0], [0, 0, 0.2]);
-    // a friendly carved face that glows
-    [-1, 1].forEach(sd => { const e = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.07, 3), glowMat); e.position.set(sd * 0.075, 0.22, 0.255); e.rotation.x = Math.PI / 2; e.rotation.y = Math.PI; g.add(e); });
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.03), glowMat); m.position.set(0, 0.12, 0.255); g.add(m);
-    return g;
-  }
-  function ghost() {
-    const g = new THREE.Group(), mat = wMat('#ffffff', { transparent: true, opacity: 0.9, side: THREE.DoubleSide });
-    const add = (geo, y) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; g.add(m); return m; };
-    add(new THREE.SphereGeometry(0.32, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), 0.3);
-    add(new THREE.CylinderGeometry(0.32, 0.4, 0.42, 18, 1, true), 0.09);
-    [-1, 1].forEach(sd => { part(g, new THREE.SphereGeometry(0.045, 8, 6), '#3d2f4a', [sd * 0.11, 0.38, 0.29]); const arm = add(new THREE.SphereGeometry(0.09, 10, 8), 0.2); arm.position.x = sd * 0.38; arm.scale.set(1, 0.6, 0.6); });
-    part(g, new THREE.SphereGeometry(0.035, 8, 6), '#ff9fb5', [0, 0.27, 0.31]).scale.set(1, 1.3, 0.5);
-    return g;
-  }
-  function bat() {
-    const g = new THREE.Group(), dark = '#3d2f4a';
-    part(g, new THREE.SphereGeometry(0.13, 12, 10), dark);
-    [-1, 1].forEach(sd => part(g, new THREE.ConeGeometry(0.04, 0.09, 6), dark, [sd * 0.06, 0.13, 0]));
-    [-1, 1].forEach(sd => part(g, new THREE.SphereGeometry(0.025, 6, 6), '#ffe08a', [sd * 0.045, 0.03, 0.115]));
-    const shape = new THREE.Shape(); shape.moveTo(0, 0); shape.lineTo(0.5, 0.12); shape.lineTo(0.42, -0.02); shape.lineTo(0.3, 0.04); shape.lineTo(0.2, -0.06); shape.lineTo(0.08, -0.04); shape.lineTo(0, 0);
-    const wings = [-1, 1].map(sd => {
-      const pivot = new THREE.Group(); pivot.scale.x = sd; g.add(pivot);
-      const w = part(pivot, new THREE.ShapeGeometry(shape), '#4a3a5c', [0.08, 0, 0], [-Math.PI / 2, 0, 0], { side: THREE.DoubleSide });
-      return pivot;
-    });
-    g.userData.flap = t => wings.forEach(p => { p.rotation.z = Math.sin(t / 90) * 0.7; });
-    return g;
-  }
-  let decor = null;
-  function setFestive() {
-    const f = festival();
-    if ((decor && decor.key) === f) return;
-    if (decor) { scene.remove(decor.g); decor = null; }
-    agents.forEach(dressUp);
-    if (f !== 'halloween' || typeof FESTIVE === 'undefined') return;
-    const g = new THREE.Group(), anim = [];
-    const facing = (x, z) => Math.atan2(CAM_HOME.x - x, CAM_HOME.z - z);
-    FESTIVE.pumpkins.forEach(([x, y, z, sz]) => { const p = pumpkin(); p.position.set(x, y, z); p.scale.setScalar(sz); p.rotation.y = facing(x, z) + (Math.random() - 0.5) * 0.5; g.add(p); });
-    FESTIVE.ghosts.forEach(([x, y, z], i) => {
-      const h = ghost(); g.add(h);
-      anim.push(t => { const a = t / 3200 + i * 2; h.position.set(x + Math.cos(a) * 0.8, y + Math.sin(t / 700 + i) * 0.25, z + Math.sin(a) * 0.8); h.rotation.y = facing(h.position.x, h.position.z) + Math.sin(t / 900 + i) * 0.3; });
-    });
-    const B = FESTIVE.bats;
-    for (let i = 0; i < B.n; i++) {
-      const b = bat(); g.add(b);
-      const ph = i / B.n * Math.PI * 2, r = B.r * (0.75 + (i % 3) * 0.12), sp = (0.00022 + i * 0.00003) * (i % 2 ? 1 : -1), dy = (i % 2) * 1.2;
-      anim.push(t => { const a = ph + t * sp; b.position.set(B.x + Math.cos(a) * r, B.y + dy + Math.sin(t / 500 + i) * 0.3, B.z + Math.sin(a) * r * 0.8); b.rotation.y = Math.atan2(-Math.sin(a) * Math.sign(sp), Math.cos(a) * 0.8 * Math.sign(sp)); b.userData.flap(t + i * 137); });
-    }
-    scene.add(g);
-    decor = { key: f, g, anim };
-  }
-  animated.push(t => decor && decor.anim.forEach(fn => fn(t)));
-  setFestive(); setInterval(setFestive, 60000);
-
   // ---------- once everything is built, merge what never moves (agents stay separate) ----------
-  if (window.mergeStatic) mergeStatic(scene, { skip: o => [...agents.values()].some(a => a.cat.g === o), owners: new Set([...places.map(p => p.group), decor && decor.g].filter(Boolean)) });
-  if (festival() && FESTIVALS[festival()].hello) setTimeout(() => toast(FESTIVALS[festival()].hello), 1200);
+  // (after the Blender models have swapped in, so they get merged too)
+  const mergeNow = () => window.mergeStatic && mergeStatic(scene, { skip: o => [...agents.values()].some(a => a.cat.g === o), owners: new Set(places.map(p => p.group)) });
+  window.whenModelsLoaded ? whenModelsLoaded(mergeNow) : mergeNow();
 
   // ---------- ambient sound, off until you turn it on: birds by day, crickets at night, rain and thunder when it's really wet ----------
   const SOUND_KEY = 'miw-town-sound';
