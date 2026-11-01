@@ -136,7 +136,8 @@ node video/serve.js           # http://localhost:19200 plays the intro loop
 ```
 
 - `?t=2.5` freezes on the frame at 2.5 seconds, handy for checking stills.
-- `?capture` renders every frame into `video/out/<clip>/frames/`.
-- `sh video/encode.sh intro` then makes the MP4 for X, a looping GIF, a contact sheet and a three-loop seam check (needs [FFmpeg](https://ffmpeg.org): `brew install ffmpeg`).
+- `?capture` renders every frame into `video/out/<clip>/frames/`, and `?audio` renders its soundtrack to `video/out/<clip>/<clip>.wav`. Every sound is synthesized in code (`video/sound.js`) and timed from the same numbers as the animation.
+- `sh video/encode.sh intro` then makes the MP4 for X (with the soundtrack mixed to -14 LUFS), a looping GIF, a contact sheet and a three-loop seam check (needs [FFmpeg](https://ffmpeg.org): `brew install ffmpeg`).
+- For Reels, TikTok and Shorts, `cd video/remotion && npm install && npm run render` makes a 9:16 cut with [Remotion](https://www.remotion.dev): the loop twice, framed with a bouncy title and an end card (`video/out/intro/intro-vertical.mp4`).
 
 **Meet the friends** (`video/intro.html`): a 10.5 s seamless loop, 1080×1080 at 30 fps. In Miw's Cheesecake shop, a giant strawberry cheesecake turns to bring each friend to the front, where it hops, spins and gets its name tag.
