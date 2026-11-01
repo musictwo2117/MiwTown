@@ -33,7 +33,7 @@ const SIZE = 1080, FPS = 30, BEAT = 1.5, FRIENDS = [
   { sp: 'miw',     name: 'Miw',     color: '#ff6fae' },
 ];
 const N = FRIENDS.length, LOOP = N * BEAT, FRAMES = Math.round(LOOP * FPS);
-const R = 2.45, CHAR_SCALE = 1.45;
+const R = 2.45, CHAR_SCALE = 1.45, BLUR = 2.4;
 
 // ---------- easing ----------
 const clamp01 = x => Math.min(1, Math.max(0, x));
@@ -43,10 +43,12 @@ const outQuad = x => 1 - (1 - x) * (1 - x);
 const inOutBack = (x, c = 0.9) => { const c2 = c * 1.525; return x < 0.5 ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2 : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2; };
 // damped spring from 0 to 1, settled after about 0.5 s
 const spring = (s, zeta = 0.45, hz = 3.2) => s <= 0 ? 0 : 1 - Math.exp(-zeta * TAU * hz * s) * Math.cos(TAU * hz * Math.sqrt(1 - zeta * zeta) * s);
-const rng = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
 // ---------- renderer: draw at 2x, downsample into the 1080 output ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+// Two passes, like a camera lens: the shop behind (layer 1) is drawn first and softly blurred, then the cake and
+// the friends (layer 0) go over it sharp. Nothing in the shop ever passes in front of the cake, so no depth test is needed.
+const BACK = 1;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
 renderer.setPixelRatio(2);
 renderer.setSize(SIZE, SIZE, false);
 renderer.shadowMap.enabled = true;
@@ -55,9 +57,8 @@ const out = document.getElementById('out'), ctx = out.getContext('2d');
 ctx.imageSmoothingQuality = 'high';
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#fbe7df');
+const WALL = new THREE.Color('#fbe7df');
 const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-const RAINBOW = ['#ffb3c1', '#ffd6a5', '#fdf3a7', '#caffbf', '#a6ecf5', '#b5ccff', '#d3c4ff'];
 // canvas textures; the menu redraws itself once its font has loaded
 const tex = (w, h, draw, rx = 1, ry = 1) => {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
@@ -77,6 +78,14 @@ scene.add(sun);
 const fill = new THREE.DirectionalLight(0xffeef2, 0.26);
 fill.position.set(-2, 3, 10);
 scene.add(fill);
+// a soft pink rim from behind, so the friends' edges lift off the blurred shop
+const rim = new THREE.DirectionalLight(0xffd6e6, 0.4);
+rim.position.set(1, 6, -9);
+scene.add(rim);
+// warm daylight pooling round the window, and a glow under each lamp
+const windowGlow = new THREE.PointLight(0xffd9a8, 0.45, 7, 1.5);
+windowGlow.position.set(-4.3, 2.1, -4.8);
+scene.add(windowGlow);
 
 const mats = {};
 const M = (c, extra) => { const k = c + JSON.stringify(extra || {}); return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c, ...extra })); };
@@ -88,56 +97,20 @@ function mesh(geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast
   return m;
 }
 const cyl = (rt, rb, h, seg = 48) => new THREE.CylinderGeometry(rt, rb, h, seg);
-const sph = (r, seg = 20) => new THREE.SphereGeometry(r, seg, Math.round(seg * 0.75));
-const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 
-// a strawberry: a rounded cone with a leafy cap
-function strawberry(parent, x, y, z, s = 1, tilt = 0) {
-  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.z = tilt; g.scale.setScalar(s); parent.add(g);
-  g.add(mesh(new THREE.SphereGeometry(0.16, 16, 12), '#ef5470', { y: 0.12, s: [1, 1.15, 1] }));
-  g.add(mesh(cyl(0.001, 0.15, 0.16, 16), '#ef5470', { y: 0.0, rx: PI }));
-  for (let k = 0; k < 5; k++) g.add(mesh(sph(0.05, 8), '#7cc68a', { x: Math.sin(k / 5 * TAU) * 0.07, z: Math.cos(k / 5 * TAU) * 0.07, y: 0.27, s: [1, 0.4, 1.8], ry: k / 5 * TAU, cast: false }));
-  return g;
-}
-// a whole cheesecake: graham crust, cream body and a topping, with a strawberry on top
-function cheesecake(parent, x, y, z, r, top, berry = true) {
-  parent.add(mesh(cyl(r, r, r * 0.22), '#c98b4b', { x, y: y + r * 0.11, z }));
-  parent.add(mesh(cyl(r * 0.99, r, r * 0.62), '#fff0cf', { x, y: y + r * 0.53, z }));
-  parent.add(mesh(cyl(r * 1.01, r * 1.01, r * 0.1), top, { x, y: y + r * 0.88, z }));
-  if (berry) strawberry(parent, x, y + r * 0.95, z, r * 1.4);
-}
-
-// ---------- the turntable: a giant strawberry cheesecake on a cake stand ----------
+// ---------- the turntable: a giant strawberry cheesecake on a cake stand (models/shop.py) ----------
+// the friends stand on the cake's top at y = 0; only the pink disc they stand on turns
 const island = new THREE.Group(), table = new THREE.Group();
 scene.add(island); island.add(table);
-island.add(mesh(cyl(3.4, 3.4, 0.12, 72), '#f48fa8', { y: -0.05, recv: true, cast: false }));            // strawberry glaze
-island.add(mesh(cyl(3.36, 3.36, 0.9, 72), '#fff0cf', { y: -0.55, recv: true }));                        // the cream cheese
-island.add(mesh(cyl(3.4, 3.38, 0.3, 72), '#c98b4b', { y: -1.14, recv: true }));                         // graham crust
-// glaze drips down the side, crumbs on the crust, strawberries round the rim
-{ const r = rng(11);
-  for (let i = 0; i < 44; i++) {
-    const a = i / 44 * TAU + r() * 0.06, len = 0.12 + r() * 0.3;
-    island.add(mesh(sph(0.1 + r() * 0.05, 14), '#f07f9c', { x: Math.sin(a) * 3.36, z: Math.cos(a) * 3.36, y: -0.1 - len * 0.5, s: [1, 1 + len * 4, 0.6], cast: false }));
-  }
-  for (let i = 0; i < 40; i++) {
-    const a = r() * TAU;
-    island.add(mesh(sph(0.04 + r() * 0.03, 8), r() < 0.5 ? '#b5763c' : '#dba062', { x: Math.sin(a) * 3.39, z: Math.cos(a) * 3.39, y: -1.25 + r() * 0.22, cast: false }));
-  }
-  for (let i = 0; i < 16; i++) {
-    const a = (i + 0.5) / 16 * TAU;
-    strawberry(island, Math.sin(a) * 3.12, 0.01, Math.cos(a) * 3.12, 1, (r() - 0.5) * 0.4);
-  }
-}
 table.add(mesh(cyl(2.9, 2.9, 0.04, 72), '#fbb8c8', { y: 0.03, recv: true, cast: false }));
-// the stand: a white plate on a pedestal, sitting on a marble counter
-island.add(mesh(cyl(3.85, 3.7, 0.1, 72), '#fffaf6', { y: -1.34, recv: true }));
-island.add(mesh(cyl(0.45, 0.75, 1.0, 32), '#fffaf6', { y: -1.9 }));
-island.add(mesh(cyl(1.5, 1.6, 0.14, 48), '#fffaf6', { y: -2.43, recv: true }));
-scene.add(mesh(box(26, 0.3, 9), '#fbf3ee', { y: -2.65, z: -1.5, recv: true }));
+loadModel('bigcake', () => island.add(makeScenery('bigcake').g));
+const toBack = o => o.traverse(c => c.layers.set(BACK));
 
-// ---------- the shop behind ----------
+// ---------- the shop behind (models/shop.py), with its pictures drawn here ----------
 const shop = new THREE.Group(); shop.position.z = -6; scene.add(shop);
-// striped wallpaper with little hearts, and a pink wainscot with a cream rail
+// the set already has soft shadows baked in by Blender; hard ones from the sun would cut grey slabs across the wall
+loadModel('shop', () => { const set = makeScenery('shop').g; set.traverse(o => { o.castShadow = false; }); shop.add(set); toBack(shop); });
+// striped wallpaper with little hearts
 const paper = tex(256, 256, (g, w, h) => {
   g.fillStyle = '#fff6ea'; g.fillRect(0, 0, w, h);
   g.fillStyle = '#ffe6ea'; g.fillRect(0, 0, w / 2, h);
@@ -145,12 +118,9 @@ const paper = tex(256, 256, (g, w, h) => {
   const heart = (x, y, r) => { g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.6, y - r * 0.3, x - r * 0.5, y - r * 1.3, x, y - r * 0.4); g.bezierCurveTo(x + r * 0.5, y - r * 1.3, x + r * 1.6, y - r * 0.3, x, y + r * 0.9); g.fill(); };
   heart(w * 0.75, h * 0.25, 12); heart(w * 0.75, h * 0.75, 12);
 }, 12, 7);
-shop.add(mesh(new THREE.PlaneGeometry(34, 20), null, { y: 4, cast: false, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
-shop.add(mesh(box(34, 2.6, 0.2), '#f6c3cf', { y: -1.6, z: 0.1, cast: false }));
-shop.add(mesh(box(34, 0.18, 0.34), '#fff4e6', { y: -0.3, z: 0.15, cast: false }));
-for (let x = -16; x <= 16; x += 1.6) shop.add(mesh(box(0.9, 1.6, 0.06), '#f9d0da', { x, y: -1.65, z: 0.22, cast: false }));
+shop.add(mesh(new THREE.PlaneGeometry(34, 20), null, { y: 4, cast: false, recv: true, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
 
-// the shop's chalkboard sign, up top in the middle: it doubles as the video's title
+// the chalkboard's lettering: the shop's sign doubles as the video's title
 const menu = tex(1024, 400, (g, w, h) => {
   g.fillStyle = '#4a3b3f'; g.fillRect(0, 0, w, h);
   g.strokeStyle = '#fff6ea'; g.lineWidth = 6; g.setLineDash([18, 14]); g.strokeRect(26, 26, w - 52, h - 52);
@@ -158,67 +128,47 @@ const menu = tex(1024, 400, (g, w, h) => {
   g.font = '600 112px Fredoka'; g.fillText("Miw's Cheesecake", w / 2, h * 0.4);
   g.font = '500 60px Fredoka'; g.fillStyle = '#ffb3c1'; g.fillText('♡ meet the friends ♡', w / 2, h * 0.74);
 });
-shop.add(mesh(box(5.4, 2.3, 0.12), '#d9a87a', { x: 0, y: 3.85, z: 0.1, cast: false }));
 shop.add(mesh(new THREE.PlaneGeometry(5.0, 1.95), null, { x: 0, y: 3.85, z: 0.17, cast: false, mat: new THREE.MeshBasicMaterial({ map: menu }) }));
 
-// a window on the left, with a dusky pink sky and a scalloped awning
+// the view through the window: a dusky pink sky with puffy clouds
 const view = tex(256, 256, (g, w, h) => {
   const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffc6d6'); gr.addColorStop(1, '#ffe9c9');
   g.fillStyle = gr; g.fillRect(0, 0, w, h);
   g.fillStyle = 'rgba(255,255,255,0.85)';
   [[60, 80, 26], [90, 70, 32], [124, 84, 24], [190, 150, 22], [214, 142, 28]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); });
 });
-{ const win = new THREE.Group(); win.position.set(-4.3, 2.1, 0.1); win.scale.setScalar(0.8); shop.add(win);
-  win.add(mesh(box(3.2, 3.0, 0.14), '#fffaf6', { cast: false }));
-  win.add(mesh(new THREE.PlaneGeometry(2.8, 2.6), null, { z: 0.08, cast: false, mat: new THREE.MeshBasicMaterial({ map: view }) }));
-  win.add(mesh(box(0.1, 2.6, 0.06), '#fffaf6', { z: 0.12, cast: false }));
-  win.add(mesh(box(2.8, 0.1, 0.06), '#fffaf6', { z: 0.12, cast: false }));
-  win.add(mesh(box(3.5, 0.16, 0.5), '#fffaf6', { y: -1.55, z: 0.2, cast: false }));
-  win.add(mesh(box(3.6, 0.5, 0.5), '#f48fa8', { y: 1.72, z: 0.3, rx: 0.5, cast: false }));
-  for (let k = 0; k < 7; k++) {
-    const x = -1.5 + k * 0.5;
-    win.add(mesh(sph(0.25, 14), k % 2 ? '#fff6ea' : '#f48fa8', { x, y: 1.48, z: 0.52, s: [1, 0.55, 0.6], cast: false }));
-  }
-  // a little potted plant and a cake on the sill
-  win.add(mesh(cyl(0.22, 0.17, 0.32, 20), '#f6c3cf', { x: -1.1, y: -1.3, z: 0.25 }));
-  [[0, 0.3], [0.13, 0.22], [-0.13, 0.24]].forEach(([dx, dy]) => win.add(mesh(sph(0.16, 12), '#8cc97f', { x: -1.1 + dx, y: -1.1 + dy, z: 0.25 })));
-  cheesecake(win, 0.9, -1.47, 0.25, 0.32, '#8f7fd8');
-}
-
-// shelves on the right, lined with cheesecakes and jars of jam
-{ const shelves = new THREE.Group(); shelves.position.set(4.4, 0.55, 0.3); shelves.scale.setScalar(0.8); shop.add(shelves);
-  const tops = ['#f48fa8', '#8f7fd8', '#a8c97f', '#ffd27a', '#f6a96b'];
-  [0.5, 2.3].forEach((y, row) => {
-    shelves.add(mesh(box(3.8, 0.14, 0.9), '#e3b07e', { y, z: 0.25 }));
-    for (const sd of [-1, 1]) shelves.add(mesh(box(0.12, 0.3, 0.7), '#d39c6a', { x: sd * 1.5, y: y - 0.2, z: 0.15, cast: false }));
-    [-1.25, 0, 1.25].forEach((x, k) => {
-      if ((row + k) % 3 === 2) {
-        [-0.22, 0.22].forEach((dx, j) => {
-          shelves.add(mesh(cyl(0.17, 0.17, 0.42, 20), j ? '#f48fa8' : '#8f7fd8', { x: x + dx, y: y + 0.28, z: 0.35 }));
-          shelves.add(mesh(cyl(0.19, 0.19, 0.08, 20), '#fff6ea', { x: x + dx, y: y + 0.52, z: 0.35 }));
-        });
-      } else cheesecake(shelves, x, y + 0.07, 0.35, 0.42, tops[(row * 3 + k) % tops.length]);
-    });
-  });
-}
-
-// pastel bunting either side of the sign
-{ const r = rng(3);
-  for (let i = 0; i < 26; i++) {
-    const x = -13 + i * 1.04, y = 5.3 - 0.4 * Math.sin((i % 13) / 13 * PI);
-    if (Math.abs(x) < 3.1) continue;   // leave the sign clear
-    shop.add(mesh(cyl(0.34, 0.001, 0.62, 3), RAINBOW[i % RAINBOW.length], { x, y: y - 0.3, z: 0.3, rz: 0, ry: PI / 6 + r() * 0.1, s: [1, 1, 0.2], cast: false }));
-  }
+shop.add(mesh(new THREE.PlaneGeometry(2.24, 2.08), null, { x: -4.3, y: 2.1, z: 0.12, cast: false, mat: new THREE.MeshBasicMaterial({ map: view }) }));
+// a beam of warm light slanting in through the window, fading out as it reaches into the room
+const beamTex = tex(64, 256, (g, w, h) => {
+  const along = g.createLinearGradient(0, 0, 0, h); along.addColorStop(0, 'rgba(255,236,200,0.35)'); along.addColorStop(1, 'rgba(255,236,200,0)');
+  g.fillStyle = along; g.fillRect(0, 0, w, h);
+  const across = g.createLinearGradient(0, 0, w, 0);   // soft sides
+  across.addColorStop(0, 'rgba(0,0,0,1)'); across.addColorStop(0.3, 'rgba(0,0,0,0)'); across.addColorStop(0.7, 'rgba(0,0,0,0)'); across.addColorStop(1, 'rgba(0,0,0,1)');
+  g.globalCompositeOperation = 'destination-out'; g.fillStyle = across; g.fillRect(0, 0, w, h);
+});
+{ const beam = new THREE.Group(); beam.position.set(-4.3, 2.6, 0.3); beam.rotation.set(-1.05, 0, 0.5); shop.add(beam);
+  const geo = new THREE.PlaneGeometry(2.0, 5.5); geo.translate(0, -2.75, 0);
+  beam.add(mesh(geo, null, { cast: false, mat: new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }) }));
 }
 
 // two pendant lamps with glowing bulbs; they sway a touch, twice per loop
-const lamps = [-3.4, 3.4].map((x, i) => {
-  const g = new THREE.Group(); g.position.set(x, 10.6, -3); scene.add(g);
-  g.add(mesh(cyl(0.02, 0.02, 4.4, 6), '#8a6a5a', { y: -2.2, cast: false }));
-  g.add(mesh(new THREE.SphereGeometry(0.62, 32, 16, 0, TAU, 0, PI / 2), ['#ffd6a5', '#ffb3c1', '#caffbf'][i], { y: -4.75, cast: false, mat: new THREE.MeshLambertMaterial({ color: ['#ffd6a5', '#ffb3c1', '#caffbf'][i], side: THREE.DoubleSide }) }));
-  g.add(mesh(sph(0.22, 16), null, { y: -4.85, cast: false, mat: new THREE.MeshBasicMaterial({ color: '#fff4c9' }) }));
+const glow = new THREE.MeshBasicMaterial({ color: '#fff4c9' });
+const halo = tex(128, 128, (g, w, h) => {
+  const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  r.addColorStop(0, 'rgba(255,240,200,0.9)'); r.addColorStop(0.35, 'rgba(255,225,180,0.35)'); r.addColorStop(1, 'rgba(255,225,180,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+const lamps = [-3.1, 3.1].map(x => {
+  const g = new THREE.Group(); g.position.set(x, 9.3, -3); scene.add(g);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.position.y = -5.05; s.scale.setScalar(1.6); g.add(s);
+  const light = new THREE.PointLight(0xffe2b8, 0.35, 6, 1.5); light.position.y = -5.4; g.add(light);
   return g;
 });
+// the lamps hang in front of the wall, so their cords would throw long stripes across it: no shadows from them
+loadModel('shoplamp', () => lamps.forEach(g => { const l = makeScenery('shoplamp', { bulb: glow }).g; l.traverse(o => { o.castShadow = false; }); g.add(l); toBack(g); }));
+// every light shines on both passes
+scene.traverse(o => { if (o.isLight) o.layers.enableAll(); });
 
 // ---------- friends ----------
 const friends = FRIENDS.map((f, i) => {
@@ -287,8 +237,21 @@ window.renderAt = t => {
     f.hop.position.y = y; f.hop.rotation.y = spin; f.hop.scale.set(sxz, sy, sxz);
   });
 
+  // the shop, out of focus: drawn a touch larger so the blur never pulls in the canvas edge
+  camera.layers.set(BACK); scene.background = WALL;
+  renderer.render(scene, camera);
+  ctx.filter = `blur(${BLUR}px)`;
+  ctx.drawImage(renderer.domElement, -12, -12, SIZE + 24, SIZE + 24);
+  ctx.filter = 'none';
+  // the cake and the friends, in focus, on top
+  camera.layers.set(0); scene.background = null;
+  renderer.setClearColor(0x000000, 0);
   renderer.render(scene, camera);
   ctx.drawImage(renderer.domElement, 0, 0, SIZE, SIZE);
+  // a soft warm vignette
+  const vig = ctx.createRadialGradient(SIZE / 2, SIZE * 0.55, SIZE * 0.35, SIZE / 2, SIZE * 0.55, SIZE * 0.78);
+  vig.addColorStop(0, 'rgba(120,60,70,0)'); vig.addColorStop(1, 'rgba(120,60,70,0.16)');
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, SIZE, SIZE);
 
   // the front friend's tag: pops in at the top of the hop, shrinks away as the table turns
   const pop = u < 0.95 ? spring(u - 0.3, 0.42, 3) : 1 - inOutCubic(seg(u, 0.95, 1.12)) * 1.0;

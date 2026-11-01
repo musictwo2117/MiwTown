@@ -48,7 +48,7 @@ sh models/build.sh            # everything
 sh models/build.sh cat cafe   # just these
 ```
 
-Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, and the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy). Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy), and the intro video's cheesecake shop (the set, the giant cake and the hanging lamp) from `models/shop.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
 
 ## Features
 
