@@ -18,6 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="models.js"></script>
+<script src="sound.js"></script>
 <script>
 // Meet the friends: a 10.5 s seamless loop, 1080x1080, 30 fps (315 frames).
 // A floating pretzel turntable carries the seven friends round; each beat (1.5 s) the one at the front
@@ -331,12 +332,39 @@ window.renderAt = t => {
   nameTag(FRIENDS[beat], (front.x + 1) / 2 * SIZE, (1 - front.y) / 2 * SIZE);
 };
 
-// ---------- play, freeze (?t=) or capture (?capture) ----------
+// ---------- the soundtrack: a cosy music-box loop, and a sound for every move, from the same timings ----------
+// 7 beats of 1.5 s, two bars of 4/4 at 160 BPM per beat. Hits land one frame after what they go with.
+const F1 = 1 / FPS;
+const CHORDS = [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50], [48, 52, 55], [41, 45, 48], [43, 47, 50]];   // C Am F G C F G
+const TUNE = [[72, 76, 79, 76], [72, 76, 81, 79], [77, 76, 72, 69], [74, 79, 77, 74], [76, 79, 84, 79], [77, 81, 79, 77], [74, 79, 76, 74]];
+function score() {
+  const ev = [{ at: F1, sound: 'bell' }];
+  for (let b = 0; b < N; b++) {
+    const t0 = b * BEAT, chord = CHORDS[b], name = FRIENDS[b].name;
+    ev.push({ at: t0, sound: 'pad', notes: chord.map(n => n + 12), dur: BEAT });
+    ev.push({ at: t0, sound: 'bass', note: chord[0] - 12 });
+    ev.push({ at: t0 + BEAT / 2, sound: 'bass', note: chord[0] - 12, gain: 0.12 });
+    TUNE[b].forEach((n, k) => ev.push({ at: t0 + k * BEAT / 4, sound: 'musicbox', note: n, pan: k % 2 ? 0.25 : -0.25 }));
+    ev.push({ at: t0 + 0.15 + F1, sound: 'boing' });
+    ev.push({ at: t0 + 0.47 + F1, sound: 'thump' });
+    ev.push({ at: t0 + 0.3 + F1, sound: 'pop' });
+    [...name].forEach((_, k) => ev.push({ at: t0 + 0.44 + 0.035 * k + 0.12 + F1, sound: 'tick', note: [84, 86, 88, 91, 93, 96, 98][k % 7], pan: -0.3 + 0.6 * k / Math.max(1, name.length - 1) }));
+    ev.push({ at: t0 + 0.95, sound: 'whoosh' });
+  }
+  return ev;
+}
+
+// ---------- play, freeze (?t=), capture (?capture) or render the soundtrack (?audio) ----------
 const q = new URLSearchParams(location.search);
 whenModelsLoaded(() => document.fonts.load('600 58px Fredoka').then(() => document.fonts.load('500 50px Fredoka')).then(() => document.fonts.load('600 120px Fredoka')).then(async () => {
   menu.redraw();
   window.__ready = true;
   if (q.has('t')) return renderAt(parseFloat(q.get('t')) || 0);
+  if (q.has('audio')) {
+    await fetch('audio/intro', { method: 'POST', body: await renderLoop(score(), LOOP) });
+    window.__audio = true; document.title = 'audio saved';
+    return;
+  }
   if (q.has('capture')) {
     for (let f = 0; f < FRAMES; f++) {
       renderAt(f / FPS);
