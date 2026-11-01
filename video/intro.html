@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meet the Friends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #f4e4e8; display: grid; place-items: center; overflow: hidden; }
+  #out { width: min(100vw, 100vh); height: min(100vw, 100vh); display: block; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1080" height="1080"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="models.js"></script>
+<script>
+// Meet the friends: a 10.5 s seamless loop, 1080x1080, 30 fps (315 frames).
+// A floating pretzel turntable carries the seven friends round; each beat (1.5 s) the one at the front
+// hops, spins and gets its name tag, then the table turns 1/7 to the next.
+// window.renderAt(t) draws exactly time t. ?t=2.5 freezes on that frame; ?capture renders every frame to video/out/intro/.
+const PI = Math.PI, TAU = PI * 2;
+const SIZE = 1080, FPS = 30, BEAT = 1.5, FRIENDS = [
+  { sp: 'cat',     name: 'Kitty',   color: '#f7a072' },
+  { sp: 'bunny',   name: 'Bunny',   color: '#f49ac1' },
+  { sp: 'bear',    name: 'Teddy',   color: '#c99a6e' },
+  { sp: 'frog',    name: 'Froggy',  color: '#8cc97f' },
+  { sp: 'chick',   name: 'Chick',   color: '#f2c14e' },
+  { sp: 'penguin', name: 'Penguin', color: '#8fb3ff' },
+  { sp: 'miw',     name: 'Miw',     color: '#ff6fae' },
+];
+const N = FRIENDS.length, LOOP = N * BEAT, FRAMES = Math.round(LOOP * FPS);
+const R = 2.45, CHAR_SCALE = 1.45, BLUR = 2.4;
+
+// ---------- easing ----------
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const seg = (u, a, b) => clamp01((u - a) / (b - a));
+const inOutCubic = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const outQuad = x => 1 - (1 - x) * (1 - x);
+const inOutBack = (x, c = 0.9) => { const c2 = c * 1.525; return x < 0.5 ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2 : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2; };
+// damped spring from 0 to 1, settled after about 0.5 s
+// a well-mixed hash in [0, 1): neighbouring k give unrelated values
+const hash = (k, j) => { const x = Math.sin(k * 127.1 + j * 311.7) * 43758.5453; return x - Math.floor(x); };
+const spring = (s, zeta = 0.45, hz = 3.2) => s <= 0 ? 0 : 1 - Math.exp(-zeta * TAU * hz * s) * Math.cos(TAU * hz * Math.sqrt(1 - zeta * zeta) * s);
+
+// ---------- renderer: draw at 2x, downsample into the 1080 output ----------
+// Two passes, like a camera lens: the shop behind (layer 1) is drawn first and softly blurred, then the cake and
+// the friends (layer 0) go over it sharp. Nothing in the shop ever passes in front of the cake, so no depth test is needed.
+const BACK = 1;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+renderer.setPixelRatio(2);
+renderer.setSize(SIZE, SIZE, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const out = document.getElementById('out'), ctx = out.getContext('2d');
+ctx.imageSmoothingQuality = 'high';
+
+const scene = new THREE.Scene();
+const WALL = new THREE.Color('#fbe7df');
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+// canvas textures; the menu redraws itself once its font has loaded
+const tex = (w, h, draw, rx = 1, ry = 1) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.redraw = () => { draw(c.getContext('2d'), w, h); t.needsUpdate = true; }; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.anisotropy = 8;
+  return t;
+};
+
+// the town's light recipe, warmed up for an indoor shop
+scene.add(new THREE.HemisphereLight(0xfff1e0, 0xe8c4b8, 0.55));
+const sun = new THREE.DirectionalLight(0xfff0dc, 0.55);
+sun.position.set(5, 9, 4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
+sun.shadow.radius = 3; sun.shadow.bias = -0.0005;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffeef2, 0.26);
+fill.position.set(-2, 3, 10);
+scene.add(fill);
+// a soft pink rim from behind, so the friends' edges lift off the blurred shop
+const rim = new THREE.DirectionalLight(0xffd6e6, 0.4);
+rim.position.set(1, 6, -9);
+scene.add(rim);
+// warm daylight pooling round the window, and a glow under each lamp
+const windowGlow = new THREE.PointLight(0xffd9a8, 0.45, 7, 1.5);
+windowGlow.position.set(-4.3, 2.1, -4.8);
+scene.add(windowGlow);
+
+const mats = {};
+const M = (c, extra) => { const k = c + JSON.stringify(extra || {}); return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c, ...extra })); };
+function mesh(geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast = true, recv = false, mat } = {}) {
+  const m = new THREE.Mesh(geo, mat || M(color));
+  m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+  if (s) Array.isArray(s) ? m.scale.set(...s) : m.scale.setScalar(s);
+  m.castShadow = cast; m.receiveShadow = recv;
+  return m;
+}
+const cyl = (rt, rb, h, seg = 48) => new THREE.CylinderGeometry(rt, rb, h, seg);
+
+// ---------- the turntable: a giant strawberry cheesecake on a cake stand (models/shop.py) ----------
+// the friends stand on the cake's top at y = 0; only the pink disc they stand on turns
+const island = new THREE.Group(), table = new THREE.Group();
+scene.add(island); island.add(table);
+table.add(mesh(cyl(2.9, 2.9, 0.04, 72), '#fbb8c8', { y: 0.03, recv: true, cast: false }));
+loadModel('bigcake', () => island.add(makeScenery('bigcake').g));
+const toBack = o => o.traverse(c => { if (!c.userData.sharp) c.layers.set(BACK); });   // userData.sharp opts out
+
+// ---------- the shop behind (models/shop.py), with its pictures drawn here ----------
+const shop = new THREE.Group(); shop.position.z = -6; scene.add(shop);
+// the set already has soft shadows baked in by Blender; hard ones from the sun would cut grey slabs across the wall
+loadModel('shop', () => { const set = makeScenery('shop').g; set.traverse(o => { o.castShadow = false; }); shop.add(set); toBack(shop); });
+// striped wallpaper with little hearts
+const paper = tex(256, 256, (g, w, h) => {
+  g.fillStyle = '#fff6ea'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ffe6ea'; g.fillRect(0, 0, w / 2, h);
+  g.fillStyle = '#f9c6d2';
+  const heart = (x, y, r) => { g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.6, y - r * 0.3, x - r * 0.5, y - r * 1.3, x, y - r * 0.4); g.bezierCurveTo(x + r * 0.5, y - r * 1.3, x + r * 1.6, y - r * 0.3, x, y + r * 0.9); g.fill(); };
+  heart(w * 0.75, h * 0.25, 12); heart(w * 0.75, h * 0.75, 12);
+}, 12, 7);
+shop.add(mesh(new THREE.PlaneGeometry(34, 20), null, { y: 4, cast: false, recv: true, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
+
+// the chalkboard's lettering: the shop's sign doubles as the video's title
+const menu = tex(1024, 400, (g, w, h) => {
+  g.fillStyle = '#4a3b3f'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#fff6ea'; g.lineWidth = 6; g.setLineDash([18, 14]); g.strokeRect(26, 26, w - 52, h - 52);
+  g.fillStyle = '#fff6ea'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '600 112px Fredoka'; g.fillText("Miw's Cheesecake", w / 2, h * 0.4);
+  g.font = '500 60px Fredoka'; g.fillStyle = '#ffb3c1'; g.fillText('♡ meet the friends ♡', w / 2, h * 0.74);
+});
+// the sign is the title, so it stays in focus: it's drawn with the cake and friends, not with the blurred shop
+const sign = new THREE.Group(); sign.position.z = -6; scene.add(sign);
+sign.add(mesh(new THREE.PlaneGeometry(5.0, 1.95), null, { x: 0, y: 3.85, z: 0.17, cast: false, mat: new THREE.MeshBasicMaterial({ map: menu }) }));
+loadModel('sign', () => { const frame = makeScenery('sign').g; frame.traverse(o => { o.castShadow = false; }); sign.add(frame); });
+
+// the view through the window: a dusky pink sky with puffy clouds
+const view = tex(256, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffc6d6'); gr.addColorStop(1, '#ffe9c9');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  [[60, 80, 26], [90, 70, 32], [124, 84, 24], [190, 150, 22], [214, 142, 28]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); });
+});
+shop.add(mesh(new THREE.PlaneGeometry(2.24, 2.08), null, { x: -4.3, y: 2.1, z: 0.12, cast: false, mat: new THREE.MeshBasicMaterial({ map: view }) }));
+// a beam of warm light slanting in through the window, fading out as it reaches into the room
+const beamTex = tex(64, 256, (g, w, h) => {
+  const along = g.createLinearGradient(0, 0, 0, h); along.addColorStop(0, 'rgba(255,236,200,0.35)'); along.addColorStop(1, 'rgba(255,236,200,0)');
+  g.fillStyle = along; g.fillRect(0, 0, w, h);
+  const across = g.createLinearGradient(0, 0, w, 0);   // soft sides
+  across.addColorStop(0, 'rgba(0,0,0,1)'); across.addColorStop(0.3, 'rgba(0,0,0,0)'); across.addColorStop(0.7, 'rgba(0,0,0,0)'); across.addColorStop(1, 'rgba(0,0,0,1)');
+  g.globalCompositeOperation = 'destination-out'; g.fillStyle = across; g.fillRect(0, 0, w, h);
+});
+const halo = tex(128, 128, (g, w, h) => {
+  const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  r.addColorStop(0, 'rgba(255,240,200,0.9)'); r.addColorStop(0.35, 'rgba(255,225,180,0.35)'); r.addColorStop(1, 'rgba(255,225,180,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+const beam = new THREE.Group(); beam.position.set(-4.3, 2.6, 0.3); beam.rotation.set(-1.05, 0, 0.5); shop.add(beam);
+{ const geo = new THREE.PlaneGeometry(2.0, 5.5); geo.translate(0, -2.75, 0);
+  beam.add(mesh(geo, null, { cast: false, mat: new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }) }));
+}
+
+// ---------- little things that move in the shop; each repeats a whole number of times per loop ----------
+const puff = tex(64, 64, (g, w, h) => {
+  const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  r.addColorStop(0, 'rgba(255,255,255,0.9)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+const sprite = (map, opts = {}) => new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, ...opts }));
+// steam curling up from the cup of tea on the top shelf: six puffs, each rising every 2.625 s (4 per loop)
+const STEAM_AT = new THREE.Vector3(4.4, 2.68, 0.45);
+const steam = [...Array(6)].map(() => { const s = sprite(puff); shop.add(s); return s; });
+// sugar dust twinkling in the window's beam of light
+const dust = [...Array(34)].map((_, k) => {
+  const r = (j => () => hash(k + 1, j++))(1), s = sprite(halo, { color: '#ffe7a3' });
+  s.userData.sharp = true;   // sharp golden specks: blurred, they'd vanish into the bright window
+  beam.add(s);
+  return { s, a0: r(), b: (r() - 0.5) * 1.3, size: 0.07 + r() * 0.07, tw: 1 + Math.floor(r() * 3), ph: r() };
+});
+// the clock's minute hand: once round per loop, as if the afternoon flies by
+const minute = new THREE.Group(); minute.position.set(4.85, 4.0, 0.29); shop.add(minute);
+minute.add(mesh(new THREE.BoxGeometry(0.045, 0.4, 0.03), '#6b3d45', { y: 0.17, cast: false }));
+
+// two pendant lamps with glowing bulbs; they sway a touch, twice per loop. They hang in front of the wall and
+// beside the sign, so they're drawn in focus too; only their soft halos go with the blurred shop
+const glow = new THREE.MeshBasicMaterial({ color: '#fff4c9' });
+const lamps = [-3.1, 3.1].map(x => {
+  const g = new THREE.Group(); g.position.set(x, 9.3, -3); scene.add(g);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.position.y = -5.05; s.scale.setScalar(1.6); s.layers.set(BACK); g.add(s);
+  const light = new THREE.PointLight(0xffe2b8, 0.35, 6, 1.5); light.position.y = -5.4; g.add(light);
+  return g;
+});
+// the lamps hang in front of the wall, so their cords would throw long stripes across it: no shadows from them
+loadModel('shoplamp', () => lamps.forEach(g => { const l = makeScenery('shoplamp', { bulb: glow }).g; l.traverse(o => { o.castShadow = false; }); g.add(l); }));
+// every light shines on both passes
+scene.traverse(o => { if (o.isLight) o.layers.enableAll(); });
+
+// ---------- friends ----------
+const friends = FRIENDS.map((f, i) => {
+  const seat = new THREE.Group(), hop = new THREE.Group();
+  const a = i / N * TAU;
+  seat.position.set(Math.sin(a) * R, 0.06, Math.cos(a) * R);
+  seat.rotation.y = a;                       // facing out, so whoever is at the front faces the camera
+  seat.add(hop); table.add(seat);
+  return { ...f, i, seat, hop, model: null, idle: null, blink: null };
+});
+friends.forEach(f => loadModel(f.sp, () => {
+  const m = makeModel(f.sp, f.color);
+  m.g.scale.setScalar(CHAR_SCALE);
+  f.hop.add(m.g);
+  const mixer = new THREE.AnimationMixer(m.g), act = n => { const c = m.clips.find(c => c.name === n); if (!c) return null; const a = mixer.clipAction(c); a.play(); return a; };
+  Object.assign(f, { model: m, mixer, idle: act('idle'), blink: act('blink') });
+}));
+
+// ---------- the name tag, drawn in 2D over the render, animated with GSAP ----------
+// One paused timeline covers a beat: the pill stretches in with an elastic wobble, the dot pops, the letters
+// bounce up one after another, and it all shrinks away as the table turns. renderAt seeks it to the exact time.
+const TAG = { in: 0, out: 0, pillX: 0.3, pillY: 0.3, dot: 0, letters: [...Array(8)].map(() => ({ y: 26, s: 0 })) };
+const tagTL = gsap.timeline({ paused: true })
+  .to(TAG, { in: 1, duration: 0.22, ease: 'back.out(2)' }, 0.3)
+  .to(TAG, { pillX: 1, duration: 0.55, ease: 'elastic.out(1, 0.45)' }, 0.3)
+  .to(TAG, { pillY: 1, duration: 0.4, ease: 'back.out(2.2)' }, 0.32)
+  .to(TAG, { dot: 1, duration: 0.25, ease: 'back.out(3)' }, 0.4)
+  .to(TAG.letters, { y: 0, s: 1, duration: 0.3, ease: 'back.out(2.6)', stagger: 0.035 }, 0.44)
+  .to(TAG, { out: 1, duration: 0.17, ease: 'back.in(2)' }, 0.95)
+  .to({}, { duration: 0.01 }, BEAT - 0.01);
+function nameTag(f, x, y) {
+  const S = TAG.in * (1 - TAG.out);
+  if (S <= 0.001) return;
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(S, S);
+  ctx.font = '600 58px Fredoka';
+  const w = ctx.measureText(f.name).width + 112, h = 92;
+  ctx.save(); ctx.scale(TAG.pillX, TAG.pillY);
+  ctx.shadowColor = 'rgba(160, 80, 100, 0.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+  ctx.fillStyle = '#fffaf6';
+  ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 6; ctx.strokeStyle = f.color; ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = f.color;
+  ctx.beginPath(); ctx.arc(-w / 2 + 46, 0, 13 * TAG.dot, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#6b3d45'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let lx = -w / 2 + 76;
+  [...f.name].forEach((c, i) => {
+    const cw = ctx.measureText(c).width, L = TAG.letters[i] || { y: 0, s: 1 };
+    if (L.s > 0.001) { ctx.save(); ctx.translate(lx + cw / 2, 3 + L.y); ctx.scale(L.s, L.s); ctx.fillText(c, 0, 0); ctx.restore(); }
+    lx += cw;
+  });
+  ctx.restore();
+}
+
+// ---------- one frame ----------
+const front = new THREE.Vector3();
+window.renderAt = t => {
+  t = ((t % LOOP) + LOOP) % LOOP;
+  const beat = Math.floor(t / BEAT + 1e-9) % N, u = t - beat * BEAT, ph = t / LOOP;
+
+  // camera: 30 degree lens, 4 degree sway and a gentle rise and fall, once each per loop
+  const az = 4 * Math.sin(TAU * ph) * PI / 180, el = (13 + 1.5 * Math.sin(2 * TAU * ph)) * PI / 180, dist = 14.2;
+  camera.position.set(Math.sin(az) * Math.cos(el) * dist, 1.2 + Math.sin(el) * dist, Math.cos(az) * Math.cos(el) * dist);
+  camera.lookAt(0, 1.2, 0);
+
+  // the table turns 1/7 at the end of every beat; the lamps sway a touch
+  lamps.forEach((l, i) => { l.rotation.z = 0.025 * Math.sin(2 * TAU * ph + i * 1.3); });
+
+  // the shop: clouds drift past the window once per loop, the minute hand goes round, steam curls, sugar twinkles
+  view.offset.x = ph;
+  minute.rotation.z = -TAU * ph;
+  steam.forEach((p, k) => {
+    const life = (t / 2.625 + k / 6) % 1;
+    p.position.set(STEAM_AT.x + 0.07 * Math.sin(TAU * (life * 1.3 + k * 0.4)), STEAM_AT.y + life * 0.95, STEAM_AT.z);
+    p.scale.setScalar(0.16 + life * 0.45);
+    p.material.opacity = 0.85 * Math.sin(PI * life);
+  });
+  dust.forEach(d => {
+    const a = (d.a0 + ph) % 1;   // drifts down the beam once per loop, fading in and out at its ends
+    d.s.position.set(d.b, -0.2 - a * 2.6, 0.04);   // the top of the beam, by the window, above the cake
+    d.s.scale.setScalar(d.size);
+    d.s.material.opacity = Math.sin(PI * a) * (0.55 + 0.45 * Math.sin(TAU * (d.tw * ph + d.ph)));
+  });
+  table.rotation.y = -(beat + inOutBack(seg(u, 0.95, 1.5))) / N * TAU;
+
+  // the riders sway with the table as it starts and stops
+  const lean = -0.13 * Math.sin(TAU * seg(u, 0.95, 1.5));
+  friends.forEach(f => {
+    // idle sways stretched to 3.5 s (3 per loop), blinks every 5.25 s (2 per loop), each friend offset
+    if (f.idle) f.idle.time = ((t / 3.5 + f.i * 0.37) % 1) * f.idle.getClip().duration;
+    if (f.blink) f.blink.time = ((t / 5.25 + f.i * 0.29) % 1) * f.blink.getClip().duration;
+    if (f.mixer) f.mixer.update(0);
+    // everyone else turns their head to watch whoever is at the front
+    const world = f.i / N * TAU + table.rotation.y;
+    if (f.model && f.model.head) f.model.head.rotation.y = -0.6 * Math.sin(world);
+    let y = 0, sy = 1, sxz = 1, spin = 0;
+    if (f.i === beat) {
+      // anticipation squash, a hop with a full spin, a squashy landing and a springy settle
+      const a = seg(u, 0, 0.15), air = seg(u, 0.15, 0.47), land = u - 0.47;
+      if (u < 0.15) { sy = 1 - 0.14 * outQuad(a); sxz = 1 + 0.08 * outQuad(a); }
+      else if (u < 0.47) { y = 0.62 * 4 * air * (1 - air); sy = 1 + 0.12 * (1 - air) * (1 - air) + 0.05 * air * air; sxz = 1 / Math.sqrt(sy); spin = TAU * inOutCubic(air); }
+      else { const k = 1 - spring(land, 0.35, 3.6); sy = 1 - 0.16 * k; sxz = 1 + 0.09 * k; }
+    } else {
+      // when the hopper lands, the friends beside it bounce too, rippling round the ring
+      const d = Math.min((f.i - beat + N) % N, (beat - f.i + N) % N), b = seg(u, 0.5 + 0.07 * (d - 1), 0.78 + 0.07 * (d - 1));
+      if (b > 0 && b < 1) { y = (0.11 - 0.025 * d) * Math.sin(PI * b); sy = 1 + 0.06 * Math.sin(PI * b); sxz = 1 / Math.sqrt(sy); }
+    }
+    f.hop.position.y = y; f.hop.rotation.y = spin; f.hop.rotation.z = lean; f.hop.scale.set(sxz, sy, sxz);
+  });
+
+  // the shop, out of focus: drawn a touch larger so the blur never pulls in the canvas edge
+  camera.layers.set(BACK); scene.background = WALL;
+  renderer.render(scene, camera);
+  ctx.filter = `blur(${BLUR}px)`;
+  ctx.drawImage(renderer.domElement, -12, -12, SIZE + 24, SIZE + 24);
+  ctx.filter = 'none';
+  // the cake and the friends, in focus, on top
+  camera.layers.set(0); scene.background = null;
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, camera);
+  ctx.drawImage(renderer.domElement, 0, 0, SIZE, SIZE);
+  // a soft warm vignette
+  const vig = ctx.createRadialGradient(SIZE / 2, SIZE * 0.55, SIZE * 0.35, SIZE / 2, SIZE * 0.55, SIZE * 0.78);
+  vig.addColorStop(0, 'rgba(120,60,70,0)'); vig.addColorStop(1, 'rgba(120,60,70,0.16)');
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // the front friend's tag, at the top of the hop
+  tagTL.seek(u, false);
+  front.set(0, -0.5, R).applyMatrix4(island.matrixWorld).project(camera);
+  nameTag(FRIENDS[beat], (front.x + 1) / 2 * SIZE, (1 - front.y) / 2 * SIZE);
+};
+
+// ---------- play, freeze (?t=) or capture (?capture) ----------
+const q = new URLSearchParams(location.search);
+whenModelsLoaded(() => document.fonts.load('600 58px Fredoka').then(() => document.fonts.load('500 50px Fredoka')).then(() => document.fonts.load('600 120px Fredoka')).then(async () => {
+  menu.redraw();
+  window.__ready = true;
+  if (q.has('t')) return renderAt(parseFloat(q.get('t')) || 0);
+  if (q.has('capture')) {
+    for (let f = 0; f < FRAMES; f++) {
+      renderAt(f / FPS);
+      const png = await new Promise(r => out.toBlob(r, 'image/png'));
+      await fetch(`frame/intro/${String(f).padStart(4, '0')}`, { method: 'POST', body: png });
+      document.title = `${f + 1}/${FRAMES}`;
+    }
+    window.__captured = FRAMES;
+    return;
+  }
+  const t0 = performance.now();
+  (function tick() { renderAt((performance.now() - t0) / 1000); requestAnimationFrame(tick); })();
+}), 15000);
+</script>
+</body>
+</html>

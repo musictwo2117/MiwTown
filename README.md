@@ -48,7 +48,7 @@ sh models/build.sh            # everything
 sh models/build.sh cat cafe   # just these
 ```
 
-Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, and the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy). Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy), and the intro video's cheesecake shop (the set, the giant cake and the hanging lamp) from `models/shop.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
 
 ## Features
 
@@ -126,3 +126,17 @@ The server listens on `127.0.0.1` only, and:
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
 
 Built with [three.js](https://threejs.org) r128.
+
+## Videos
+
+`video/` is a little studio for cute clips made from code, using the same Blender characters. Each clip is one HTML page with a `renderAt(t)` that draws exactly time `t`, so every frame comes out the same every time.
+
+```bash
+node video/serve.js           # http://localhost:19200 plays the intro loop
+```
+
+- `?t=2.5` freezes on the frame at 2.5 seconds, handy for checking stills.
+- `?capture` renders every frame into `video/out/<clip>/frames/`.
+- `sh video/encode.sh intro` then makes the MP4 for X, a looping GIF, a contact sheet and a three-loop seam check (needs [FFmpeg](https://ffmpeg.org): `brew install ffmpeg`).
+
+**Meet the friends** (`video/intro.html`): a 10.5 s seamless loop, 1080×1080 at 30 fps. In Miw's Cheesecake shop, a giant strawberry cheesecake turns to bring each friend to the front, where it hops, spins and gets its name tag.

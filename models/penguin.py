@@ -16,19 +16,19 @@ torso.decal('belly', 0, -0.1, (0.26, 0.27, 0.13), SNOW, out=-0.1)
 for sd in (-1, 1):
     blob(f'flipper_{"LR"[sd > 0]}', body, (sd * 0.34, 0.0, 0.32), (0.05, 0.12, 0.2), NAVY, rot=(0.15, sd * -0.45, 0))
 
-h = Ell(head, (0, 0, 0), (0.42, 0.37, 0.36))
+h = Ell(head, (0, 0, 0), (0.39, 0.37, 0.39))
 h.body('skull', NAVY, seg=40, ring=24)
-# heart-shaped face: two overlapping white lobes
+# heart-shaped face: two overlapping white lobes, wide enough for the wide-set eyes
 for sd in (-1, 1):
-    h.decal(f'face_{"LR"[sd > 0]}', sd * 0.22, -0.02, (0.2, 0.24, 0.1), SNOW, out=-0.08, spin=-sd * 0.25)
-eyes(h, 0.27, 0.0, (0.06, 0.075), out=0.02)
-blush(h, 0.5, -0.2, out=0.022)
-p, n = h.at(0, -0.15)
+    h.decal(f'face_{"LR"[sd > 0]}', sd * 0.25, -0.15, (0.24, 0.26, 0.1), SNOW, out=-0.08, spin=-sd * 0.25)
+eyes(h, 0.36, -0.13, out=0.02)
+blush(h, 0.62, -0.3, out=0.022)
+p, n = h.at(0, -0.27)
 beak(head, p + n * 0.05, (0.06, 0.07, 0.035), ORANGE)
 
 # a little scarf round the neck, with stripes on the hanging end
-ring('scarf', body, (0, 0, 0.6), 0.24, 0.065, SCARF, Quaternion())
-end = node('scarf_end', body, (0.13, -0.27, 0.58))
+ring('scarf', body, (0, 0, 0.52), 0.26, 0.065, SCARF, Quaternion())
+end = node('scarf_end', body, (0.14, -0.29, 0.5))
 end.rotation_euler = (0.2, -0.25, 0)
 blob('scarf_tail', end, (0, 0, -0.1), (0.06, 0.025, 0.12), SCARF)
 for j in range(2):
@@ -43,9 +43,11 @@ for f in feet:
 
 # pivots for animation: flippers flap from the shoulder, the scarf end swings, eyes blink
 flippers = [group(f'flipper_pivot_{s}', body, (sd * 0.3, 0.0, 0.48), [f'flipper_{s}']) for s, sd in (('L', -1), ('R', 1))]
+cheesecake_slice(chibi(body, head))
 animate(body, head, tail, feet,
         limbs=[(flippers[0], 1, 0.45, 0), (flippers[1], 1, -0.45, 0)],
         ears=[(bpy.data.objects['scarf_end'], 0, 0.3)],
         eyes=[eye_group(head, s) for s in 'LR'])
 
+pastel()
 finish()
