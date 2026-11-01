@@ -392,7 +392,8 @@
     const key = wearOf(me);
     if (me.wornOn === me.cat && me.wornKey === key) return;
     if (me.wornOn === me.cat) (me.wornParts || []).forEach(p => p.parent && p.parent.remove(p));
-    me.wornParts = makeWear(key, me.cat, me.species === 'miw');
+    // the penguin always wears its own pink scarf, so it skips the wardrobe one
+    me.wornParts = makeWear(key === 'scarf' && me.species === 'penguin' ? 'none' : key, me.cat, me.species === 'miw');
     me.wornOn = me.cat; me.wornKey = key;
   }
   // level ups: a little party, and the new thing goes straight on

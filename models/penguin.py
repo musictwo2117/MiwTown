@@ -18,12 +18,12 @@ for sd in (-1, 1):
 
 h = Ell(head, (0, 0, 0), (0.39, 0.37, 0.39))
 h.body('skull', NAVY, seg=40, ring=24)
-# heart-shaped face: two overlapping white lobes
+# heart-shaped face: two overlapping white lobes, wide enough for the wide-set eyes
 for sd in (-1, 1):
-    h.decal(f'face_{"LR"[sd > 0]}', sd * 0.22, -0.05, (0.2, 0.24, 0.1), SNOW, out=-0.08, spin=-sd * 0.25)
-eyes(h, 0.3, -0.03, (0.058, 0.078), out=0.02)
-blush(h, 0.52, -0.2, (0.08, 0.045), out=0.022)
-p, n = h.at(0, -0.17)
+    h.decal(f'face_{"LR"[sd > 0]}', sd * 0.25, -0.15, (0.24, 0.26, 0.1), SNOW, out=-0.08, spin=-sd * 0.25)
+eyes(h, 0.36, -0.13, out=0.02)
+blush(h, 0.62, -0.3, out=0.022)
+p, n = h.at(0, -0.27)
 beak(head, p + n * 0.05, (0.06, 0.07, 0.035), ORANGE)
 
 # a little scarf round the neck, with stripes on the hanging end
@@ -43,10 +43,11 @@ for f in feet:
 
 # pivots for animation: flippers flap from the shoulder, the scarf end swings, eyes blink
 flippers = [group(f'flipper_pivot_{s}', body, (sd * 0.3, 0.0, 0.48), [f'flipper_{s}']) for s, sd in (('L', -1), ('R', 1))]
-chibi(body, head)
+cheesecake_slice(chibi(body, head))
 animate(body, head, tail, feet,
         limbs=[(flippers[0], 1, 0.45, 0), (flippers[1], 1, -0.45, 0)],
         ears=[(bpy.data.objects['scarf_end'], 0, 0.3)],
         eyes=[eye_group(head, s) for s in 'LR'])
 
+pastel()
 finish()
