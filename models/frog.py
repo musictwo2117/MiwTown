@@ -15,8 +15,7 @@ blob('tummy', body, (0, -0.25, 0.26), (0.22, 0.1, 0.17), BELLY)
 for sd in (-1, 1):
     blob(f'paw_{"LR"[sd > 0]}', body, (sd * 0.18, -0.28, 0.19), (0.07, 0.075, 0.06), FROG, rot=(0.3, 0, sd * 0.2))
 
-head.location.z = 0.8
-h = Ell(head, (0, 0, 0), (0.5, 0.38, 0.3))
+h = Ell(head, (0, 0, 0), (0.42, 0.38, 0.42))
 h.body('skull', FROG, seg=40, ring=24)
 
 for sd in (-1, 1):
@@ -28,8 +27,8 @@ for sd in (-1, 1):
     bulb.decal(f'eye_{s}', sd * 0.06, 0.1, (0.07, 0.08, 0.035), EYE, out=0.025)
     bulb.decal(f'shine_{s}', sd * 0.15, 0.3, (0.03, 0.028, 0.02), SHINE, out=0.05)
 
-smile(h, pitch=-0.08, width=0.36, depth=0.08, thick=0.012)
-blush(h, 0.62, -0.22, (0.08, 0.045))
+smile(h, pitch=-0.16, width=0.24, depth=0.06, thick=0.011)
+blush(h, 0.6, -0.26, (0.085, 0.045))
 for sd in (-1, 1):
     h.decal(f'nostril_{"LR"[sd > 0]}', sd * 0.06, 0.12, (0.012, 0.009, 0.01), SPOT, out=0.002)
 
@@ -48,6 +47,7 @@ for f in feet:
 blinks = [eye_group(head, s, extra=[f'white_{s}']) for s in 'LR']
 bulbs = [group(f'bulb_pivot_{s}', head, bpy.data.objects[f'bulb_{s}'].location.copy() - Vector((0, 0, 0.1)), [f'bulb_{s}', f'blink_{s}']) for s in 'LR']
 paws = [group(f'paw_pivot_{s}', body, (sd * 0.18, -0.21, 0.3), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+chibi(body, head, head_z=0.78, grow=1.08)
 animate(body, head, tail, feet,
         limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
         ears=[(b, 0, 0.12) for b in bulbs],

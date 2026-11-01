@@ -1,6 +1,21 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "miws-town", "runtimeExecutable": "node", "runtimeArgs": ["server.js"], "port": 19100 }
+    {
+      "name": "miws-town",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "server.js"
+      ],
+      "port": 19100
+    },
+    {
+      "name": "video-studio",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "video/serve.js"
+      ],
+      "port": 19200
+    }
   ]
 }

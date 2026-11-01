@@ -14,8 +14,6 @@ FRAME = material('glasses', '#ff6fae', 0.35)
 LIPS = material('lips', '#e8506e', 0.5)
 TONGUE = material('tongue', '#ff9fb5', 0.5)
 root, body, head, tail, feet = skeleton('miw')
-head.location.z = 0.98
-head.scale = (1.12, 1.12, 1.12)
 for sd, f in zip((-1, 1), feet): f.location.x = sd * 0.11
 
 # the dress: a bell turned on a lathe, with polka dots and a bunny badge
@@ -50,23 +48,26 @@ for sd in (-1, 1):
     tube(f'leg_{s}', body, [(sd * 0.11, -0.01, 0.16), (sd * 0.11, -0.01, 0.1)], [1, 1], FACE, bevel=0.048)
 
 # head
-h = Ell(head, (0, 0, 0), (0.37, 0.34, 0.34))
+h = Ell(head, (0, 0, 0), (0.36, 0.34, 0.36))
 h.body('face', FACE, seg=40, ring=24)
 for sd in (-1, 1):
     blob(f'ear_{"LR"[sd > 0]}', head, (sd * 0.36, 0.01, -0.03), (0.06, 0.04, 0.07), FACE)
 
 # hair: a cap pulled back off the face, a fringe of soft locks, and two braids
 def cap(co):
-    if co.y < -0.15 and co.z < 0.42:
+    if co.y < -0.15 and co.z < 0.3:
         co.y = -0.15 + (co.y + 0.15) * 0.05
-blob('hair', head, (0, 0.025, 0.03), (0.395, 0.37, 0.37), HAIR, seg=40, ring=24, shape=cap)
-for i, yaw in enumerate([-0.62, -0.38, -0.13, 0.13, 0.38, 0.62]):
-    h.decal(f'fringe_{i}', yaw, 0.5 - abs(yaw) * 0.25, (0.095, 0.07, 0.05), HAIR_DK if i % 2 else HAIR, out=-0.012, spin=-yaw * 0.6)
+blob('hair', head, (0, 0.025, 0.03), (0.385, 0.37, 0.39), HAIR, seg=40, ring=24, shape=cap)
+# bangs: soft locks that grow out of the cap and sweep down over the forehead, so the hair reads as one piece
+for i, yaw in enumerate([-0.66, -0.44, -0.22, 0.0, 0.22, 0.44, 0.66]):
+    end = 0.3 + abs(yaw) * 0.12
+    h.stroke(f'fringe_{i}', [(yaw * 0.5, 1.35), (yaw * 0.8, 0.8), (yaw, 0.48), (yaw * 1.06, end)], HAIR_DK if i % 2 else HAIR,
+             0.06, out=0.012, radii=[1, 1, 0.95, 0.75])
 for sd in (-1, 1):
     s = "LR"[sd > 0]
-    for i, r in enumerate([0.1, 0.095, 0.088, 0.078, 0.066]):
+    for i, r in enumerate([0.1, 0.09, 0.078]):
         blob(f'braid_{s}{i}', head, (sd * (0.33 + i * 0.012), 0.07, -0.25 - i * 0.115), (r, r, r * 1.15), HAIR_DK if i % 2 else HAIR, seg=20, ring=12)
-    blob(f'braid_tip_{s}', head, (sd * 0.39, 0.07, -0.86), (0.05, 0.05, 0.08), HAIR, seg=16, ring=10,
+    blob(f'braid_tip_{s}', head, (sd * 0.37, 0.07, -0.62), (0.05, 0.05, 0.08), HAIR, seg=16, ring=10,
          shape=lambda co: (co.__setitem__(0, co.x * (1 - 0.6 * max(0.0, -co.z))), co.__setitem__(1, co.y * (1 - 0.6 * max(0.0, -co.z)))))
     # a pink bow at the top of each braid
     bow = node(f'bow_{s}', head, (sd * 0.38, -0.02, -0.2))
@@ -76,14 +77,14 @@ for sd in (-1, 1):
         blob(f'bow_loop_{s}{k}', bow, (k * 0.07, 0, 0), (0.07, 0.03, 0.05), FRAME, rot=(0, k * 0.3, 0))
 
 # face: big eyes behind pink glasses, blush and an open smile
-eyes(h, 0.33, -0.04, (0.065, 0.085))
+eyes(h, 0.36, -0.06, (0.06, 0.082))
 for sd in (-1, 1):
-    p, n = h.at(sd * 0.33, -0.04, 0.035)
+    p, n = h.at(sd * 0.36, -0.06, 0.035)
     ring(f'lens_{"LR"[sd > 0]}', head, p, 0.095, 0.014, FRAME, n.to_track_quat('Z', 'Y'))
-h.stroke('bridge', [(-0.1, -0.02), (0, 0.0), (0.1, -0.02)], FRAME, 0.012, out=0.04)
-blush(h, 0.5, -0.3, (0.07, 0.04))
-h.decal('mouth', 0, -0.42, (0.042, 0.026, 0.018), LIPS, out=-0.004)
-h.decal('tongue', 0, -0.44, (0.024, 0.012, 0.01), TONGUE, out=0.007)
+h.stroke('bridge', [(-0.12, -0.04), (0, -0.02), (0.12, -0.04)], FRAME, 0.012, out=0.04)
+blush(h, 0.56, -0.27, (0.08, 0.045))
+h.decal('mouth', 0, -0.37, (0.042, 0.026, 0.018), LIPS, out=-0.004)
+h.decal('tongue', 0, -0.39, (0.024, 0.012, 0.01), TONGUE, out=0.007)
 
 for f in feet:
     blob(f'boot{f.name[-2:]}', f, (0, -0.0, 0.015), (0.09, 0.09, 0.075), BOOT)
@@ -92,11 +93,12 @@ for f in feet:
 
 # pivots for animation: arms swing from the shoulder, braids sway, eyes blink, and the legs go with the boots
 arms = [group(f'arm_pivot_{s}', body, (sd * 0.14, 0.0, 0.7), [f'arm_{s}', f'hand_{s}', f'sleeve_{s}']) for s, sd in (('L', -1), ('R', 1))]
-braids = [group(f'braid_pivot_{s}', head, (sd * 0.33, 0.07, -0.2), [*(f'braid_{s}{i}' for i in range(5)), f'braid_tip_{s}', f'bow_{s}']) for s, sd in (('L', -1), ('R', 1))]
+braids = [group(f'braid_pivot_{s}', head, (sd * 0.33, 0.07, -0.2), [*(f'braid_{s}{i}' for i in range(3)), f'braid_tip_{s}', f'bow_{s}']) for s, sd in (('L', -1), ('R', 1))]
 for f in feet:
     leg = bpy.data.objects[f'leg{f.name[-2:]}']
     leg.parent = f
     leg.location = leg.location - f.location
+chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84)
 animate(body, head, tail, feet,
         limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0), (braids[0], 1, 0.12, 0), (braids[1], 1, 0.12, 0)],
         eyes=[eye_group(head, s) for s in 'LR'])

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meet the Friends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #f4e4e8; display: grid; place-items: center; overflow: hidden; }
+  #out { width: min(100vw, 100vh); height: min(100vw, 100vh); display: block; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1080" height="1080"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="models.js"></script>
+<script>
+// Meet the friends: a 10.5 s seamless loop, 1080x1080, 30 fps (315 frames).
+// A floating pretzel turntable carries the seven friends round; each beat (1.5 s) the one at the front
+// hops, spins and gets its name tag, then the table turns 1/7 to the next.
+// window.renderAt(t) draws exactly time t. ?t=2.5 freezes on that frame; ?capture renders every frame to video/out/intro/.
+const PI = Math.PI, TAU = PI * 2;
+const SIZE = 1080, FPS = 30, BEAT = 1.5, FRIENDS = [
+  { sp: 'cat',     name: 'Kitty',   color: '#f7a072' },
+  { sp: 'bunny',   name: 'Bunny',   color: '#f49ac1' },
+  { sp: 'bear',    name: 'Teddy',   color: '#c99a6e' },
+  { sp: 'frog',    name: 'Froggy',  color: '#8cc97f' },
+  { sp: 'chick',   name: 'Chick',   color: '#f2c14e' },
+  { sp: 'penguin', name: 'Penguin', color: '#8fb3ff' },
+  { sp: 'miw',     name: 'Miw',     color: '#ff6fae' },
+];
+const N = FRIENDS.length, LOOP = N * BEAT, FRAMES = Math.round(LOOP * FPS);
+const R = 2.45, CHAR_SCALE = 1.45;
+
+// ---------- easing ----------
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const seg = (u, a, b) => clamp01((u - a) / (b - a));
+const inOutCubic = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const outQuad = x => 1 - (1 - x) * (1 - x);
+const inOutBack = (x, c = 0.9) => { const c2 = c * 1.525; return x < 0.5 ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2 : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2; };
+// damped spring from 0 to 1, settled after about 0.5 s
+const spring = (s, zeta = 0.45, hz = 3.2) => s <= 0 ? 0 : 1 - Math.exp(-zeta * TAU * hz * s) * Math.cos(TAU * hz * Math.sqrt(1 - zeta * zeta) * s);
+const rng = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// ---------- renderer: draw at 2x, downsample into the 1080 output ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(2);
+renderer.setSize(SIZE, SIZE, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const out = document.getElementById('out'), ctx = out.getContext('2d');
+ctx.imageSmoothingQuality = 'high';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#fbe7df');
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+const RAINBOW = ['#ffb3c1', '#ffd6a5', '#fdf3a7', '#caffbf', '#a6ecf5', '#b5ccff', '#d3c4ff'];
+// canvas textures; the menu redraws itself once its font has loaded
+const tex = (w, h, draw, rx = 1, ry = 1) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.redraw = () => { draw(c.getContext('2d'), w, h); t.needsUpdate = true; }; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.anisotropy = 8;
+  return t;
+};
+
+// the town's light recipe, warmed up for an indoor shop
+scene.add(new THREE.HemisphereLight(0xfff1e0, 0xe8c4b8, 0.55));
+const sun = new THREE.DirectionalLight(0xfff0dc, 0.55);
+sun.position.set(5, 9, 4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
+sun.shadow.radius = 3; sun.shadow.bias = -0.0005;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffeef2, 0.26);
+fill.position.set(-2, 3, 10);
+scene.add(fill);
+
+const mats = {};
+const M = (c, extra) => { const k = c + JSON.stringify(extra || {}); return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c, ...extra })); };
+function mesh(geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast = true, recv = false, mat } = {}) {
+  const m = new THREE.Mesh(geo, mat || M(color));
+  m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+  if (s) Array.isArray(s) ? m.scale.set(...s) : m.scale.setScalar(s);
+  m.castShadow = cast; m.receiveShadow = recv;
+  return m;
+}
+const cyl = (rt, rb, h, seg = 48) => new THREE.CylinderGeometry(rt, rb, h, seg);
+const sph = (r, seg = 20) => new THREE.SphereGeometry(r, seg, Math.round(seg * 0.75));
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+
+// a strawberry: a rounded cone with a leafy cap
+function strawberry(parent, x, y, z, s = 1, tilt = 0) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.z = tilt; g.scale.setScalar(s); parent.add(g);
+  g.add(mesh(new THREE.SphereGeometry(0.16, 16, 12), '#ef5470', { y: 0.12, s: [1, 1.15, 1] }));
+  g.add(mesh(cyl(0.001, 0.15, 0.16, 16), '#ef5470', { y: 0.0, rx: PI }));
+  for (let k = 0; k < 5; k++) g.add(mesh(sph(0.05, 8), '#7cc68a', { x: Math.sin(k / 5 * TAU) * 0.07, z: Math.cos(k / 5 * TAU) * 0.07, y: 0.27, s: [1, 0.4, 1.8], ry: k / 5 * TAU, cast: false }));
+  return g;
+}
+// a whole cheesecake: graham crust, cream body and a topping, with a strawberry on top
+function cheesecake(parent, x, y, z, r, top, berry = true) {
+  parent.add(mesh(cyl(r, r, r * 0.22), '#c98b4b', { x, y: y + r * 0.11, z }));
+  parent.add(mesh(cyl(r * 0.99, r, r * 0.62), '#fff0cf', { x, y: y + r * 0.53, z }));
+  parent.add(mesh(cyl(r * 1.01, r * 1.01, r * 0.1), top, { x, y: y + r * 0.88, z }));
+  if (berry) strawberry(parent, x, y + r * 0.95, z, r * 1.4);
+}
+
+// ---------- the turntable: a giant strawberry cheesecake on a cake stand ----------
+const island = new THREE.Group(), table = new THREE.Group();
+scene.add(island); island.add(table);
+island.add(mesh(cyl(3.4, 3.4, 0.12, 72), '#f48fa8', { y: -0.05, recv: true, cast: false }));            // strawberry glaze
+island.add(mesh(cyl(3.36, 3.36, 0.9, 72), '#fff0cf', { y: -0.55, recv: true }));                        // the cream cheese
+island.add(mesh(cyl(3.4, 3.38, 0.3, 72), '#c98b4b', { y: -1.14, recv: true }));                         // graham crust
+// glaze drips down the side, crumbs on the crust, strawberries round the rim
+{ const r = rng(11);
+  for (let i = 0; i < 44; i++) {
+    const a = i / 44 * TAU + r() * 0.06, len = 0.12 + r() * 0.3;
+    island.add(mesh(sph(0.1 + r() * 0.05, 14), '#f07f9c', { x: Math.sin(a) * 3.36, z: Math.cos(a) * 3.36, y: -0.1 - len * 0.5, s: [1, 1 + len * 4, 0.6], cast: false }));
+  }
+  for (let i = 0; i < 40; i++) {
+    const a = r() * TAU;
+    island.add(mesh(sph(0.04 + r() * 0.03, 8), r() < 0.5 ? '#b5763c' : '#dba062', { x: Math.sin(a) * 3.39, z: Math.cos(a) * 3.39, y: -1.25 + r() * 0.22, cast: false }));
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = (i + 0.5) / 16 * TAU;
+    strawberry(island, Math.sin(a) * 3.12, 0.01, Math.cos(a) * 3.12, 1, (r() - 0.5) * 0.4);
+  }
+}
+table.add(mesh(cyl(2.9, 2.9, 0.04, 72), '#fbb8c8', { y: 0.03, recv: true, cast: false }));
+// the stand: a white plate on a pedestal, sitting on a marble counter
+island.add(mesh(cyl(3.85, 3.7, 0.1, 72), '#fffaf6', { y: -1.34, recv: true }));
+island.add(mesh(cyl(0.45, 0.75, 1.0, 32), '#fffaf6', { y: -1.9 }));
+island.add(mesh(cyl(1.5, 1.6, 0.14, 48), '#fffaf6', { y: -2.43, recv: true }));
+scene.add(mesh(box(26, 0.3, 9), '#fbf3ee', { y: -2.65, z: -1.5, recv: true }));
+
+// ---------- the shop behind ----------
+const shop = new THREE.Group(); shop.position.z = -6; scene.add(shop);
+// striped wallpaper with little hearts, and a pink wainscot with a cream rail
+const paper = tex(256, 256, (g, w, h) => {
+  g.fillStyle = '#fff6ea'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ffe6ea'; g.fillRect(0, 0, w / 2, h);
+  g.fillStyle = '#f9c6d2';
+  const heart = (x, y, r) => { g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.6, y - r * 0.3, x - r * 0.5, y - r * 1.3, x, y - r * 0.4); g.bezierCurveTo(x + r * 0.5, y - r * 1.3, x + r * 1.6, y - r * 0.3, x, y + r * 0.9); g.fill(); };
+  heart(w * 0.75, h * 0.25, 12); heart(w * 0.75, h * 0.75, 12);
+}, 12, 7);
+shop.add(mesh(new THREE.PlaneGeometry(34, 20), null, { y: 4, cast: false, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
+shop.add(mesh(box(34, 2.6, 0.2), '#f6c3cf', { y: -1.6, z: 0.1, cast: false }));
+shop.add(mesh(box(34, 0.18, 0.34), '#fff4e6', { y: -0.3, z: 0.15, cast: false }));
+for (let x = -16; x <= 16; x += 1.6) shop.add(mesh(box(0.9, 1.6, 0.06), '#f9d0da', { x, y: -1.65, z: 0.22, cast: false }));
+
+// the shop's chalkboard sign, up top in the middle: it doubles as the video's title
+const menu = tex(1024, 400, (g, w, h) => {
+  g.fillStyle = '#4a3b3f'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#fff6ea'; g.lineWidth = 6; g.setLineDash([18, 14]); g.strokeRect(26, 26, w - 52, h - 52);
+  g.fillStyle = '#fff6ea'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '600 112px Fredoka'; g.fillText("Miw's Cheesecake", w / 2, h * 0.4);
+  g.font = '500 60px Fredoka'; g.fillStyle = '#ffb3c1'; g.fillText('♡ meet the friends ♡', w / 2, h * 0.74);
+});
+shop.add(mesh(box(5.4, 2.3, 0.12), '#d9a87a', { x: 0, y: 3.85, z: 0.1, cast: false }));
+shop.add(mesh(new THREE.PlaneGeometry(5.0, 1.95), null, { x: 0, y: 3.85, z: 0.17, cast: false, mat: new THREE.MeshBasicMaterial({ map: menu }) }));
+
+// a window on the left, with a dusky pink sky and a scalloped awning
+const view = tex(256, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffc6d6'); gr.addColorStop(1, '#ffe9c9');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  [[60, 80, 26], [90, 70, 32], [124, 84, 24], [190, 150, 22], [214, 142, 28]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); });
+});
+{ const win = new THREE.Group(); win.position.set(-4.3, 2.1, 0.1); win.scale.setScalar(0.8); shop.add(win);
+  win.add(mesh(box(3.2, 3.0, 0.14), '#fffaf6', { cast: false }));
+  win.add(mesh(new THREE.PlaneGeometry(2.8, 2.6), null, { z: 0.08, cast: false, mat: new THREE.MeshBasicMaterial({ map: view }) }));
+  win.add(mesh(box(0.1, 2.6, 0.06), '#fffaf6', { z: 0.12, cast: false }));
+  win.add(mesh(box(2.8, 0.1, 0.06), '#fffaf6', { z: 0.12, cast: false }));
+  win.add(mesh(box(3.5, 0.16, 0.5), '#fffaf6', { y: -1.55, z: 0.2, cast: false }));
+  win.add(mesh(box(3.6, 0.5, 0.5), '#f48fa8', { y: 1.72, z: 0.3, rx: 0.5, cast: false }));
+  for (let k = 0; k < 7; k++) {
+    const x = -1.5 + k * 0.5;
+    win.add(mesh(sph(0.25, 14), k % 2 ? '#fff6ea' : '#f48fa8', { x, y: 1.48, z: 0.52, s: [1, 0.55, 0.6], cast: false }));
+  }
+  // a little potted plant and a cake on the sill
+  win.add(mesh(cyl(0.22, 0.17, 0.32, 20), '#f6c3cf', { x: -1.1, y: -1.3, z: 0.25 }));
+  [[0, 0.3], [0.13, 0.22], [-0.13, 0.24]].forEach(([dx, dy]) => win.add(mesh(sph(0.16, 12), '#8cc97f', { x: -1.1 + dx, y: -1.1 + dy, z: 0.25 })));
+  cheesecake(win, 0.9, -1.47, 0.25, 0.32, '#8f7fd8');
+}
+
+// shelves on the right, lined with cheesecakes and jars of jam
+{ const shelves = new THREE.Group(); shelves.position.set(4.4, 0.55, 0.3); shelves.scale.setScalar(0.8); shop.add(shelves);
+  const tops = ['#f48fa8', '#8f7fd8', '#a8c97f', '#ffd27a', '#f6a96b'];
+  [0.5, 2.3].forEach((y, row) => {
+    shelves.add(mesh(box(3.8, 0.14, 0.9), '#e3b07e', { y, z: 0.25 }));
+    for (const sd of [-1, 1]) shelves.add(mesh(box(0.12, 0.3, 0.7), '#d39c6a', { x: sd * 1.5, y: y - 0.2, z: 0.15, cast: false }));
+    [-1.25, 0, 1.25].forEach((x, k) => {
+      if ((row + k) % 3 === 2) {
+        [-0.22, 0.22].forEach((dx, j) => {
+          shelves.add(mesh(cyl(0.17, 0.17, 0.42, 20), j ? '#f48fa8' : '#8f7fd8', { x: x + dx, y: y + 0.28, z: 0.35 }));
+          shelves.add(mesh(cyl(0.19, 0.19, 0.08, 20), '#fff6ea', { x: x + dx, y: y + 0.52, z: 0.35 }));
+        });
+      } else cheesecake(shelves, x, y + 0.07, 0.35, 0.42, tops[(row * 3 + k) % tops.length]);
+    });
+  });
+}
+
+// pastel bunting either side of the sign
+{ const r = rng(3);
+  for (let i = 0; i < 26; i++) {
+    const x = -13 + i * 1.04, y = 5.3 - 0.4 * Math.sin((i % 13) / 13 * PI);
+    if (Math.abs(x) < 3.1) continue;   // leave the sign clear
+    shop.add(mesh(cyl(0.34, 0.001, 0.62, 3), RAINBOW[i % RAINBOW.length], { x, y: y - 0.3, z: 0.3, rz: 0, ry: PI / 6 + r() * 0.1, s: [1, 1, 0.2], cast: false }));
+  }
+}
+
+// two pendant lamps with glowing bulbs; they sway a touch, twice per loop
+const lamps = [-3.4, 3.4].map((x, i) => {
+  const g = new THREE.Group(); g.position.set(x, 10.6, -3); scene.add(g);
+  g.add(mesh(cyl(0.02, 0.02, 4.4, 6), '#8a6a5a', { y: -2.2, cast: false }));
+  g.add(mesh(new THREE.SphereGeometry(0.62, 32, 16, 0, TAU, 0, PI / 2), ['#ffd6a5', '#ffb3c1', '#caffbf'][i], { y: -4.75, cast: false, mat: new THREE.MeshLambertMaterial({ color: ['#ffd6a5', '#ffb3c1', '#caffbf'][i], side: THREE.DoubleSide }) }));
+  g.add(mesh(sph(0.22, 16), null, { y: -4.85, cast: false, mat: new THREE.MeshBasicMaterial({ color: '#fff4c9' }) }));
+  return g;
+});
+
+// ---------- friends ----------
+const friends = FRIENDS.map((f, i) => {
+  const seat = new THREE.Group(), hop = new THREE.Group();
+  const a = i / N * TAU;
+  seat.position.set(Math.sin(a) * R, 0.06, Math.cos(a) * R);
+  seat.rotation.y = a;                       // facing out, so whoever is at the front faces the camera
+  seat.add(hop); table.add(seat);
+  return { ...f, i, seat, hop, model: null, idle: null, blink: null };
+});
+friends.forEach(f => loadModel(f.sp, () => {
+  const m = makeModel(f.sp, f.color);
+  m.g.scale.setScalar(CHAR_SCALE);
+  f.hop.add(m.g);
+  const mixer = new THREE.AnimationMixer(m.g), act = n => { const c = m.clips.find(c => c.name === n); if (!c) return null; const a = mixer.clipAction(c); a.play(); return a; };
+  Object.assign(f, { model: m, mixer, idle: act('idle'), blink: act('blink') });
+}));
+
+// ---------- the name tag, drawn in 2D over the render ----------
+function nameTag(f, x, y, s) {
+  if (s <= 0.001) return;
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(s, s);
+  ctx.font = '600 58px Fredoka';
+  const w = ctx.measureText(f.name).width + 112, h = 92;
+  ctx.shadowColor = 'rgba(160, 80, 100, 0.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+  ctx.fillStyle = '#fffaf6';
+  ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 6; ctx.strokeStyle = f.color; ctx.stroke();
+  ctx.fillStyle = f.color;
+  ctx.beginPath(); ctx.arc(-w / 2 + 46, 0, 13, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#6b3d45'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(f.name, -w / 2 + 76, 3);
+  ctx.restore();
+}
+
+// ---------- one frame ----------
+const front = new THREE.Vector3();
+window.renderAt = t => {
+  t = ((t % LOOP) + LOOP) % LOOP;
+  const beat = Math.floor(t / BEAT + 1e-9) % N, u = t - beat * BEAT, ph = t / LOOP;
+
+  // camera: 30 degree lens, 4 degree sway and a gentle rise and fall, once each per loop
+  const az = 4 * Math.sin(TAU * ph) * PI / 180, el = (13 + 1.5 * Math.sin(2 * TAU * ph)) * PI / 180, dist = 14.2;
+  camera.position.set(Math.sin(az) * Math.cos(el) * dist, 1.2 + Math.sin(el) * dist, Math.cos(az) * Math.cos(el) * dist);
+  camera.lookAt(0, 1.2, 0);
+
+  // the table turns 1/7 at the end of every beat; the lamps sway a touch
+  lamps.forEach((l, i) => { l.rotation.z = 0.025 * Math.sin(2 * TAU * ph + i * 1.3); });
+  table.rotation.y = -(beat + inOutBack(seg(u, 0.95, 1.5))) / N * TAU;
+
+  friends.forEach(f => {
+    // idle sways stretched to 3.5 s (3 per loop), blinks every 5.25 s (2 per loop), each friend offset
+    if (f.idle) f.idle.time = ((t / 3.5 + f.i * 0.37) % 1) * f.idle.getClip().duration;
+    if (f.blink) f.blink.time = ((t / 5.25 + f.i * 0.29) % 1) * f.blink.getClip().duration;
+    if (f.mixer) f.mixer.update(0);
+    let y = 0, sy = 1, sxz = 1, spin = 0;
+    if (f.i === beat) {
+      // anticipation squash, a hop with a full spin, a squashy landing and a springy settle
+      const a = seg(u, 0, 0.15), air = seg(u, 0.15, 0.47), land = u - 0.47;
+      if (u < 0.15) { sy = 1 - 0.14 * outQuad(a); sxz = 1 + 0.08 * outQuad(a); }
+      else if (u < 0.47) { y = 0.62 * 4 * air * (1 - air); sy = 1 + 0.12 * (1 - air) * (1 - air) + 0.05 * air * air; sxz = 1 / Math.sqrt(sy); spin = TAU * inOutCubic(air); }
+      else { const k = 1 - spring(land, 0.35, 3.6); sy = 1 - 0.16 * k; sxz = 1 + 0.09 * k; }
+    }
+    f.hop.position.y = y; f.hop.rotation.y = spin; f.hop.scale.set(sxz, sy, sxz);
+  });
+
+  renderer.render(scene, camera);
+  ctx.drawImage(renderer.domElement, 0, 0, SIZE, SIZE);
+
+  // the front friend's tag: pops in at the top of the hop, shrinks away as the table turns
+  const pop = u < 0.95 ? spring(u - 0.3, 0.42, 3) : 1 - inOutCubic(seg(u, 0.95, 1.12)) * 1.0;
+  front.set(0, -0.5, R).applyMatrix4(island.matrixWorld).project(camera);
+  nameTag(FRIENDS[beat], (front.x + 1) / 2 * SIZE, (1 - front.y) / 2 * SIZE, Math.max(0, pop));
+};
+
+// ---------- play, freeze (?t=) or capture (?capture) ----------
+const q = new URLSearchParams(location.search);
+whenModelsLoaded(() => document.fonts.load('600 58px Fredoka').then(() => document.fonts.load('500 50px Fredoka')).then(() => document.fonts.load('600 120px Fredoka')).then(async () => {
+  menu.redraw();
+  window.__ready = true;
+  if (q.has('t')) return renderAt(parseFloat(q.get('t')) || 0);
+  if (q.has('capture')) {
+    for (let f = 0; f < FRAMES; f++) {
+      renderAt(f / FPS);
+      const png = await new Promise(r => out.toBlob(r, 'image/png'));
+      await fetch(`frame/intro/${String(f).padStart(4, '0')}`, { method: 'POST', body: png });
+      document.title = `${f + 1}/${FRAMES}`;
+    }
+    window.__captured = FRAMES;
+    return;
+  }
+  const t0 = performance.now();
+  (function tick() { renderAt((performance.now() - t0) / 1000); requestAnimationFrame(tick); })();
+}), 15000);
+</script>
+</body>
+</html>
