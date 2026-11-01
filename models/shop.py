@@ -2,6 +2,7 @@
 #   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/shop.py -- models/shop.glb [preview.png]
 # The output file's name picks the piece, each in the same coordinates video/intro.html builds around it:
 #   shop     — the set, in the shop group's space (the wallpaper wall is z = 0, +z comes towards the camera)
+#   sign     — the chalkboard's frame, in the same space as shop; the page keeps it in focus as the title
 #   bigcake  — the giant strawberry cheesecake on its stand and the counter under it; the friends stand on its top at y = 0
 #   shoplamp — a pendant lamp hanging down from its origin; "bulb" is swapped for the page's glowing material
 # Flat pictures (the chalkboard's lettering, the view through the window, the wallpaper) stay as canvas
@@ -81,20 +82,6 @@ def shop(g):
     rbox('rail', g, (34, 0.2, 0.34), (0, -0.25, 0.17), C(CREAM), r=0.07)
     scallops(g, 'rail_scallop', -17, 17, -0.4, 0.3, CREAM, r=0.12)
 
-    # the chalkboard's frame: soft wood with round corner knobs and a strawberry on top
-    bx, by, bw, bh = 0, 3.85, 5.0, 1.95
-    for nm, size, loc in (('top', (bw + 0.5, 0.22, 0.2), (bx, by + bh / 2 + 0.1, 0.12)), ('bottom', (bw + 0.5, 0.22, 0.2), (bx, by - bh / 2 - 0.1, 0.12)),
-                          ('left', (0.22, bh + 0.2, 0.2), (bx - bw / 2 - 0.12, by, 0.12)), ('right', (0.22, bh + 0.2, 0.2), (bx + bw / 2 + 0.12, by, 0.12))):
-        rbox(f'board_{nm}', g, size, loc, C(WOOD), r=0.08)
-    rbox('board_back', g, (bw + 0.2, bh + 0.1, 0.1), (bx, by, 0.05), C('#4a3b3f'), r=0.02)
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            ball(f'board_knob_{sx}{sy}', g, 0.14, (bx + sx * (bw / 2 + 0.12), by + sy * (bh / 2 + 0.1), 0.2), C(WOOD_DK), seg=14)
-    strawberry(g, 'board_berry', bx, by + bh / 2 + 0.2, 0.2, 1.3)
-    rbox('board_ledge', g, (bw - 0.4, 0.1, 0.28), (bx, by - bh / 2 - 0.25, 0.22), C(WOOD), r=0.04)
-    for k, c in enumerate(('#fff6ea', '#ffb3c1', '#b5ccff')):   # chalk on the ledge
-        cyl(f'chalk_{k}', g, 0.035, 0.035, 0.22, (bx - 1.6 + k * 0.32, by - bh / 2 - 0.17, 0.26), C(c), r=0.015, rot=(0, 0, math.pi / 2))
-
     # the window: rounded frame, mullions, a striped awning with a scalloped hem, a sill with a flower box
     wx, wy, ww, wh = -4.3, 2.1, 2.24, 2.08
     for nm, size, loc in (('top', (ww + 0.36, 0.2, 0.22), (wx, wy + wh / 2 + 0.08, 0.14)), ('bottom', (ww + 0.36, 0.2, 0.22), (wx, wy - wh / 2 - 0.08, 0.14)),
@@ -163,6 +150,23 @@ def shop(g):
         for i, x in enumerate(xs[:-1]):
             xm = x + side * 0.26
             prism(f'flag_{side}_{i}', g, [(-0.2, 0), (0.2, 0), (0, -0.42)], 0.04, (xm, sag(xm), 0.3), C(['#ffb3c1', '#ffd6a5', '#fdf3a7', '#caffbf', '#a6ecf5', '#d3c4ff'][i]), r=0.015)
+
+# ---------- the chalkboard sign, kept in focus as the video's title ----------
+@piece
+def sign(g):
+    # the chalkboard's frame: soft wood with round corner knobs and a strawberry on top
+    bx, by, bw, bh = 0, 3.85, 5.0, 1.95
+    for nm, size, loc in (('top', (bw + 0.5, 0.22, 0.2), (bx, by + bh / 2 + 0.1, 0.12)), ('bottom', (bw + 0.5, 0.22, 0.2), (bx, by - bh / 2 - 0.1, 0.12)),
+                          ('left', (0.22, bh + 0.2, 0.2), (bx - bw / 2 - 0.12, by, 0.12)), ('right', (0.22, bh + 0.2, 0.2), (bx + bw / 2 + 0.12, by, 0.12))):
+        rbox(f'board_{nm}', g, size, loc, C(WOOD), r=0.08)
+    rbox('board_back', g, (bw + 0.2, bh + 0.1, 0.1), (bx, by, 0.05), C('#4a3b3f'), r=0.02)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            ball(f'board_knob_{sx}{sy}', g, 0.14, (bx + sx * (bw / 2 + 0.12), by + sy * (bh / 2 + 0.1), 0.2), C(WOOD_DK), seg=14)
+    strawberry(g, 'board_berry', bx, by + bh / 2 + 0.2, 0.2, 1.3)
+    rbox('board_ledge', g, (bw - 0.4, 0.1, 0.28), (bx, by - bh / 2 - 0.25, 0.22), C(WOOD), r=0.04)
+    for k, c in enumerate(('#fff6ea', '#ffb3c1', '#b5ccff')):   # chalk on the ledge
+        cyl(f'chalk_{k}', g, 0.035, 0.035, 0.22, (bx - 1.6 + k * 0.32, by - bh / 2 - 0.17, 0.26), C(c), r=0.015, rot=(0, 0, math.pi / 2))
 
 # ---------- the giant cheesecake the friends ride ----------
 @piece
