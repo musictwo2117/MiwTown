@@ -128,7 +128,10 @@ const menu = tex(1024, 400, (g, w, h) => {
   g.font = '600 112px Fredoka'; g.fillText("Miw's Cheesecake", w / 2, h * 0.4);
   g.font = '500 60px Fredoka'; g.fillStyle = '#ffb3c1'; g.fillText('♡ meet the friends ♡', w / 2, h * 0.74);
 });
-shop.add(mesh(new THREE.PlaneGeometry(5.0, 1.95), null, { x: 0, y: 3.85, z: 0.17, cast: false, mat: new THREE.MeshBasicMaterial({ map: menu }) }));
+// the sign is the title, so it stays in focus: it's drawn with the cake and friends, not with the blurred shop
+const sign = new THREE.Group(); sign.position.z = -6; scene.add(sign);
+sign.add(mesh(new THREE.PlaneGeometry(5.0, 1.95), null, { x: 0, y: 3.85, z: 0.17, cast: false, mat: new THREE.MeshBasicMaterial({ map: menu }) }));
+loadModel('sign', () => { const frame = makeScenery('sign').g; frame.traverse(o => { o.castShadow = false; }); sign.add(frame); });
 
 // the view through the window: a dusky pink sky with puffy clouds
 const view = tex(256, 256, (g, w, h) => {
@@ -151,7 +154,8 @@ const beamTex = tex(64, 256, (g, w, h) => {
   beam.add(mesh(geo, null, { cast: false, mat: new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }) }));
 }
 
-// two pendant lamps with glowing bulbs; they sway a touch, twice per loop
+// two pendant lamps with glowing bulbs; they sway a touch, twice per loop. They hang in front of the wall and
+// beside the sign, so they're drawn in focus too; only their soft halos go with the blurred shop
 const glow = new THREE.MeshBasicMaterial({ color: '#fff4c9' });
 const halo = tex(128, 128, (g, w, h) => {
   const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
@@ -161,12 +165,12 @@ const halo = tex(128, 128, (g, w, h) => {
 const lamps = [-3.1, 3.1].map(x => {
   const g = new THREE.Group(); g.position.set(x, 9.3, -3); scene.add(g);
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  s.position.y = -5.05; s.scale.setScalar(1.6); g.add(s);
+  s.position.y = -5.05; s.scale.setScalar(1.6); s.layers.set(BACK); g.add(s);
   const light = new THREE.PointLight(0xffe2b8, 0.35, 6, 1.5); light.position.y = -5.4; g.add(light);
   return g;
 });
 // the lamps hang in front of the wall, so their cords would throw long stripes across it: no shadows from them
-loadModel('shoplamp', () => lamps.forEach(g => { const l = makeScenery('shoplamp', { bulb: glow }).g; l.traverse(o => { o.castShadow = false; }); g.add(l); toBack(g); }));
+loadModel('shoplamp', () => lamps.forEach(g => { const l = makeScenery('shoplamp', { bulb: glow }).g; l.traverse(o => { o.castShadow = false; }); g.add(l); }));
 // every light shines on both passes
 scene.traverse(o => { if (o.isLight) o.layers.enableAll(); });
 
