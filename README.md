@@ -28,7 +28,7 @@ Each Claude Code session moves in as a little character. When it reads files it 
 
 The characters, the town's buildings, the Cat Room's furniture and the little props dotted around the town are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
 
-![The seven characters sculpted in Blender: an orange tabby cat, a white bunny, a bear, a frog, a chick, a penguin in a pink scarf, and Miw with orange braids, pink glasses and a polka-dot dress](docs/characters.jpg)
+![The seven characters sculpted in Blender, each holding a slice of strawberry cheesecake: an orange tabby cat, a white bunny, a bear, a frog with eyes on two round bumps, a chick, a penguin in a pink scarf, and Miw with orange braids, pink glasses and a polka-dot dress](docs/characters.jpg)
 
 ![The town's nine buildings sculpted in Blender: the ladybug Bug Clinic, the Pretzel Café, the Cat Home, the book-stack Library, the Code Factory, the mailbox Post Office, the mushroom Cozy Cottage, the Thinking Tower and the notebook Writing Studio](docs/buildings.jpg)
 
@@ -36,7 +36,8 @@ The characters, the town's buildings, the Cat Room's furniture and the little pr
 
 ![Props used all over the town: a flower, a round tree, a lamp post with a pink ribbon and a two-tier tree](docs/props.jpg)
 
-- **Soft and rounded.** Big heads, chubby bodies and bevelled edges everywhere, with ambient occlusion baked into each vertex, so creases and undersides go softly darker like a clay toy.
+- **Little vinyl toys.** Big round heads on small bean bodies, small bead eyes set low and wide, a tiny w mouth (the frog smiles wide), rosy dot cheeks and a light pastel palette with a soft sheen. Each friend holds a slice of strawberry cheesecake, put away while it walks. The design was picked option by option from side-by-side renders.
+- **Soft and rounded.** Bevelled edges everywhere, with a soft, rosy shadow baked into each vertex, so creases and undersides go gently darker without looking grubby.
 - **Animated in Blender too.** Every character has a walk cycle with a real stride, plus idle sways, ear twitches and blinks. Moving parts of buildings (the telescope dome, the pencil, the gears, the envelope sign) are named nodes the town animates.
 - **Always something to show.** The pages draw their built-in shapes first and swap each model in as it loads, so they still work if a model is missing.
 - **Light on the browser.** Each piece of furniture is fused into one mesh per color before export, so the room has far fewer meshes to draw.
@@ -57,7 +58,7 @@ Characters are `models/<name>.py`; the buildings all come from `models/town.py`,
 - **Play with your agents.** Tap one to pet it, rename it, or change its look. Models: cat, bunny, bear, frog, chick, penguin, and Miw. The card also shows a spinning 3D portrait, a timeline of today, and recent activity.
 - **Heads-up alerts.** A little card pops up when a friend gets stuck, is waiting for you, or finishes; tap it to jump there. The tab title shows how many need you, and 🔔 turns on desktop notifications for when the tab is in the background.
 - **Follow and photos.** 🎯 Follow keeps the camera on one friend as it walks around. 📸 Photo saves a framed picture of the scene, name tags included.
-- **Levels and a wardrobe.** Agents earn XP as they work and rest. They unlock a bow (Lv 2), scarf (Lv 3), flower crown (Lv 5), party hat (Lv 7), and crown (Lv 10).
+- **Levels and a wardrobe.** Agents earn XP as they work and rest. They unlock a bow (Lv 2), scarf (Lv 3), flower crown (Lv 5), party hat (Lv 7), and crown (Lv 10). The penguin keeps its own pink scarf instead of the Lv 3 one.
 - **Real Bangkok time and weather.** Day and night follow Thai time. Clouds, rain, and storms follow the real weather from [Open-Meteo](https://open-meteo.com).
 - **Little touches.** Animated speech bubbles, friends waving when they meet, butterflies, a hot-air balloon, and optional ambient sound (🔇 by default). Tap any building or room to see who's there.
 
@@ -124,6 +125,7 @@ The server listens on `127.0.0.1` only, and:
 | `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
 | `models/` | Blender scripts for the characters, buildings, furniture and props, the `.glb` files they make, and `build.sh` |
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
+| `video/` | The video studio: clip pages, the frame and sound capture server, the FFmpeg encoder and the Remotion 9:16 cut (see [Videos](#videos)) |
 
 Built with [three.js](https://threejs.org) r128.
 
@@ -141,3 +143,9 @@ node video/serve.js           # http://localhost:19200 plays the intro loop
 - For Reels, TikTok and Shorts, `cd video/remotion && npm install && npm run render` makes a 9:16 cut with [Remotion](https://www.remotion.dev): the loop twice, framed with a bouncy title and an end card (`video/out/intro/intro-vertical.mp4`).
 
 **Meet the friends** (`video/intro.html`): a 10.5 s seamless loop, 1080×1080 at 30 fps. In Miw's Cheesecake shop, a giant strawberry cheesecake turns to bring each friend to the front, where it hops, spins and gets its name tag.
+
+- **The set** is sculpted in Blender (`models/shop.py`): a window with a striped awning, a chalkboard sign, scalloped shelves of cheesecakes and jam, a cheesecake-wheel clock, bunting and hanging lamps.
+- **Lit like a lens.** The shop behind is softly out of focus while the cake, the friends and the sign stay sharp, with a warm beam through the window, glowing lamps, a pink rim light and a gentle vignette.
+- **Always something moving.** Steam curls from a cup of tea, sugar dust twinkles in the window light, clouds drift past and the clock's hand goes round. Everything repeats a whole number of times per loop, so the seam never shows.
+- **The friends react.** The name tag pops in with GSAP, letter by letter; the others turn to watch, bounce when the hopper lands and sway as the cake turns.
+- **Sound.** A music-box tune over soft chords, with a boing, a thump, a pop and little ticks for every hop and name tag, a whoosh as the cake turns and a shop bell, each one frame after its picture.
