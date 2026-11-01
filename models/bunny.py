@@ -13,11 +13,8 @@ blob('tummy', body, (0, -0.24, 0.27), (0.18, 0.1, 0.17), TUMMY)
 for sd in (-1, 1):
     blob(f'paw_{"LR"[sd > 0]}', body, (sd * 0.14, -0.29, 0.2), (0.06, 0.07, 0.06), CREAM, rot=(0.3, 0, sd * 0.2))
 
-h = Ell(head, (0, 0, 0), (0.42, 0.36, 0.36))
+h = Ell(head, (0, 0, 0), (0.39, 0.36, 0.39))
 h.body('skull', FUR, seg=40, ring=24)
-# cheek puffs make the face rounder
-for sd in (-1, 1):
-    h.decal(f'cheek_{"LR"[sd > 0]}', sd * 0.5, -0.32, (0.14, 0.1, 0.08), FUR, out=-0.05)
 
 # long ears: a node at the base of each, tilted, holding the ear and its pink inside
 def ear_shape(co):
@@ -30,12 +27,12 @@ for sd, tilt, droop in ((-1, 0.2, 0.15), (1, 0.42, 0.5)):
     blob(f'ear_out_{"LR"[sd > 0]}', e, (0, 0, 0.24), (0.105, 0.065, 0.28), FUR, shape=ear_shape)
     blob(f'ear_in_{"LR"[sd > 0]}', e, (0, -0.035, 0.25), (0.06, 0.04, 0.21), PINK, shape=ear_shape)
 
-eyes(h, 0.34, -0.05)
-blush(h, 0.64, -0.22)
-h.decal('nose', 0, -0.13, (0.03, 0.022, 0.02), NOSE, out=0.006)
-omega_mouth(h, pitch=-0.19, width=0.1, depth=0.035)
+eyes(h, 0.38, -0.05, (0.062, 0.084))
+blush(h, 0.62, -0.22, (0.085, 0.045))
+h.decal('nose', 0, -0.16, (0.03, 0.022, 0.02), NOSE, out=0.006)
+omega_mouth(h, pitch=-0.22, width=0.1, depth=0.035)
 for sd in (-1, 1):
-    h.decal(f'tooth_{"LR"[sd > 0]}', sd * 0.022, -0.29, (0.02, 0.03, 0.012), SHINE, out=0.004)
+    h.decal(f'tooth_{"LR"[sd > 0]}', sd * 0.022, -0.31, (0.02, 0.03, 0.012), SHINE, out=0.004)
 
 # cotton-ball tail
 tail.location = (0, 0.3, 0.2)
@@ -46,6 +43,7 @@ for f in feet:
 
 # pivots for animation: the ear nodes already sit at their base
 paws = [group(f'paw_pivot_{s}', body, (sd * 0.14, -0.22, 0.31), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+chibi(body, head)
 animate(body, head, tail, feet,
         limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
         ears=[(bpy.data.objects[f'ear_{s}'], 0, 0.22) for s in 'LR'],

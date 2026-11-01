@@ -10,6 +10,10 @@
   const mats = {};
   // meshes with baked soft shadows (a per-vertex "ao" color from Blender) get a material that multiplies it in
   const mat = (c, ao) => mats[c + ao] || (mats[c + ao] = new THREE.MeshLambertMaterial({ color: c, vertexColors: ao }));
+  // characters get a soft sheen, like a vinyl toy; eyes and their highlights shine a little more
+  const toy = (c, ao, glossy) => mats['toy' + c + ao + glossy] || (mats['toy' + c + ao + glossy] = new THREE.MeshPhongMaterial({
+    color: c, vertexColors: ao, specular: glossy ? 0x5a5258 : 0x2c2629, shininess: glossy ? 60 : 24 }));
+  const GLOSSY = /^(eye|shine|glasses|button|nose|lips)$/;
   const templates = {};
 
   // whenModelsLoaded(cb) runs cb once every model asked for so far has loaded (or failed), or after maxMs at most:
@@ -40,10 +44,10 @@
     g.traverse(o => {
       if (!o.isMesh) return;
       const n = o.material.name;
-      o.material = mat(n === 'skin' ? color : n === 'stripe' ? shade(color) : own(o.material), !!o.geometry.attributes.color);
+      o.material = toy(n === 'skin' ? color : n === 'stripe' ? shade(color) : own(o.material), !!o.geometry.attributes.color, GLOSSY.test(n));
       o.castShadow = !SMALL.test(n); o.receiveShadow = false;
     });
-    return { g, body: find('body'), head: find('head'), tail: find('tail'), feet: [find('foot_L'), find('foot_R')], pose: poser(g, t.animations) };
+    return { g, body: find('body'), head: find('head'), tail: find('tail'), feet: [find('foot_L'), find('foot_R')], pose: poser(g, t.animations), clips: t.animations };
   };
 
   // Buildings, furniture and props: every material keeps its Blender color (with baked shadows), except the names

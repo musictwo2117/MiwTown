@@ -326,6 +326,18 @@ def skeleton(name):
     feet = [node(f'foot_{"LR"[sd > 0]}', root, (sd * FOOT_AT[0], FOOT_AT[1], FOOT_AT[2])) for sd in (-1, 1)]
     return root, body, head, tail, feet
 
+def chibi(body, head, head_z=0.8, grow=1.12, shrink=0.88):
+    """Vinyl-toy proportions: a big, round head sitting low on a small body. The pages reset the body node's
+    position and scale every frame, so the body's parts shrink inside a 'trunk' node instead. Call after the
+    parts and their pivots are built, before animate()."""
+    trunk = node('trunk', body)
+    for o in [o for o in body.children if o not in (head, trunk)]:
+        o.parent = trunk
+    trunk.scale = (shrink,) * 3
+    head.location.z = head_z
+    head.scale = (grow,) * 3   # uniform, so a round head stays round
+    return trunk
+
 def group(name, parent, loc, names):
     """Gather already-built parts under a new pivot node at loc (in parent's space), so they can swing about it."""
     g = node(name, parent, loc)
@@ -403,13 +415,18 @@ def at_rest():
     scene.frame_set(0)
 
 # ---------- soft shadows ----------
+FLAT = {'eye', 'shine', 'blush', 'mouth', 'nose', 'lips', 'tongue', 'stripe', 'frogspot', 'white', 'button', 'dot', 'glasses'}
+
 def bake_ao(rays=32, reach=0.35, strength=0.55):
     """Ambient occlusion baked into each vertex's color: creases, undersides and spots tucked under other parts go
     softly darker, like a clay toy under a cloudy sky. The town multiplies it into the material color."""
     bpy.context.view_layer.update()
     meshes = [o for o in scene.objects if o.type == 'MESH' and o.name != 'floor']
+    # face details and markings lie flat on the skin: if they cast shade, the coarse head mesh gets grubby
+    # smudges round the eyes, nose and mouth, so only the bigger shapes block light
+    occluders = [o for o in meshes if o.data.materials[0].name not in FLAT and not o.name.startswith(('cheek_', 'brow_', 'freckle'))]
     verts, polys = [], []
-    for o in meshes:
+    for o in occluders:
         mw, base = o.matrix_world, len(verts)
         verts += [mw @ v.co for v in o.data.vertices]
         polys += [[base + i for i in p.vertices] for p in o.data.polygons]

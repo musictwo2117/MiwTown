@@ -12,7 +12,7 @@ blob('tummy', body, (0, -0.25, 0.26), (0.17, 0.09, 0.15), CREAM)
 for sd in (-1, 1):
     blob(f'paw_{"LR"[sd > 0]}', body, (sd * 0.15, -0.29, 0.2), (0.065, 0.07, 0.065), CREAM, rot=(0.3, 0, sd * 0.2))
 
-h = Ell(head, (0, 0, 0), (0.43, 0.36, 0.35))
+h = Ell(head, (0, 0, 0), (0.39, 0.36, 0.39))
 h.body('skull', SKIN, seg=40, ring=24)
 
 # big rounded ears, tilted outwards, with pink insides
@@ -25,12 +25,12 @@ for sd in (-1, 1):
     blob(f'ear_{"LR"[sd > 0]}', head, loc, (0.2, 0.1, 0.21), SKIN, rot=rot, shape=ear_shape)
     blob(f'ear_in_{"LR"[sd > 0]}', head, loc + Vector((0, -0.06, -0.03)), (0.115, 0.05, 0.125), PINK, rot=rot, shape=ear_shape)
 
-eyes(h); blush(h)
-h.decal('nose', 0, -0.15, (0.034, 0.024, 0.02), NOSE, out=0.005)
-omega_mouth(h)
+eyes(h, 0.4, -0.06, (0.062, 0.084)); blush(h, 0.64, -0.22, (0.085, 0.045))
+h.decal('nose', 0, -0.17, (0.034, 0.024, 0.02), NOSE, out=0.005)
+omega_mouth(h, pitch=-0.23, width=0.1, depth=0.035)
 for sd in (-1, 1):
     for j, tilt in enumerate((0.05, -0.05)):
-        a = h.at(sd * 0.78, -0.12 + tilt, 0.004)[0]
+        a = h.at(sd * 0.78, -0.16 + tilt, 0.004)[0]
         b = a + Vector((sd * 0.09, -0.02, tilt * 0.9))
         tube(f'whisker_{"LR"[sd > 0]}{j}', head, [tuple(a), tuple(a.lerp(b, 0.5)), tuple(b)], [1, 0.8, 0.5], MOUTH, bevel=0.005)
 
@@ -55,6 +55,7 @@ for f in feet:
 # pivots for animation: ears at their base, paws at the shoulder, eyes for blinking
 ears = [group(f'ear_pivot_{s}', head, bpy.data.objects[f'ear_{s}'].location.copy(), [f'ear_{s}', f'ear_in_{s}']) for s in 'LR']
 paws = [group(f'paw_pivot_{s}', body, (sd * 0.15, -0.22, 0.32), [f'paw_{s}']) for s, sd in (('L', -1), ('R', 1))]
+chibi(body, head)
 animate(body, head, tail, feet,
         limbs=[(paws[0], 0, 0.35, math.pi), (paws[1], 0, 0.35, 0)],
         ears=[(e, 0, 0.18) for e in ears],
