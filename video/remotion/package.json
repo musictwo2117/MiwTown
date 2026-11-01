@@ -1,0 +1,16 @@
+{
+  "name": "miws-town-video",
+  "private": true,
+  "description": "Miw's Town: the vertical 9:16 cut of the intro loop, with a title and an end card. See video/remotion/README in the main README.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "node prepare.js && remotion render Vertical ../out/intro/intro-vertical.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.242",
+    "@remotion/google-fonts": "4.0.242",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.242"
+  }
+}
