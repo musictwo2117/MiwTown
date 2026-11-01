@@ -126,8 +126,14 @@ def shop(g):
         rbox(f'box_ribbon_{k}', g, (w + 0.01, h + 0.01, 0.06), (sx + 0.75, y, 0.45), C(ROSE), r=0.01, rot=(0, (k - 1) * 0.15, 0))
     for k in (-1, 1):
         ball(f'bow_loop_{k}', g, 0.09, (sx + 0.75 + k * 0.09, 3.33, 0.45), C(ROSE), scale=(1, 0.6, 0.5), seg=10)
+    # a cup of tea between them (the page sends steam up from it, at (sx, 2.68, 0.45))
+    cyl('saucer', g, 0.19, 0.15, 0.03, (sx, 2.47, 0.45), C('#ffffff'), r=0.012)
+    cyl('cup', g, 0.12, 0.09, 0.17, (sx, 2.57, 0.45), C('#ffffff'), r=0.03)
+    cyl('cup_band', g, 0.122, 0.112, 0.03, (sx, 2.6, 0.45), C(ROSE), r=0.01)
+    cyl('tea', g, 0.105, 0.105, 0.01, (sx, 2.645, 0.45), C('#c98a5a'), r=0.004)
+    torus('cup_handle', g, 0.055, 0.016, (sx + 0.13, 2.57, 0.45), C('#ffffff'), seg=16, sides=6)
 
-    # a cheesecake-wheel clock: crust rim, cream face, strawberry hours and chocolate hands
+    # a cheesecake-wheel clock: crust rim, cream face, strawberry hours and a chocolate hour hand (the page turns the minute hand)
     cx, cy, cz = 4.85, 4.0, 0.12
     cyl('clock_crust', g, 0.62, 0.62, 0.16, (cx, cy, cz), C('#c98b4b'), r=0.06, rot=(math.pi / 2, 0, 0))
     cyl('clock_face', g, 0.53, 0.53, 0.18, (cx, cy, cz + 0.01), C('#fff0cf'), r=0.05, rot=(math.pi / 2, 0, 0))
@@ -139,7 +145,6 @@ def shop(g):
         else:
             ball(f'clock_tick_{k}', g, 0.025, (cx + math.sin(a) * 0.43, cy + math.cos(a) * 0.43, cz + 0.11), C('#c98b4b'), seg=8)
     rbox('clock_hand_h', g, (0.05, 0.26, 0.03), (cx + 0.08, cy + 0.08, cz + 0.13), C('#6b3d45'), r=0.02, rot=(0, 0, -math.pi / 4))
-    rbox('clock_hand_m', g, (0.04, 0.38, 0.03), (cx - 0.02, cy + 0.17, cz + 0.15), C('#6b3d45'), r=0.015, rot=(0, 0, 0.12))
     ball('clock_pin', g, 0.045, (cx, cy, cz + 0.17), C('#ef5470'), seg=10)
 
     # pastel bunting either side of the sign, on a soft cord
