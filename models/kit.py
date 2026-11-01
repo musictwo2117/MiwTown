@@ -465,7 +465,7 @@ def bake_ao(rays=32, reach=0.35, strength=0.55):
     meshes = [o for o in scene.objects if o.type == 'MESH' and o.name != 'floor']
     # face details and markings lie flat on the skin: if they cast shade, the coarse head mesh gets grubby
     # smudges round the eyes, nose and mouth, so only the bigger shapes block light
-    occluders = [o for o in meshes if o.data.materials[0].name not in FLAT and not o.name.startswith(('cheek_', 'brow_', 'freckle'))]
+    occluders = [o for o in meshes if o.data.materials[0].name not in FLAT and not o.name.startswith(('cheek_', 'brow_', 'freckle', 'face_', 'bulb_'))]
     verts, polys = [], []
     for o in occluders:
         mw, base = o.matrix_world, len(verts)
@@ -488,7 +488,8 @@ def bake_ao(rays=32, reach=0.35, strength=0.55):
                 hit = bvh.ray_cast(p + n * 0.003, d, reach)
                 if hit[0] is not None: shade += (1 - hit[3] / reach) * d.dot(n)
             k = 1 - strength * min(1.0, 2 * shade / rays)
-            attr.data[v.index].color = (k, k, k, 1)
+            # warm, rosy shade rather than grey, which reads as dirt on pastel colours
+            attr.data[v.index].color = (1 - (1 - k) * 0.55, k, 1 - (1 - k) * 0.85, 1)
         me.color_attributes.active_color = attr
 
 def join_by_material(root):
@@ -514,7 +515,7 @@ def join_by_material(root):
         for o in objs: bpy.data.objects.remove(o)
         link(bpy.data.objects.new(name, me), root)
 
-def finish(ao=True, reach=0.35, view=1.0, strength=0.55, join=None):
+def finish(ao=True, reach=0.35, view=1.0, strength=0.35, join=None):
     """Bake, optionally render previews (view scales the camera out for bigger things), and export.
     join: a root whose meshes get fused per material after baking."""
     at_rest()

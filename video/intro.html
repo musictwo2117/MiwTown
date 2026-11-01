@@ -71,16 +71,17 @@ const tex = (w, h, draw, rx = 1, ry = 1) => {
 };
 
 // the town's light recipe, warmed up for an indoor shop
-scene.add(new THREE.HemisphereLight(0xfff1e0, 0xe8c4b8, 0.55));
-const sun = new THREE.DirectionalLight(0xfff0dc, 0.55);
+// a bright, rosy sky light so shaded sides stay soft pink instead of going grey
+scene.add(new THREE.HemisphereLight(0xfff4ec, 0xf6d3da, 0.6));
+const sun = new THREE.DirectionalLight(0xfff0dc, 0.45);
 sun.position.set(5, 9, 4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
 sun.shadow.radius = 3; sun.shadow.bias = -0.0005;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0xffeef2, 0.26);
-fill.position.set(-2, 3, 10);
+const fill = new THREE.DirectionalLight(0xffeef2, 0.28);   // from the camera's side, low, to lift the friends' lower edges
+fill.position.set(-2, 1.5, 10);
 scene.add(fill);
 // a soft pink rim from behind, so the friends' edges lift off the blurred shop
 const rim = new THREE.DirectionalLight(0xffd6e6, 0.4);
