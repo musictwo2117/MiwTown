@@ -168,17 +168,17 @@ class Ell:
         return tube(name, self.parent, p, radii or [1] * len(p), mat, bevel=width)
 
 # ---------- faces ----------
-def eyes(h, yaw=0.36, pitch=-0.06, size=(0.072, 0.092), out=0.0):
-    """Big glossy eyes with a big and a small highlight."""
+def eyes(h, yaw=0.44, pitch=-0.15, size=0.035, out=0.0):
+    """Small round bead eyes with one glint, set low and wide on the face."""
     for sd in (-1, 1):
         s = "LR"[sd > 0]
-        h.decal(f'eye_{s}', sd * yaw, pitch, (*size, 0.035), EYE, out=out)
-        h.decal(f'shine_{s}', sd * yaw + sd * size[0] * 0.7, pitch + size[1] * 0.85, (size[0] * 0.42, size[1] * 0.35, 0.02), SHINE, out=out + 0.022)
-        h.decal(f'sparkle_{s}', sd * yaw - sd * size[0] * 0.55, pitch - size[1] * 0.65, (size[0] * 0.2, size[0] * 0.2, 0.012), SHINE, out=out + 0.022)
+        h.decal(f'eye_{s}', sd * yaw, pitch, (size, size, 0.03), EYE, out=out)
+        h.decal(f'shine_{s}', sd * yaw + sd * size * 0.6, pitch + size * 0.7, (size * 0.32, size * 0.32, 0.015), SHINE, out=out + 0.02)
 
-def blush(h, yaw=0.66, pitch=-0.2, size=(0.075, 0.042), out=0.002):
+def blush(h, yaw=0.72, pitch=-0.3, size=0.042, out=0.002):
+    """A round rosy dot on each cheek."""
     for sd in (-1, 1):
-        h.decal(f'blush_{"LR"[sd > 0]}', sd * yaw, pitch, (*size, 0.015), BLUSH, out=out)
+        h.decal(f'blush_{"LR"[sd > 0]}', sd * (yaw - 0.02), pitch, (size, size, 0.015), BLUSH, out=out)
 
 def beak(parent, loc, size, mat, name='beak'):
     """A rounded little cone pointing forward (-Y)."""
@@ -326,6 +326,59 @@ def skeleton(name):
     feet = [node(f'foot_{"LR"[sd > 0]}', root, (sd * FOOT_AT[0], FOOT_AT[1], FOOT_AT[2])) for sd in (-1, 1)]
     return root, body, head, tail, feet
 
+def chibi(body, head, head_z=0.8, grow=1.12, shrink=0.88):
+    """Vinyl-toy proportions: a big, round head sitting low on a small body. The pages reset the body node's
+    position and scale every frame, so the body's parts shrink inside a 'trunk' node instead. Call after the
+    parts and their pivots are built, before animate()."""
+    trunk = node('trunk', body)
+    for o in [o for o in body.children if o not in (head, trunk)]:
+        o.parent = trunk
+    trunk.scale = (shrink,) * 3
+    head.location.z = head_z
+    head.scale = (grow,) * 3   # uniform, so a round head stays round
+    return trunk
+
+def cheesecake_slice(parent, loc=(0, -0.47, 0.3)):
+    """A slice of strawberry cheesecake held in front of the tummy, under a node called "slice" so the pages can
+    hide it (models.js hides it while walking, when the paws swing through it)."""
+    crust, cream = material('crust', '#c98b4b', 0.6), material('cake', '#fff0cf', 0.5)
+    glaze, berry = material('glaze', '#f48fa8', 0.3), material('berry', '#ef5470', 0.3)
+    g = node('slice', parent, loc)
+    g.rotation_euler = (0.45, 0, 0.35)
+    g.scale = (1.6,) * 3
+    def wedge(name, h, z, mat, r=0.13, a=0.65):
+        bm = bmesh.new()
+        pts = [(0, 0)] + [(r * math.sin(-a / 2 + a * i / 6), -r * math.cos(-a / 2 + a * i / 6)) for i in range(7)]
+        bot = [bm.verts.new((x, y, z)) for x, y in pts]
+        top = [bm.verts.new((x, y, z + h)) for x, y in pts]
+        bm.faces.new(list(reversed(bot))); bm.faces.new(top)
+        for i in range(len(pts)):
+            j = (i + 1) % len(pts)
+            bm.faces.new((bot[i], bot[j], top[j], top[i]))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bmesh.ops.bevel(bm, geom=list(bm.edges), offset=0.008, segments=2, affect='EDGES')
+        return _mesh_object(name, g, (0, 0.06, 0), bm, mat)
+    wedge('slice_crust', 0.025, 0, crust); wedge('slice_cream', 0.075, 0.025, cream); wedge('slice_glaze', 0.014, 0.1, glaze)
+    blob('slice_berry', g, (0, 0, 0.14), (0.028, 0.028, 0.034), berry)
+    return g
+
+# small face details keep their full colour so faces stay crisp; everything else goes light pastel
+FULL_COLOR = {'eye', 'shine', 'mouth', 'blush', 'nose', 'glasses', 'lips', 'berry', 'glaze', 'button'}
+def pastel(target=0.8, lift=0.5):
+    """Light pastel: lift each color's lightness halfway towards target, keeping its saturation, so it gets
+    softer without going pale. models.js does the same to the agent colors it paints onto "skin"."""
+    import colorsys
+    enc = lambda c: c * 12.92 if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+    dec = lambda c: c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    for m in bpy.data.materials:
+        if m.name in FULL_COLOR or not m.use_nodes: continue
+        p = m.node_tree.nodes.get('Principled BSDF')
+        if not p: continue
+        r, g, b, a = p.inputs['Base Color'].default_value
+        h, l, s = colorsys.rgb_to_hls(enc(r), enc(g), enc(b))
+        if l < target: l += (target - l) * lift
+        p.inputs['Base Color'].default_value = (*(dec(c) for c in colorsys.hls_to_rgb(h, l, s)), a)
+
 def group(name, parent, loc, names):
     """Gather already-built parts under a new pivot node at loc (in parent's space), so they can swing about it."""
     g = node(name, parent, loc)
@@ -403,13 +456,18 @@ def at_rest():
     scene.frame_set(0)
 
 # ---------- soft shadows ----------
+FLAT = {'eye', 'shine', 'blush', 'mouth', 'nose', 'lips', 'tongue', 'stripe', 'frogspot', 'white', 'button', 'dot', 'glasses'}
+
 def bake_ao(rays=32, reach=0.35, strength=0.55):
     """Ambient occlusion baked into each vertex's color: creases, undersides and spots tucked under other parts go
     softly darker, like a clay toy under a cloudy sky. The town multiplies it into the material color."""
     bpy.context.view_layer.update()
     meshes = [o for o in scene.objects if o.type == 'MESH' and o.name != 'floor']
+    # face details and markings lie flat on the skin: if they cast shade, the coarse head mesh gets grubby
+    # smudges round the eyes, nose and mouth, so only the bigger shapes block light
+    occluders = [o for o in meshes if o.data.materials[0].name not in FLAT and not o.name.startswith(('cheek_', 'brow_', 'freckle'))]
     verts, polys = [], []
-    for o in meshes:
+    for o in occluders:
         mw, base = o.matrix_world, len(verts)
         verts += [mw @ v.co for v in o.data.vertices]
         polys += [[base + i for i in p.vertices] for p in o.data.polygons]
