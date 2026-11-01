@@ -11,8 +11,6 @@ DOT = material('dot', '#ffffff', 0.5)
 BOOT = material('boot', '#f2a33a', 0.45)
 SOLE = material('sole', '#7a4a2a')
 FRAME = material('glasses', '#ff6fae', 0.35)
-LIPS = material('lips', '#e8506e', 0.5)
-TONGUE = material('tongue', '#ff9fb5', 0.5)
 root, body, head, tail, feet = skeleton('miw')
 for sd, f in zip((-1, 1), feet): f.location.x = sd * 0.11
 
@@ -76,15 +74,14 @@ for sd in (-1, 1):
     for k in (-1, 1):
         blob(f'bow_loop_{s}{k}', bow, (k * 0.07, 0, 0), (0.07, 0.03, 0.05), FRAME, rot=(0, k * 0.3, 0))
 
-# face: big eyes behind pink glasses, blush and an open smile
-eyes(h, 0.36, -0.06, (0.06, 0.082))
+# face: bead eyes behind pink glasses, rosy cheeks and a tiny w mouth
+eyes(h, 0.43, -0.16)
 for sd in (-1, 1):
-    p, n = h.at(sd * 0.36, -0.06, 0.035)
+    p, n = h.at(sd * 0.43, -0.16, 0.035)
     ring(f'lens_{"LR"[sd > 0]}', head, p, 0.095, 0.014, FRAME, n.to_track_quat('Z', 'Y'))
-h.stroke('bridge', [(-0.12, -0.04), (0, -0.02), (0.12, -0.04)], FRAME, 0.012, out=0.04)
-blush(h, 0.56, -0.27, (0.08, 0.045))
-h.decal('mouth', 0, -0.37, (0.042, 0.026, 0.018), LIPS, out=-0.004)
-h.decal('tongue', 0, -0.39, (0.024, 0.012, 0.01), TONGUE, out=0.007)
+h.stroke('bridge', [(-0.144, -0.14), (0, -0.12), (0.144, -0.14)], FRAME, 0.012, out=0.04)
+blush(h, 0.67, -0.37)
+omega_mouth(h, pitch=-0.49, width=0.07, depth=0.028)
 
 for f in feet:
     blob(f'boot{f.name[-2:]}', f, (0, -0.0, 0.015), (0.09, 0.09, 0.075), BOOT)
@@ -98,9 +95,10 @@ for f in feet:
     leg = bpy.data.objects[f'leg{f.name[-2:]}']
     leg.parent = f
     leg.location = leg.location - f.location
-chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84)
+cheesecake_slice(chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84), (0, -0.3, 0.48))
 animate(body, head, tail, feet,
         limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0), (braids[0], 1, 0.12, 0), (braids[1], 1, 0.12, 0)],
         eyes=[eye_group(head, s) for s in 'LR'])
 
+pastel()
 finish()

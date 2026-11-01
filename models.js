@@ -5,6 +5,13 @@
   // "skin" takes the agent's color and "stripe" a deeper, warmer shade of it; everything else keeps its Blender color
   const STRIPE_INK = new THREE.Color('#8a4a3a');
   const shade = c => '#' + new THREE.Color(c).lerp(STRIPE_INK, 0.35).getHexString();
+  // light pastel, like kit.pastel() gives the Blender colors: lightness halfway up to 0.8, saturation kept
+  const pastel = c => {
+    const col = new THREE.Color(c), hsl = {};
+    col.getHSL(hsl);
+    if (hsl.l < 0.8) hsl.l += (0.8 - hsl.l) * 0.5;
+    return '#' + col.setHSL(hsl.h, hsl.s, hsl.l).getHexString();
+  };
   const own = m => '#' + m.color.clone().convertLinearToSRGB().getHexString();
   const SMALL = /^(eye|shine|mouth|nose|blush|stripe|dot|glasses|lips|tongue|button|frogspot)$/;
   const mats = {};
@@ -44,7 +51,7 @@
     g.traverse(o => {
       if (!o.isMesh) return;
       const n = o.material.name;
-      o.material = toy(n === 'skin' ? color : n === 'stripe' ? shade(color) : own(o.material), !!o.geometry.attributes.color, GLOSSY.test(n));
+      o.material = toy(n === 'skin' ? pastel(color) : n === 'stripe' ? shade(pastel(color)) : own(o.material), !!o.geometry.attributes.color, GLOSSY.test(n));
       o.castShadow = !SMALL.test(n); o.receiveShadow = false;
     });
     return { g, body: find('body'), head: find('head'), tail: find('tail'), feet: [find('foot_L'), find('foot_R')], pose: poser(g, t.animations), clips: t.animations };
@@ -76,10 +83,13 @@
     const walk = act('walk'), idle = act('idle'), blink = act('blink');
     // start each character's loops somewhere different, so a crowd doesn't blink in unison
     [idle, blink].forEach(a => { if (a) { a.play(); a.time = Math.random() * a.getClip().duration; } });
+    // the cheesecake slice they hold is put away while walking, when the swinging paws would go through it
+    const slice = g.getObjectByName('slice');
     let walking = false;
     return (isWalking, dt) => {
       if (isWalking !== walking) {
         walking = isWalking;
+        if (slice) slice.visible = !walking;
         // stopping a clip puts the nodes it moved back to their rest pose
         if (walking) { idle && idle.stop(); walk && walk.play(); }
         else { walk && walk.stop(); idle && idle.play(); }
