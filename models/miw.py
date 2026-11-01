@@ -95,7 +95,7 @@ for f in feet:
     leg = bpy.data.objects[f'leg{f.name[-2:]}']
     leg.parent = f
     leg.location = leg.location - f.location
-cheesecake_slice(chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84), (0, -0.3, 0.48))
+cheesecake_slice(chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84), (0, -0.44, 0.28))   # in front of her dress, below her chin
 animate(body, head, tail, feet,
         limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0), (braids[0], 1, 0.12, 0), (braids[1], 1, 0.12, 0)],
         eyes=[eye_group(head, s) for s in 'LR'])
