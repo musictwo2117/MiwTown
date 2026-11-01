@@ -353,24 +353,25 @@
   }
   // builds the item onto the character's head or body; returns the meshes so they can come off again
   function makeWear(key, cat, miw) {
-    const top = miw ? 0.42 : 0.3, made = [];
+    // heights fit the sculpted models' big round heads, which sit low on the body (models/kit.py chibi())
+    const top = miw ? 0.42 : 0.36, made = [];
     const grp = parent => { const g = new THREE.Group(); parent.add(g); made.push(g); return g; };
     if (key === 'bow') {
-      const b = grp(cat.head); b.position.set(miw ? 0.24 : 0.19, top - 0.03, 0.06); b.rotation.z = -0.45;
+      const b = grp(cat.head); b.position.set(miw ? 0.24 : 0.23, top - 0.03, 0.06); b.rotation.z = -0.45;
       [-1, 1].forEach(sd => part(b, new THREE.ConeGeometry(0.09, 0.17, 12), '#ff7b9c', [sd * 0.085, 0, 0], [0, 0, sd * Math.PI / 2]));
       part(b, new THREE.SphereGeometry(0.045, 10, 8), '#ff5c8a');
     }
     if (key === 'scarf') {
-      const s = grp(cat.body), y = miw ? 0.74 : 0.6, r = miw ? 0.2 : 0.23;
+      const s = grp(cat.body), y = miw ? 0.62 : 0.47, r = miw ? 0.2 : 0.29;
       part(s, new THREE.TorusGeometry(r, 0.075, 10, 24), '#8fc1f0', [0, y, 0], [Math.PI / 2, 0, 0]);
       part(s, new THREE.BoxGeometry(0.13, 0.28, 0.06), '#8fc1f0', [0.1, y - 0.15, r + 0.03], [-0.15, 0, 0.12]);
       [-0.06, 0.03].forEach(dy => part(s, new THREE.BoxGeometry(0.135, 0.03, 0.065), '#ffffff', [0.1 + dy * 0.1, y - 0.15 + dy, r + 0.03], [-0.15, 0, 0.12]));
     }
     if (key === 'flowers') {
-      const f = grp(cat.head); f.position.y = top - 0.05; f.rotation.x = -0.12;
-      part(f, new THREE.TorusGeometry(miw ? 0.3 : 0.24, 0.03, 8, 28), '#9fd49a', [], [Math.PI / 2, 0, 0]);
+      const f = grp(cat.head); f.position.y = top - 0.03; f.rotation.x = -0.12;
+      part(f, new THREE.TorusGeometry(miw ? 0.3 : 0.27, 0.03, 8, 28), '#9fd49a', [], [Math.PI / 2, 0, 0]);
       for (let i = 0; i < 7; i++) {
-        const a = i / 7 * Math.PI * 2, r = miw ? 0.3 : 0.24;
+        const a = i / 7 * Math.PI * 2, r = miw ? 0.3 : 0.27;
         part(f, new THREE.SphereGeometry(0.065, 10, 8), ['#ff9fb5', '#ffffff', '#ffd27a'][i % 3], [Math.cos(a) * r, 0.02, Math.sin(a) * r]);
       }
     }
