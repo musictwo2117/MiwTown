@@ -1,18 +1,28 @@
 # 🥨 Miw's Town
 
-A cozy, pastel 3D town and cat room that shows what your Claude Code agents are doing, live.
+A cozy, pastel 3D town that shows what your Claude Code agents are doing, live, plus a café game built on the same little characters.
 
-Each Claude Code session moves in as a little character. When it reads files it walks to the Library, when it edits it sits in the Writing Studio, and when something fails it ends up at the Bug Clinic. When it's done it heads home to rest, swim, or grab a pretzel at the café. Everything floats on golden pretzel-dough islands with pink icing.
-
-## Two places
-
-**The Town** (`/town`): a floating island with a rainbow road and one building per state. There's also a pool islet, the Pretzel Café, waterfalls, and the 🐱 Cat Home. Tap the Cat Home to go inside.
+Each Claude Code session moves in as a character. It walks to the Library when it reads files, sits in the Writing Studio when it edits, and ends up at the Bug Clinic when something fails. When it's done it heads home to rest, swim or grab a pretzel.
 
 ![Miw's Town: a floating pastel island with a rainbow road, a giant pretzel fountain, themed buildings, waterfalls and a pool islet](docs/town.jpg)
 
-**The Cat Room** (`/room`): the same agents, indoors. It has a living room, kitchen, bathroom, bedroom, and a plant balcony, all floating on a little garden island.
+## Quick start
 
-![The Cat Room: a cozy floating home with a living room, kitchen, bathroom, bedroom and plant balcony, with agents resting inside](docs/room.jpg)
+You need [Node.js](https://nodejs.org) 18+ (no `npm install`, there are no dependencies), [Claude Code](https://claude.com/claude-code) logged in on the same machine, and a browser with WebGL.
+
+1. Run `node server.js` and open http://localhost:19100.
+2. Add the hooks from `claude-settings-snippet.json` to `~/.claude/settings.json`, with `/path/to/MiwTown` replaced by this folder (use the full path to `node` if hooks can't find it).
+3. Start a Claude Code session anywhere. A new friend moves into town. 🎉
+
+The hook gives up after 800 ms, so Claude Code is never slowed down when the town isn't running. Without the server, the page plays a demo with made-up agents.
+
+## Three pages
+
+| Page | What it is |
+|---|---|
+| **Town** (`/town`) | A floating island with one building per state, a pool, a café, waterfalls and the 🐱 Cat Home |
+| **Cat Room** (`/room`) | The same agents indoors: living room, kitchen, bathroom, bedroom and a plant balcony |
+| **Cheesecake Rush** (`/game`) | A café game: bake, serve and give change (see below) |
 
 | State | Town | Cat Room |
 |---|---|---|
@@ -24,133 +34,70 @@ Each Claude Code session moves in as a little character. When it reads files it 
 | 📮 Syncing | Post Office | Router nook |
 | 🐞 Stuck | Bug Clinic | Bug rug |
 
+<img src="docs/room.jpg" alt="The Cat Room: a cozy floating home with a living room, kitchen, bathroom, bedroom and plant balcony, with agents resting inside" width="640">
+
+## What you can do
+
+- **Send tasks.** ✨ New task starts a headless Claude Code run in a folder you pick, or messages an existing agent in a fork (your open window isn't touched). Tasks can only read and edit files in that folder.
+- **Play with your agents.** Tap one to pet it, rename it or change its look (cat, bunny, bear, frog, chick, penguin or Miw), and see its 3D portrait, today's timeline and recent activity.
+- **Get alerts.** A card pops up when a friend is stuck, waiting for you or done. The tab title counts who needs you, and 🔔 adds desktop notifications.
+- **Level up.** Agents earn XP and unlock a bow, scarf, flower crown, party hat and crown (Lv 2, 3, 5, 7, 10).
+- **Look around.** 🎯 Follow a friend, 📸 save a photo, and hide 🏷️ names, 💬 bubbles or 🏠 place labels. Tap any building or room to see who's there.
+- **Real Bangkok time and weather.** Day and night follow Thai time, and the sky follows the real weather from [Open-Meteo](https://open-meteo.com). Try `?hour=21` or `?weather=rain` (`clear`, `cloudy`, `rain`, `storm`).
+
 ## Cheesecake Rush
 
-A cozy café game (`/game`, or 🍰 Cheesecake Rush in the town's toolbar) built on the same models. Friends sit down and order a dessert and often a drink. Miw serves them, they queue at the cashier, and you give the right change on a little calculator.
+Friends sit down and order desserts and drinks; you play the café (`/game`, or 🍰 in the town's toolbar).
 
-![The Cheesecake Rush café: a block-built floating island with a pink-striped counter, the baker bunny, tables of friends waiting for their orders, a juice bar, a pond with a rainbow and a strawberry plot](docs/game-cafe.jpg)
+1. **Bake.** Cook each dessert step by step in a 3D kitchen, Cooking Mama style: crush, press, mix, pour and bake a cheesecake, or knead, roll, cut, fry and glaze donuts. Time it badly and the batch is ruined; bake well and it sells for more.
+2. **Serve.** Tap desserts onto Miw's tray (up to four), or tap a table and Miw fetches the whole order. Quick service earns bigger tips.
+3. **Cash up.** Friends pay with a note, exact money or QR. The right change on the first try earns the tip and keeps your combo going.
 
-1. **Bake.** Before each day (you get 90 seconds), and again when a shelf runs out, cook each dessert step by step in its own 3D kitchen scene, Cooking Mama style. A cheesecake is crushed cookies, a pressed base, mixing, stirring, pouring and the oven; donuts are mixed, kneaded, rolled, cut, fried in a hot pan, dipped in glaze and sprinkled. Pour too much, bake too long or leave the donuts in the oil and the batch is ruined, with a red warning first. Better baking sells for more, and a batch makes six. Strawberries are picked from the café's strawberry plot.
-2. **Serve.** Tap a dessert or drink to put it on Miw's tray (up to four), or tap a friend's table and Miw fetches everything they ordered. Quick service earns bigger tips.
-3. **Cash up.** Friends pay with a note, exact money or QR. The right change on the first try earns the tip, the combo and a speed bonus.
+Each day has a goal, unlocks more tables, desserts and drinks, and gives one to three stars. There are three save slots in the browser, and the whole game switches to Thai (ไทย) in Settings.
 
-![Two kitchen steps: a cheesecake glowing orange inside the oven with a timing bar to take it out when golden, and six donuts frying in an iron pan over a gas flame](docs/game-kitchen.jpg)
+<p>
+<img src="docs/game-cafe.jpg" alt="The café: a floating island with a pink-striped counter, the baker bunny, friends at tables, a juice bar, a pond and a strawberry plot" width="49%">
+<img src="docs/game-cashier.jpg" alt="The cashier: a pink calculator showing a bill of 24, paid 50, with 26 keyed in as change" width="49%">
+</p>
 
-![The cashier: a pink calculator showing a bill of 24, paid 50, with 26 keyed in as change, over the café](docs/game-cashier.jpg)
-
-Each day has a goal that climbs gently, with more tables and new desserts and drinks to unlock, and one to three stars. Every friend has a favorite and a quirk: the cat loves the Kitty Cupcake, some tip big, some are in a hurry. The home screen has three save slots (kept in this browser), how to play, settings and credits, and the whole game is in Thai when the language is set to ไทย. The emoji in the game are swapped for little pictures of Blender models as they load.
-
-<img src="docs/game-home.jpg" alt="The Cheesecake Rush home screen: the title over a blurred view of the café, with Play, How to play, Settings, Credits and Back to the town buttons" width="640">
+![Two kitchen steps: a cheesecake glowing inside the oven with a timing bar, and six donuts frying in an iron pan](docs/game-kitchen.jpg)
 
 ## Sculpted in Blender
 
-The characters, the town's buildings, the Cat Room's furniture and the little props dotted around the town are modelled in [Blender](https://www.blender.org), from Python scripts in `models/`, and exported as `.glb` files the pages load.
+Every character, building, piece of furniture, prop, dessert and icon is modelled from a Python script in `models/` and exported as a `.glb`. They're little vinyl toys: big round heads, bead eyes, rosy cheeks, bevelled edges and a soft shadow baked into each vertex. Characters have walk, idle, ear-twitch and blink animations. The pages draw simple built-in shapes first and swap each model in as it loads.
 
-![The seven characters sculpted in Blender, each holding a slice of strawberry cheesecake: an orange tabby cat, a white bunny, a bear, a frog with eyes on two round bumps, a chick, a penguin in a pink scarf, and Miw with orange braids, pink glasses and a polka-dot dress](docs/characters.jpg)
+![The seven characters, each holding a slice of strawberry cheesecake: a cat, a bunny, a bear, a frog, a chick, a penguin and Miw](docs/characters.jpg)
 
-![The town's nine buildings sculpted in Blender: the ladybug Bug Clinic, the Pretzel Café, the Cat Home, the book-stack Library, the Code Factory, the mailbox Post Office, the mushroom Cozy Cottage, the Thinking Tower and the notebook Writing Studio](docs/buildings.jpg)
+<p>
+<img src="docs/buildings.jpg" alt="The town's nine buildings" width="49%">
+<img src="docs/furniture.jpg" alt="The Cat Room's furniture" width="49%">
+<img src="docs/props.jpg" alt="Trees, a flower and a lamp post" width="49%">
+<img src="docs/menu.jpg" alt="The game's desserts: a cheesecake slice, a pretzel cake slice, a kitty cupcake and a donut" width="49%">
+</p>
 
-![The Cat Room's furniture sculpted in Blender: a bookshelf, floor lamp, whiteboard, server rack, kitchen counter, fridge, wardrobe, bed, dining table, bathtub, sofa, desk, router table, bean bags, cat bed, washbasin, toilet, nightstand and plants](docs/furniture.jpg)
-
-![Props used all over the town: a flower, a round tree, a lamp post with a pink ribbon and a two-tier tree](docs/props.jpg)
-
-![The Cheesecake Rush desserts sculpted in Blender: a strawberry cheesecake slice, a caramel pretzel cake slice, a kitty cupcake and a strawberry donut](docs/menu.jpg)
-
-- **Little vinyl toys.** Big round heads on small bean bodies, small bead eyes set low and wide, a tiny w mouth (the frog smiles wide), rosy dot cheeks and a light pastel palette with a soft sheen. Each friend holds a slice of strawberry cheesecake, put away while it walks. The design was picked option by option from side-by-side renders.
-- **Soft and rounded.** Bevelled edges everywhere, with a soft, rosy shadow baked into each vertex, so creases and undersides go gently darker without looking grubby.
-- **Animated in Blender too.** Every character has a walk cycle with a real stride, plus idle sways, ear twitches and blinks. Moving parts of buildings (the telescope dome, the pencil, the gears, the envelope sign) are named nodes the town animates.
-- **Always something to show.** The pages draw their built-in shapes first and swap each model in as it loads, so they still work if a model is missing.
-- **Light on the browser.** Each piece of furniture is fused into one mesh per color before export, so the room has far fewer meshes to draw.
-
-To change a model, edit its script and rebuild. The scripts are tested with Blender 5.1 (set `BLENDER` if it isn't at `/Applications/Blender.app`):
+To change a model, edit its script and rebuild (tested with Blender 5.1; set `BLENDER` if it isn't in `/Applications`):
 
 ```bash
 sh models/build.sh            # everything
 sh models/build.sh cat cafe   # just these
 ```
 
-Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy), the game's desserts from `models/menu.py` (the cheesecake and pretzel cake also come whole, as `cheesefull` and `pretzelfull`, for the oven), the game's little icons (ingredients, coins, hearts, the clock...) from `models/icons.py`, and the intro video's cheesecake shop (the set, the giant cake and the hanging lamp) from `models/shop.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+## Reference
 
-## Features
+**Configuration.** `AGENT_OFFICE_PORT` (default `19100`) sets the port for the server and the hook. `CLAUDE_BIN` (default `~/.local/bin/claude` or `claude`) is the binary used for tasks.
 
-- **Live from Claude Code hooks.** No polling of your terminal. Claude Code tells the town what it's doing.
-- **Send tasks from the UI.** ✨ New task starts a headless Claude Code run in a folder you pick. You can also message an existing agent, which continues its conversation in a fork; your open window isn't touched. Tasks can read and edit files in that folder only: no shell commands, no web.
-- **Play with your agents.** Tap one to pet it, rename it, or change its look. Models: cat, bunny, bear, frog, chick, penguin, and Miw. The card also shows a spinning 3D portrait, a timeline of today, and recent activity.
-- **Heads-up alerts.** A little card pops up when a friend gets stuck, is waiting for you, or finishes; tap it to jump there. The tab title shows how many need you, and 🔔 turns on desktop notifications for when the tab is in the background.
-- **Tidy the view.** 🏷️ Names, 💬 Bubbles and 🏠 Places hide or show the name tags, speech bubbles and the place labels over buildings and furniture.
-- **Follow and photos.** 🎯 Follow keeps the camera on one friend as it walks around. 📸 Photo saves a framed picture of the scene, name tags included.
-- **Levels and a wardrobe.** Agents earn XP as they work and rest. They unlock a bow (Lv 2), scarf (Lv 3), flower crown (Lv 5), party hat (Lv 7), and crown (Lv 10). The penguin keeps its own pink scarf instead of the Lv 3 one.
-- **Real Bangkok time and weather.** Day and night follow Thai time. Clouds, rain, and storms follow the real weather from [Open-Meteo](https://open-meteo.com).
-- **Little touches.** Animated speech bubbles, friends waving when they meet, butterflies, a hot-air balloon, and optional ambient sound (🔇 by default). Tap any building or room to see who's there.
+**Security.** The server listens on `127.0.0.1` only. Only the hook can report state (JSON with no `Origin` header), starting tasks needs a token made fresh each run, other host names are refused to block DNS rebinding, task folders must be inside your home folder, and at most 3 tasks run at once for up to 30 minutes each.
 
-## Requirements
-
-- [Node.js](https://nodejs.org) 18 or newer (no `npm install` needed; there are no dependencies)
-- [Claude Code](https://claude.com/claude-code) logged in on the same machine (`claude` on your PATH, or set `CLAUDE_BIN`)
-- A modern browser with WebGL
-
-## Setup
-
-1. **Start the server** from this folder:
-
-   ```bash
-   node server.js
-   ```
-
-   It prints `Miw's Town → http://localhost:19100`. Open that in your browser. The game is at `/game`.
-
-2. **Connect the hook.** Add `hook.js` to your Claude Code hooks in `~/.claude/settings.json`. `claude-settings-snippet.json` has the full block for all seven events (`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUseFailure`, `Notification`, `Stop`, `SessionEnd`). Replace `/path/to/MiwTown` with where you cloned this repo, and use the full path to `node` if hooks can't find it.
-
-3. **Start a Claude Code session** anywhere. A new friend moves into town. 🎉
-
-The hook gives up after 800 ms, so Claude Code is never slowed down if the town isn't running.
-
-## Try things out
-
-Add these to the URL:
-
-| Parameter | What it does |
-|---|---|
-| `?hour=21` | Pretend it's 9 pm (any hour 0–23) |
-| `?weather=rain` | Force the weather: `clear`, `cloudy`, `rain`, or `storm` |
-
-If the server isn't reachable, the page runs a demo with a few made-up agents.
-
-## Configuration
-
-| Environment variable | Default | Meaning |
-|---|---|---|
-| `AGENT_OFFICE_PORT` | `19100` | Port for the server and the hook |
-| `CLAUDE_BIN` | `~/.local/bin/claude` or `claude` | The Claude Code binary used for tasks |
-
-## Security
-
-The server listens on `127.0.0.1` only, and:
-
-- Only the hook can report state. `POST /state` must be JSON with no `Origin` header, so web pages can't plant fake agents.
-- Starting tasks needs a secret token. The token is made fresh each run and only given to pages the server serves itself.
-- Requests addressed to any other host name are refused, which blocks DNS-rebinding tricks.
-- Task folders must be inside your home folder (and not the home folder itself). This applies to messages sent to existing agents too.
-- At most 3 tasks run at once, and each stops after 30 minutes.
-
-## Files
+**Files.**
 
 | File | What's in it |
 |---|---|
-| `server.js` | Tiny Node server: agent state, tasks, weather, serves the pages |
-| `hook.js` | Claude Code hook that turns hook events into states |
-| `town.html` | The 3D town |
-| `room.html` | The 3D cat room |
-| `game.html` | Cheesecake Rush: the café, the kitchen, serving and the cashier |
-| `home.js` | The game's home screen (save slots, how to play, settings, credits) and pause menu |
-| `icons.js` | Swaps the game's emoji for pictures of their Blender models |
-| `i18n.js` | The game's Thai translation, swapped in over the English text |
-| `styletest.html` | Side-by-side looks tried for the café (`/style`) |
-| `panel.js` | Shared UI: task drawer, agent cards, wardrobe, timelines, places, sound, bubbles |
-| `scenery.js` | Shared 3D bits: pretzels, floating islands, icing, and merging static scenery to keep it fast |
-| `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
-| `models/` | Blender scripts for the characters, buildings, furniture, props, desserts and icons, the `.glb` files they make, and `build.sh` |
-| `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
-| `video/` | The video studio: clip pages, the frame and sound capture server, the FFmpeg encoder and the Remotion 9:16 cut |
+| `server.js`, `hook.js` | The Node server (state, tasks, weather, pages) and the Claude Code hook |
+| `town.html`, `room.html` | The town and the cat room |
+| `panel.js`, `scenery.js`, `models.js` | Shared UI, shared 3D scenery, and the model loader and animations |
+| `game.html`, `home.js`, `icons.js`, `i18n.js` | Cheesecake Rush, its home and pause screens, its Blender icons and its Thai translation |
+| `models/` | Blender scripts, the `.glb` files they make, and `build.sh` |
+| `video/` | Code-made promo clips and their capture and encoding tools |
+| `styletest.html` | Looks tried for the café (`/style`) |
 
 Built with [three.js](https://threejs.org) r128.
