@@ -204,14 +204,14 @@ http.createServer((req, res) => {
     return send(res, 200, [...seen].filter(p => typeof checkFolder(p) !== 'string'));
   }
 
-  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html' };
+  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html', '/game': 'game.html', '/style': 'styletest.html' };
   if (PAGES[url] && req.method === 'GET') {
     const html = fs.readFileSync(path.join(__dirname, PAGES[url]), 'utf8').replace('__MIW_TOKEN__', TOKEN);
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
     return res.end(html);
   }
-  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js') && req.method === 'GET') {
+  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js') && req.method === 'GET') {
     res.setHeader('content-type', 'text/javascript; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
