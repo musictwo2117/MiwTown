@@ -9,7 +9,7 @@ const INK = '#6b3d45', ROSE = '#e8608a', CREAM = '#fffaf6';
 const END = 75;   // the end card's length in frames
 
 // a word whose letters drop in one after another on a bouncy spring
-const Bouncy = ({ text, delay, size, color, weight }: { text: string; delay: number; size: number; color: string; weight: number }) => {
+export const Bouncy = ({ text, delay, size, color, weight }: { text: string; delay: number; size: number; color: string; weight: number }) => {
   const frame = useCurrentFrame(), { fps } = useVideoConfig();
   return (
     <div style={{ fontFamily, fontSize: size, fontWeight: weight, color, display: 'flex', justifyContent: 'center', whiteSpace: 'pre' }}>

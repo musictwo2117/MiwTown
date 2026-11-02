@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cheesecake Rush: promo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #f4e4e8; display: grid; place-items: center; overflow: hidden; }
+  #out { width: min(100vw, 100vh); height: min(100vw, 100vh); display: block; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1080" height="1080"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="models.js"></script>
+<script src="sound.js"></script>
+<script>
+// Cheesecake Rush: a 21.2 s promo, 1080x1080, 30 fps (636 frames), made the same way as the intro loop:
+// window.renderAt(t) draws exactly time t, so every frame is the same every time.
+//   1. Title        the shop and the giant cheesecake, Miw drops in and the desserts pop up round her
+//   2. Bake         stir the bowl, bake in the oven, top the cake with strawberries, cut it into four
+//   3. Serve        the friends order, Miw carries a tray round the tables
+//   4. Cash up      a calculator: key in the change, press Enter, coins rain
+//   5. End card     the friends hop one after another, then the title
+// ?t=2.5 freezes on that frame; ?capture renders every frame to video/out/rush/; ?audio renders the soundtrack.
+const PI = Math.PI, TAU = PI * 2;
+const SIZE = 1080, FPS = 30;
+const TL = { s1: [0, 3.2], s2: [3.2, 10.6], s3: [10.6, 14.6], s4: [14.6, 17.8], s5: [17.8, 21.2] };
+const DUR = 21.2, FRAMES = Math.round(DUR * FPS);
+const F1 = 1 / FPS;
+const COLORS = { cat: '#f7a072', bunny: '#f49ac1', bear: '#c99a6e', frog: '#8cc97f', chick: '#f2c14e', penguin: '#8fb3ff', miw: '#ff6fae' };
+
+// ---------- easing ----------
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const seg = (u, a, b) => clamp01((u - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const inOutCubic = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const outQuad = x => 1 - (1 - x) * (1 - x);
+const outBack = (x, c = 1.7) => 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2);
+const hash = (k, j) => { const x = Math.sin(k * 127.1 + j * 311.7) * 43758.5453; return x - Math.floor(x); };
+// damped spring from 0 to 1, settled after about 0.5 s
+const spring = (s, zeta = 0.45, hz = 3.2) => s <= 0 ? 0 : 1 - Math.exp(-zeta * TAU * hz * s) * Math.cos(TAU * hz * Math.sqrt(1 - zeta * zeta) * s);
+// appears with a springy pop at `a`, leaves with a quick shrink ending at `b`
+const popSpan = (t, a, b) => Math.max(0, spring(t - a, 0.5, 2.6)) * (1 - inOutCubic(seg(t, b - 0.2, b)));
+
+// ---------- renderer: draw at 2x, downsample into the 1080 output ----------
+const BACK = 1;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+renderer.setPixelRatio(2);
+renderer.setSize(SIZE, SIZE, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const out = document.getElementById('out'), ctx = out.getContext('2d');
+ctx.imageSmoothingQuality = 'high';
+
+const scene = new THREE.Scene();
+const WALL = new THREE.Color('#fbe7df');
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+const tex = (w, h, draw, rx = 1, ry = 1) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.redraw = () => { draw(c.getContext('2d'), w, h); t.needsUpdate = true; }; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.anisotropy = 8;
+  return t;
+};
+
+// the town's light recipe
+scene.add(new THREE.HemisphereLight(0xfff4ec, 0xf6d3da, 0.62));
+const sun = new THREE.DirectionalLight(0xfff0dc, 0.5);
+sun.position.set(5, 9, 4);
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
+sun.shadow.radius = 3; sun.shadow.bias = -0.0005;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffeef2, 0.28); fill.position.set(-2, 1.5, 10); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffd6e6, 0.35); rim.position.set(1, 6, -9); scene.add(rim);
+
+const mats = {};
+const M = (c, extra) => { const k = c + JSON.stringify(extra || {}); return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c, ...extra })); };
+function mesh(geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast = true, recv = false, mat } = {}) {
+  const m = new THREE.Mesh(geo, mat || M(color));
+  m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+  if (s) Array.isArray(s) ? m.scale.set(...s) : m.scale.setScalar(s);
+  m.castShadow = cast; m.receiveShadow = recv;
+  return m;
+}
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const cyl = (rt, rb, h, seg = 32) => new THREE.CylinderGeometry(rt, rb, h, seg);
+const sph = (r, seg = 16) => new THREE.SphereGeometry(r, seg, Math.max(6, seg * 0.75 | 0));
+const group = (parent, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); parent && parent.add(g); return g; };
+
+// ---------- models arrive later: groups are made now and filled when each file has loaded ----------
+const fillers = {};
+const whenModel = (name, fn) => (fillers[name] = fillers[name] || []).push(fn);
+// a dessert (or any model from the town) inside a group of its own that scenes can move and scale
+function holder(name, parent, scale = 1) {
+  const g = group(parent); g.scale.setScalar(scale);
+  whenModel(name, () => g.add(makeScenery(name).g));
+  return g;
+}
+const chars = [];
+function newChar(sp, parent, { scale = 1.45, slice = false } = {}) {
+  const hop = group(parent);
+  const c = { sp, hop, scale, slice, m: null, phase: hash(chars.length + 3, 5) };
+  chars.push(c);
+  whenModel(sp, () => {
+    const m = makeModel(sp, COLORS[sp]); m.g.scale.setScalar(scale); hop.add(m.g);
+    const mixer = new THREE.AnimationMixer(m.g), act = n => { const cl = m.clips.find(x => x.name === n); if (!cl) return null; const a = mixer.clipAction(cl); a.play(); return a; };
+    Object.assign(c, { m, mixer, idle: act('idle'), blink: act('blink'), walk: act('walk'), sliceNode: m.g.getObjectByName('slice') });
+  });
+  return c;
+}
+// idle sways and blinks, or a walk cycle, all set from the time so frames never depend on each other
+function poseChar(c, t, walking = false, wphase = 0) {
+  if (!c.m) return;
+  if (c.idle) { c.idle.enabled = !walking; c.idle.time = ((t / 3.5 + c.phase) % 1) * c.idle.getClip().duration; }
+  if (c.walk) { c.walk.enabled = walking; c.walk.time = (((wphase % 1) + 1) % 1) * c.walk.getClip().duration; }
+  if (c.blink) c.blink.time = ((t / 5.25 + c.phase * 0.8) % 1) * c.blink.getClip().duration;
+  c.mixer.update(0);
+  if (c.sliceNode) c.sliceNode.visible = c.slice && !walking;
+}
+// squash and stretch, a hop with a spin, applied to a character's hop group
+function hopAnim(c, u, start, { height = 0.62, spin = true } = {}) {
+  let y = 0, sy = 1, sxz = 1, ry = 0;
+  const s = u - start;
+  if (s >= 0 && s < 1.2) {
+    const a = seg(s, 0, 0.15), air = seg(s, 0.15, 0.47), land = s - 0.47;
+    if (s < 0.15) { sy = 1 - 0.14 * outQuad(a); sxz = 1 + 0.08 * outQuad(a); }
+    else if (s < 0.47) { y = height * 4 * air * (1 - air); sy = 1 + 0.12 * (1 - air) * (1 - air) + 0.05 * air * air; sxz = 1 / Math.sqrt(sy); if (spin) ry = TAU * inOutCubic(air); }
+    else { const k = 1 - spring(land, 0.35, 3.6); sy = 1 - 0.16 * k; sxz = 1 + 0.09 * k; }
+  }
+  c.hop.position.y = y; c.hop.rotation.y = ry; c.hop.scale.set(sxz, sy, sxz);
+}
+
+// ---------- little sparkles and splashes: a pool of tiny shapes, placed afresh each frame from the time ----------
+const POOL = [...Array(160)].map(() => { const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.06), new THREE.MeshBasicMaterial({ color: '#ffe08a', transparent: true })); m.visible = false; scene.add(m); return m; });
+let poolUsed = 0;
+const tmpV = new THREE.Vector3();
+function particle(x, y, z, size, alpha, color) {
+  const m = POOL[poolUsed++]; if (!m) return;
+  m.visible = true; m.position.set(x, y, z); m.scale.setScalar(size); m.material.opacity = alpha; m.material.color.set(color); m.rotation.y = x * 5 + y * 3;
+}
+// n shapes thrown out from `origin` at time `te`, each with its own steady direction
+function burst(t, te, origin, n, key, { spread = 2.2, up = 1.8, life = 0.8, colors = ['#ffe08a', '#ffffff', '#ffb3c6'], size = 1, grav = 3 } = {}) {
+  const a = t - te; if (a < 0 || a > life) return;
+  for (let i = 0; i < n; i++) {
+    const ang = hash(key, i * 3 + 1) * TAU, sp = spread * (0.4 + hash(key, i * 3 + 2) * 0.6), v = up * (0.6 + hash(key, i * 3 + 3) * 0.8);
+    particle(origin.x + Math.cos(ang) * sp * a, origin.y + Math.max(v * a - 0.5 * grav * a * a, -0.15), origin.z + Math.sin(ang) * sp * a * 0.6, (0.9 * (1 - a / life) + 0.25) * size, 1 - a / life, colors[i % colors.length]);
+  }
+}
+// soft round shadow blobs for scenes that have no real shadows
+const blobTex = tex(64, 64, (g, w) => { const r = g.createRadialGradient(w / 2, w / 2, 2, w / 2, w / 2, w / 2); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.55, 'rgba(255,255,255,.55)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, w, w); });
+const blobMat = new THREE.MeshBasicMaterial({ map: blobTex, color: '#7a4a63', transparent: true, opacity: 0.32, depthWrite: false });
+const blobGeo = new THREE.PlaneGeometry(2, 2).rotateX(-PI / 2);
+const blob = (parent, x, y, z, rx, rz = rx) => { const b = new THREE.Mesh(blobGeo, blobMat); b.position.set(x, y + 0.02, z); b.scale.set(rx, 1, rz); parent.add(b); return b; };
+
+// ---------- wallpaper, the window view and the chalkboard: pictures drawn here ----------
+const paper = tex(256, 256, (g, w, h) => {
+  g.fillStyle = '#fff6ea'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffe6ea'; g.fillRect(0, 0, w / 2, h); g.fillStyle = '#f9c6d2';
+  const heart = (x, y, r) => { g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.6, y - r * 0.3, x - r * 0.5, y - r * 1.3, x, y - r * 0.4); g.bezierCurveTo(x + r * 0.5, y - r * 1.3, x + r * 1.6, y - r * 0.3, x, y + r * 0.9); g.fill(); };
+  heart(w * 0.75, h * 0.25, 12); heart(w * 0.75, h * 0.75, 12);
+}, 12, 7);
+const tile = tex(64, 64, (g) => { g.fillStyle = '#ffeedd'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#ffbfd2'; g.fillRect(0, 0, 32, 32); g.fillRect(32, 32, 32, 32); });
+const view = tex(256, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffc6d6'); gr.addColorStop(1, '#ffe9c9'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  [[60, 80, 26], [90, 70, 32], [124, 84, 24], [190, 150, 22], [214, 142, 28]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); });
+});
+const halo = tex(128, 128, (g, w, h) => { const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); r.addColorStop(0, 'rgba(255,240,200,0.9)'); r.addColorStop(0.35, 'rgba(255,225,180,0.35)'); r.addColorStop(1, 'rgba(255,225,180,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); });
+const title = tex(1024, 400, (g, w, h) => {
+  g.fillStyle = '#4a3b3f'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#fff6ea'; g.lineWidth = 6; g.setLineDash([18, 14]); g.strokeRect(26, 26, w - 52, h - 52);
+  g.fillStyle = '#fff6ea'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '600 118px Fredoka'; g.fillText('Cheesecake Rush', w / 2, h * 0.4);
+  g.font = '500 58px Fredoka'; g.fillStyle = '#ffb3c1'; g.fillText('♡ bake · serve · cash up ♡', w / 2, h * 0.74);
+});
+
+// ============================================================================================
+// the stage for the title and the end card: the shop behind (blurred), the giant cheesecake in front
+// ============================================================================================
+const gStage = group(scene);
+const island = group(gStage), table = group(island);
+table.add(mesh(cyl(2.9, 2.9, 0.04, 72), '#fbb8c8', { y: 0.03, recv: true, cast: false }));
+whenModel('bigcake', () => island.add(makeScenery('bigcake').g));
+const toBack = o => o.traverse(c => { if (!c.userData.sharp) c.layers.set(BACK); });
+const shop = group(gStage, 0, 0, -6);
+whenModel('shop', () => { const set = makeScenery('shop').g; set.traverse(o => { o.castShadow = false; }); shop.add(set); toBack(shop); });
+shop.add(mesh(new THREE.PlaneGeometry(34, 20), null, { y: 4, cast: false, recv: true, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
+shop.add(mesh(new THREE.PlaneGeometry(2.24, 2.08), null, { x: -4.3, y: 2.1, z: 0.12, cast: false, mat: new THREE.MeshBasicMaterial({ map: view }) }));
+const sign = group(gStage, 0, 0, -6);
+const signBoard = mesh(new THREE.PlaneGeometry(5.0, 1.95), null, { x: 0, y: 3.85, z: 0.17, cast: false, mat: new THREE.MeshBasicMaterial({ map: title }) });
+sign.add(signBoard);
+whenModel('sign', () => { const frame = makeScenery('sign').g; frame.traverse(o => { o.castShadow = false; }); sign.add(frame); });
+const glow = new THREE.MeshBasicMaterial({ color: '#fff4c9' });
+const lamps = [-3.1, 3.1].map(x => {
+  const g = group(gStage, x, 9.3, -3);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.position.y = -5.05; s.scale.setScalar(1.6); s.layers.set(BACK); g.add(s);
+  return g;
+});
+whenModel('shoplamp', () => lamps.forEach(g => { const l = makeScenery('shoplamp', { bulb: glow }).g; l.traverse(o => { o.castShadow = false; }); g.add(l); }));
+
+// every light shines on both passes (the blurred shop and the sharp front)
+scene.traverse(o => { if (o.isLight) o.layers.enableAll(); });
+
+// scene 1: Miw drops in on the cake, and four desserts pop up round her
+const heroSeat = group(table), hero = newChar('miw', heroSeat, { slice: true });
+const DESSERT_RING = ['cheesecake', 'kittycupcake', 'donut', 'pretzelcake'].map((name, i) => {
+  const a = (i - 1.5) * 0.62, g = group(table, Math.sin(a) * 2.0, 0.06, Math.cos(a) * 1.45 - 0.4);
+  const inner = holder(name, g, 2.0);
+  return { g, inner, i };
+});
+// scene 5: the seven friends stand round the cake like in the intro
+const RING = ['cat', 'bunny', 'bear', 'frog', 'chick', 'penguin', 'miw'].map((sp, i) => {
+  const a = i / 7 * TAU, seat = group(table, Math.sin(a) * 2.45, 0.06, Math.cos(a) * 2.45); seat.rotation.y = a;
+  return newChar(sp, seat, { slice: true });
+});
+
+// ============================================================================================
+// scene 2: the kitchen
+// ============================================================================================
+const gKit = group(scene);
+const KIT = { bowl: [-2.6, 0.6, 0.3], oven: [0.7, 0.6, -0.5], plate: [3.5, 0.6, 0.3] };
+gKit.add(mesh(box(15, 0.5, 3), '#fff6ef', { y: 0.25 }), mesh(box(15.2, 0.12, 3.2), '#ffc4d6', { y: 0.55 }));
+gKit.add(mesh(new THREE.PlaneGeometry(34, 14), null, { y: 4.4, z: -3.0, cast: false, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
+gKit.add(mesh(box(34, 0.9, 0.2), '#ffd3e0', { y: 1.15, z: -2.95, cast: false }));
+// shelves with jars, a rack of pots, a window
+[[-5.6, 3.1], [-5.6, 4.1]].forEach(([x, y]) => gKit.add(mesh(box(2.6, 0.08, 0.5), '#e8b886', { x, y, z: -2.7, cast: false })));
+[0, 1].forEach(r => [-0.9, -0.3, 0.3, 0.9].forEach((dx, i) => gKit.add(mesh(cyl(0.17, 0.17, 0.36, 14), ['#ffc4d6', '#cdeee0', '#ffe3a8', '#d9ccf5'][(i + r) % 4], { x: -5.6 + dx, y: 3.34 + r * 1.0, z: -2.7, cast: false }))));
+gKit.add(mesh(box(3.4, 0.07, 0.07), '#8a7a80', { x: 1.2, y: 4.6, z: -2.7, cast: false }));
+[-1.4, -0.7, 0, 0.7, 1.4].forEach((dx, i) => gKit.add(mesh(cyl(0.26, 0.21, 0.26, 16), '#d98a5a', { x: 1.2 + dx, y: 4.2, z: -2.7, cast: false }), mesh(box(0.05, 0.4, 0.05), '#8a7a80', { x: 1.2 + dx, y: 4.45, z: -2.7, cast: false })));
+gKit.add(mesh(box(3.0, 2.5, 0.08), '#ffffff', { x: 6.6, y: 3.6, z: -2.85, cast: false }), mesh(new THREE.PlaneGeometry(2.7, 2.2), null, { x: 6.6, y: 3.6, z: -2.8, cast: false, mat: new THREE.MeshBasicMaterial({ map: view }) }));
+// the bowl, a spoon, the batter
+const bowlG = group(gKit, ...KIT.bowl);
+bowlG.add(mesh(cyl(0.9, 0.62, 0.8, 36), '#ffe1ea', { y: 0.4 }));
+const batter = mesh(cyl(0.8, 0.8, 0.05, 36), '#fff6e4', { y: 0.78 }); bowlG.add(batter);
+const spoon = group(bowlG, 0, 0.8, 0);
+spoon.add(mesh(cyl(0.045, 0.045, 1.3, 8), '#e8b886', { x: 0.65, y: 0.55, rz: -0.5 }), mesh(sph(0.14, 10), '#e8b886', { x: 0.36, y: 0.02, s: [1, 0.5, 1] }));
+blob(gKit, KIT.bowl[0], 0.61, KIT.bowl[2], 1.3);
+// the oven: a glass door that swings down, a dessert baking behind it
+const ovenG = group(gKit, ...KIT.oven);
+ovenG.add(mesh(box(2.7, 2.1, 1.7), '#ffc4d6', { y: 1.05 }), mesh(box(2.8, 0.12, 1.8), '#fffaf3', { y: 2.12 }), mesh(box(2.0, 1.25, 0.02), '#7a4630', { y: 0.95, z: 0.86 }));
+[-0.65, 0.65].forEach(x => ovenG.add(mesh(sph(0.1, 10), '#ffffff', { x, y: 1.82, z: 0.88 })));
+const door = group(ovenG, 0, 0.32, 1.12);
+const glass = new THREE.MeshBasicMaterial({ color: '#ffb36b', transparent: true, opacity: 0.5 });
+door.add(mesh(box(2.0, 1.25, 0.06), '', { y: 0.62, mat: glass }), mesh(box(2.15, 0.09, 0.1), '#ffffff', { y: 1.27 }));
+const ovenCake = holder('cheesefull', ovenG, 1.0); ovenCake.position.set(0, 0.45, 0.98);
+const steam = [0, 1, 2, 3].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true })); ovenG.add(m); return m; });
+blob(gKit, KIT.oven[0], 0.61, KIT.oven[2], 1.8);
+// the plate: the cake comes out onto it, gets its toppings, and is cut in four
+const plateG = group(gKit, ...KIT.plate);
+plateG.add(mesh(cyl(1.0, 0.85, 0.08, 36), '#ffffff', { y: 0.04 }));
+const plateCake = holder('cheesefull', plateG, 1.6); plateCake.position.y = 0.08;
+const slices = [0, 1, 2, 3].map(i => { const g = group(plateG, 0, 0.08, 0); g.add(holder('cheesecake', g, 1.5)); return g; });
+blob(gKit, KIT.plate[0], 0.61, KIT.plate[2], 1.4);
+const flyCake = holder('cheesefull', gKit, 1.6);
+// ingredients and toppings
+const INGS = [
+  () => mesh(sph(0.13, 10), '#fff6e8', { s: [1, 1.25, 1] }),
+  () => mesh(box(0.22, 0.3, 0.12), '#ffffff', { rz: 0.4 }),
+  () => { const g = new THREE.Group(); g.add(mesh(sph(0.12, 10), '#ef5470', { s: [1, 1.1, 1] }), mesh(sph(0.06, 6), '#7cc68a', { y: 0.12, s: [1.4, 0.5, 1.4] })); return g; },
+].map(f => { const m = f(); m.visible = false; gKit.add(m); return m; });
+const TOPS = [
+  () => { const g = new THREE.Group(); g.add(mesh(sph(0.13, 10), '#ef5470', { s: [1, 1.1, 1] }), mesh(sph(0.065, 6), '#7cc68a', { y: 0.13, s: [1.4, 0.5, 1.4] })); return g; },
+  () => mesh(sph(0.11, 10), '#6b3a2a', { s: [1.5, 0.5, 1.1] }),
+  () => mesh(new THREE.OctahedronGeometry(0.12), '#ffe08a'),
+].map(f => { const m = f(); m.visible = false; plateG.add(m); return m; });
+const chefSeat = group(gKit), chef = newChar('miw', chefSeat, { scale: 1.25 });
+
+// ============================================================================================
+// scene 3: the café: three friends at their tables, Miw serving
+// ============================================================================================
+const gCafe = group(scene);
+const floor = mesh(new THREE.PlaneGeometry(22, 12), null, { cast: false, mat: new THREE.MeshLambertMaterial({ map: (() => { const t = tile.clone(); t.needsUpdate = true; t.repeat.set(11, 6); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })() }) });
+floor.rotation.x = -PI / 2; gCafe.add(floor);
+gCafe.add(mesh(new THREE.PlaneGeometry(40, 16), null, { y: 6, z: -6.2, cast: false, mat: new THREE.MeshLambertMaterial({ map: paper }) }));
+gCafe.add(mesh(box(13, 1.05, 1.2), '#fff6ef', { y: 0.53, z: -4.2 }), mesh(box(13.3, 0.14, 1.45), '#ffc4d6', { y: 1.12, z: -4.2 }));
+for (let i = 0; i < 13; i++) gCafe.add(mesh(box(1.0, 0.08, 1.0), i % 2 ? '#fffaf3' : '#ff9fbf', { x: -6 + i, y: 4.6, z: -4.1, rx: 0.32 }), mesh(sph(0.5, 14), i % 2 ? '#fffaf3' : '#ff9fbf', { x: -6 + i, y: 4.3, z: -3.55, s: [1, 0.4, 0.15], cast: false }));
+[-6.4, 6.4].forEach(x => gCafe.add(mesh(cyl(0.1, 0.12, 5.0, 12), '#e8b886', { x, y: 2.5, z: -4.6 })));
+[['cheesecake', -4.6], ['donut', -1.5], ['kittycupcake', 1.6], ['pretzelcake', 4.7]].forEach(([n, x]) => { gCafe.add(mesh(cyl(0.55, 0.5, 0.06, 28), '#ffffff', { x, y: 1.51, z: -4.15 })); const h = holder(n, gCafe, 1.5); h.position.set(x, 1.55, -4.15); });
+const CAFE = [{ x: -3.4, sp: 'cat', want: 'kittycupcake' }, { x: 0, sp: 'bunny', want: 'cheesecake' }, { x: 3.4, sp: 'bear', want: 'pretzelcake' }].map(d => {
+  const z = 0.3, g = group(gCafe, d.x, 0, z);
+  g.add(mesh(cyl(0.95, 0.95, 0.1, 28), '#fff6ef', { y: 1.0 }), mesh(cyl(0.08, 0.1, 0.95, 10), '#e2b088', { y: 0.5 }), mesh(cyl(0.45, 0.5, 0.06, 18), '#e2b088', { y: 0.06 }), mesh(cyl(0.3, 0.26, 0.04, 20), '#ffffff', { x: 0.2, y: 1.07 }));
+  g.add(mesh(cyl(0.34, 0.34, 0.12, 18), '#ffd27a', { x: 1.15, y: 0.5 }), mesh(cyl(0.05, 0.05, 0.44, 8), '#e2b088', { x: 1.15, y: 0.22 }));
+  blob(gCafe, d.x, 0, z, 1.7, 1.5);
+  const seat = group(gCafe, d.x + 1.15, 0.52, z); seat.rotation.y = -PI / 2;
+  d.char = newChar(d.sp, seat, { scale: 1.45 });
+  d.food = holder(d.want, gCafe, 0.9); d.food.position.set(d.x + 0.2, 1.09, z); d.food.visible = false;
+  d.fly = holder(d.want, gCafe, 0.9); d.fly.visible = false;
+  d.z = z; d.seatPos = new THREE.Vector3(d.x + 1.15, 2.7, z);
+  return d;
+});
+const miwCafe = group(gCafe), miwChar = newChar('miw', miwCafe, { scale: 1.45 });
+const tray = group(miwCafe, 0, 0.98, 0.52); tray.add(mesh(cyl(0.45, 0.4, 0.04, 24), '#ffffff'));
+const trayItems = CAFE.map((d, i) => { const h = holder(d.want, tray, 0.66); h.position.set((i - 1) * 0.38, 0.03, 0); return h; });
+blob(miwCafe, 0, 0, 0, 0.9);
+
+// ============================================================================================
+// scene 4: two friends beside the calculator
+// ============================================================================================
+const gCash = group(scene);
+const catSeat = group(gCash, -2.15, 0, 0), miwSeat = group(gCash, 2.15, 0, 0);
+const cashCat = newChar('cat', catSeat, { scale: 1.5 }), cashMiw = newChar('miw', miwSeat, { scale: 1.5 });
+[-2.15, 2.15].forEach(x => { gCash.add(mesh(cyl(1.05, 1.05, 0.08, 40), '#fbb8c8', { x, y: -0.04, cast: false })); blob(gCash, x, 0, 0, 1.0); });
+
+const groups = [gStage, gKit, gCafe, gCash];
+const BG = [null, new THREE.Color('#fbe7df'), new THREE.Color('#fbe7df'), null, null];
+
+// ============================================================================================
+// the 2D layer: bubbles, the calculator, captions, the title, the iris between scenes
+// ============================================================================================
+const thumbs = {};
+function makeThumbs() {
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(160, 160);
+  ['cheesecake', 'donut', 'kittycupcake', 'pretzelcake'].forEach(n => {
+    const s = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
+    s.add(new THREE.HemisphereLight(0xfff4ea, 0xd9b0b4, 0.85)); const l = new THREE.DirectionalLight(0xfff3e6, 0.55); l.position.set(2, 4, 3); s.add(l);
+    const g = makeScenery(n).g; s.add(g);
+    const bb = new THREE.Box3().setFromObject(g), c = bb.getCenter(new THREE.Vector3()), rad = bb.getSize(new THREE.Vector3()).length() / 2;
+    cam.position.set(c.x, c.y + rad * 1.3, c.z + rad * 3.4); cam.lookAt(c);
+    r.render(s, cam);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 160; cv.getContext('2d').drawImage(r.domElement, 0, 0); thumbs[n] = cv;
+  });
+  r.dispose();
+}
+const toScreen = (v) => { tmpV.copy(v).project(camera); return [(tmpV.x + 1) / 2 * SIZE, (1 - tmpV.y) / 2 * SIZE]; };
+
+// an order bubble over a friend's head: a ring and the dessert they want
+function bubble(x, y, k, name, p) {
+  if (k <= 0.001) return;
+  ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+  ctx.shadowColor = 'rgba(160,80,100,0.25)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(-84, -74, 168, 108, 38); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-14, 33); ctx.lineTo(0, 54); ctx.lineTo(14, 33); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 9; ctx.strokeStyle = '#f3e6ea'; ctx.beginPath(); ctx.arc(-46, -20, 22, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = p > 0.5 ? '#6cc47a' : '#f2b64a'; ctx.beginPath(); ctx.arc(-46, -20, 22, -PI / 2, -PI / 2 + TAU * p); ctx.stroke();
+  if (thumbs[name]) ctx.drawImage(thumbs[name], 2, -68, 90, 90);
+  ctx.restore();
+}
+// "+12 🪙" and a heart rising from a point
+function rise(text, x, y, u, a, color = '#b07a0c', stroke = true) {
+  const s = u - a; if (s < 0 || s > 1.1) return;
+  ctx.save(); ctx.globalAlpha = Math.min(1, s * 8) * (1 - seg(s, 0.7, 1.1)); ctx.translate(x, y - s * 90);
+  const k = 0.6 + 0.4 * outBack(clamp01(s * 5)); ctx.scale(k, k);
+  ctx.font = '600 52px Fredoka'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 10; ctx.strokeStyle = '#ffffff'; ctx.lineJoin = 'round';
+  // a coin is drawn, not typed: emoji get a grey outline when stroked
+  const coin = text.endsWith('🪙'), label = coin ? text.slice(0, -2).trim() : text, w = ctx.measureText(label).width, off = coin ? 24 : 0;
+  if (stroke) ctx.strokeText(label, -off, 0); ctx.fillStyle = color; ctx.fillText(label, -off, 0);
+  if (coin) { const cx = w / 2 + 6; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, 0, 28, 0, TAU); ctx.fill(); ctx.fillStyle = '#f0b33a'; ctx.beginPath(); ctx.arc(cx, 0, 22, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffd966'; ctx.beginPath(); ctx.arc(cx - 2, -2, 17, 0, TAU); ctx.fill(); }
+  ctx.restore();
+}
+function pill(text, cx, cy, k, { size = 54, color = '#6b3d45', accent = '#ff7ea6', emoji = '' } = {}) {
+  if (k <= 0.001) return;
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k);
+  ctx.font = `600 ${size}px Fredoka`;
+  const full = (emoji ? emoji + '  ' : '') + text, w = ctx.measureText(full).width + 96, h = size + 52;
+  ctx.shadowColor = 'rgba(160, 80, 100, 0.25)'; ctx.shadowBlur = 26; ctx.shadowOffsetY = 9;
+  ctx.fillStyle = '#fffaf6'; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
+  ctx.shadowColor = 'transparent'; ctx.lineWidth = 7; ctx.strokeStyle = accent; ctx.stroke();
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(full, 0, 4);
+  ctx.restore();
+}
+// a small rounded chip for the step names ("Stir", "Bake", "Decorate")
+const chip = (text, cx, cy, k, accent) => pill(text, cx, cy, k, { size: 38, accent });
+
+// ---------- the calculator, as in the game's checkout ----------
+function calculator(u) {
+  const slide = spring(u - 0.05, 0.55, 2.4), cx = SIZE / 2, cy = lerp(SIZE + 400, 560, Math.min(1, slide)), W = 440, H = 640;
+  ctx.save(); ctx.translate(cx, cy);
+  ctx.shadowColor = 'rgba(160,80,100,0.3)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+  ctx.fillStyle = '#ffe1ea'; ctx.beginPath(); ctx.roundRect(-W / 2, -H / 2, W, H, 44); ctx.fill();
+  ctx.shadowColor = 'transparent'; ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+  // the LCD
+  const done = u >= 1.95, flash = done ? 1 - seg(u, 1.95, 2.5) : 0;
+  ctx.fillStyle = flash > 0 ? `rgb(${Math.round(211 - 30 * flash)},${Math.round(236 + 8 * flash)},${Math.round(201 - 20 * flash)})` : '#d3ecc9';
+  ctx.beginPath(); ctx.roundRect(-W / 2 + 28, -H / 2 + 28, W - 56, 196, 24); ctx.fill();
+  ctx.fillStyle = '#2f4a35'; ctx.font = '600 28px ui-monospace, Menlo, monospace'; ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left'; ctx.fillText('🧾 BILL', -W / 2 + 48, -H / 2 + 74); ctx.fillText('🐱 PAID', -W / 2 + 48, -H / 2 + 112);
+  ctx.textAlign = 'right'; ctx.font = '700 32px ui-monospace, Menlo, monospace'; ctx.fillText('16', W / 2 - 48, -H / 2 + 74); ctx.fillText('50', W / 2 - 48, -H / 2 + 112);
+  ctx.strokeStyle = 'rgba(47,74,53,0.35)'; ctx.lineWidth = 3; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(-W / 2 + 48, -H / 2 + 134); ctx.lineTo(W / 2 - 48, -H / 2 + 134); ctx.stroke(); ctx.setLineDash([]);
+  ctx.textAlign = 'left'; ctx.font = '600 24px ui-monospace, Menlo, monospace'; ctx.fillText('CHANGE', -W / 2 + 48, -H / 2 + 196);
+  const typed = u >= 1.3 ? '34' : u >= 0.95 ? '3' : '';
+  ctx.textAlign = 'right'; ctx.font = '700 68px ui-monospace, Menlo, monospace';
+  ctx.fillText(typed + (Math.floor(u * 2) % 2 === 0 && !done ? '_' : ''), W / 2 - 48, -H / 2 + 204);
+  // the keys; a pressed key sinks and glows
+  const KEYS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '⌫'], PRESS = { '3': 0.95, '4': 1.3 };
+  KEYS.forEach((k, i) => {
+    const col = i % 3, row = i / 3 | 0, kx = -W / 2 + 28 + col * 136 + 6, ky = -H / 2 + 252 + row * 76, kw = 124, kh = 62;
+    const s = k in PRESS ? u - PRESS[k] : -1, down = s >= 0 && s < 0.22 ? Math.sin(PI * s / 0.22) : 0;
+    ctx.fillStyle = k === 'C' || k === '⌫' ? '#e9b6c8' : '#e9b6c8';
+    ctx.beginPath(); ctx.roundRect(kx, ky + 7, kw, kh, 18); ctx.fill();
+    ctx.fillStyle = down > 0 ? '#ffe9a8' : (k === 'C' || k === '⌫') ? '#ffd3e0' : '#ffffff';
+    ctx.beginPath(); ctx.roundRect(kx, ky + 7 * (1 - down) + 7 * down, kw, kh, 18); ctx.fill();
+    ctx.fillStyle = k === 'C' || k === '⌫' ? '#c2406f' : '#4b3442'; ctx.font = '600 36px Fredoka'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(k, kx + kw / 2, ky + kh / 2 + 7 + 3 * down);
+  });
+  // Enter
+  const es = u - 1.95, ed = es >= 0 && es < 0.25 ? Math.sin(PI * es / 0.25) : 0;
+  ctx.fillStyle = '#e0568a'; ctx.beginPath(); ctx.roundRect(-W / 2 + 34, H / 2 - 98 + 8, W - 68, 66, 33); ctx.fill();
+  ctx.fillStyle = ed > 0 ? '#ff5d9a' : '#ff8fb8'; ctx.beginPath(); ctx.roundRect(-W / 2 + 34, H / 2 - 98 + 8 * (1 - ed) + 8 * ed, W - 68, 66, 33); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.font = '600 38px Fredoka'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('Enter ✓', 0, H / 2 - 62 + 8 * ed);
+  ctx.restore();
+}
+function coinsRain(u, start) {
+  const s = u - start; if (s < 0 || s > 1.5) return;
+  for (let i = 0; i < 26; i++) {
+    const x = 120 + hash(i, 1) * 840, delay = hash(i, 2) * 0.5, a = s - delay; if (a < 0) continue;
+    const y = -60 + a * (820 + hash(i, 3) * 300) + 0.5 * 600 * a * a * 0.2, sq = Math.abs(Math.cos(a * 9 + i)), r = 26 + hash(i, 4) * 10;
+    ctx.save(); ctx.translate(x, y); ctx.scale(sq * 0.8 + 0.2, 1); ctx.rotate(0.3);
+    ctx.fillStyle = '#f0b33a'; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffd966'; ctx.beginPath(); ctx.arc(-2, -2, r * 0.78, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#d99a1c'; ctx.font = `600 ${r}px Fredoka`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', 0, 2);
+    ctx.restore();
+  }
+}
+// soft pink background with slow floating hearts, for the cash-up scene
+function pinkBackdrop(u) {
+  const g = ctx.createLinearGradient(0, 0, 0, SIZE); g.addColorStop(0, '#ffe3ea'); g.addColorStop(1, '#fff1dc'); ctx.fillStyle = g; ctx.fillRect(0, 0, SIZE, SIZE);
+  for (let i = 0; i < 14; i++) {
+    const x = hash(i, 7) * SIZE, y = SIZE - ((u * (40 + hash(i, 8) * 40) + hash(i, 9) * SIZE) % (SIZE + 120)) + 60, r = 18 + hash(i, 10) * 22;
+    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = 0.45; ctx.fillStyle = '#ffc0d2';
+    ctx.beginPath(); ctx.moveTo(0, r * 0.9); ctx.bezierCurveTo(-r * 1.6, -r * 0.3, -r * 0.5, -r * 1.3, 0, -r * 0.4); ctx.bezierCurveTo(r * 0.5, -r * 1.3, r * 1.6, -r * 0.3, 0, r * 0.9); ctx.fill(); ctx.restore();
+  }
+}
+// the pink iris that wipes between scenes: closes over the old scene, opens on the new one
+function iris(t) {
+  for (const b of [TL.s2[0], TL.s3[0], TL.s4[0], TL.s5[0]]) {
+    const d = Math.abs(t - b), W = 0.2; if (d > W) continue;
+    const cover = inOutCubic(1 - d / W), r = cover * SIZE * 0.82;
+    ctx.save(); ctx.translate(SIZE / 2, SIZE / 2);
+    ctx.fillStyle = '#ff9fbf'; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+    ctx.lineWidth = 16; ctx.strokeStyle = '#fffaf6'; ctx.stroke();
+    if (cover > 0.5) { ctx.globalAlpha = (cover - 0.5) * 2; ctx.font = '220px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🍰', 0, 14); }
+    ctx.restore();
+  }
+}
+// the end title: the letters bounce up one after another
+function endTitle(u) {
+  const text = 'Cheesecake Rush', a = 1.5;
+  if (u < a) return;
+  ctx.save(); ctx.font = '600 128px Fredoka'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const total = ctx.measureText(text).width; let x = SIZE / 2 - total / 2;
+  const card = spring(u - a, 0.55, 2.2);
+  ctx.globalAlpha = Math.min(1, card * 1.4);
+  ctx.save(); ctx.translate(SIZE / 2, 205); ctx.scale(card, card); ctx.shadowColor = 'rgba(160,80,100,0.2)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = 'rgba(255,250,246,0.94)'; ctx.beginPath(); ctx.roundRect(-total / 2 - 60, -92, total + 120, 184, 92); ctx.fill(); ctx.restore();
+  ctx.shadowColor = 'transparent';
+  [...text].forEach((ch, i) => {
+    const cw = ctx.measureText(ch).width, s = Math.max(0, outBack(clamp01((u - a - 0.12 - i * 0.035) / 0.3), 2.6));
+    if (s > 0.001) { ctx.save(); ctx.translate(x + cw / 2, 205 + (1 - s) * 40); ctx.scale(s, s); ctx.lineWidth = 12; ctx.strokeStyle = '#fffaf6'; ctx.lineJoin = 'round'; ctx.strokeText(ch, 0, 4); ctx.fillStyle = i < 9 ? '#6b3d45' : '#e0568a'; ctx.fillText(ch, 0, 4); ctx.restore(); }
+    x += cw;
+  });
+  ctx.restore();
+  pill('A cozy game from Miw\'s Town', SIZE / 2, 330, Math.max(0, spring(u - a - 0.7, 0.5, 2.4)), { size: 40, accent: '#ffb3c8', emoji: '🥨' });
+}
+
+// ============================================================================================
+// one frame
+// ============================================================================================
+const sceneAt = t => t < TL.s2[0] ? 0 : t < TL.s3[0] ? 1 : t < TL.s4[0] ? 2 : t < TL.s5[0] ? 3 : 4;
+const camLook = new THREE.Vector3();
+window.renderAt = t => {
+  t = Math.min(DUR - 1e-6, Math.max(0, t));
+  const si = sceneAt(t), u = t - [TL.s1, TL.s2, TL.s3, TL.s4, TL.s5][si][0];
+  poolUsed = 0; POOL.forEach(m => { m.visible = false; });
+  camera.fov = si === 2 ? 36 : 30; camera.aspect = 1; camera.updateProjectionMatrix();   // the café is shot a little wider
+  gStage.visible = si === 0 || si === 4; gKit.visible = si === 1; gCafe.visible = si === 2; gCash.visible = si === 3;
+  sun.castShadow = si === 0 || si === 4;
+  const caps = [];   // captions to draw: [text, start, end, emoji]
+  let overlay2D = null;
+
+  if (si === 0 || si === 4) {
+    // ---- the stage: turntable cake, shop behind ----
+    const s1 = si === 0;
+    hero.hop.parent.visible = s1; DESSERT_RING.forEach(d => { d.g.visible = s1; }); RING.forEach(c => { c.hop.parent.visible = !s1; });
+    sign.visible = s1;
+    const ph = u / (s1 ? TL.s1[1] - TL.s1[0] : TL.s5[1] - TL.s5[0]);
+    const dist = s1 ? lerp(15.4, 12.2, inOutCubic(ph)) : lerp(12.4, 13.8, ph), az = (s1 ? lerp(-5, 3, ph) : lerp(3, -4, ph)) * PI / 180, el = (13 + 1.5 * Math.sin(ph * TAU)) * PI / 180;
+    camera.position.set(Math.sin(az) * Math.cos(el) * dist, 1.2 + Math.sin(el) * dist, Math.cos(az) * Math.cos(el) * dist);
+    camera.lookAt(0, 1.2, 0);
+    lamps.forEach((l, i) => { l.rotation.z = 0.025 * Math.sin(t * 1.7 + i * 1.3); });
+    view.offset.x = (t * 0.05) % 1;
+    if (s1) {
+      table.rotation.y = 0;
+      // the sign springs in, Miw drops from above and lands with a squash, the desserts pop up one by one
+      const sg = Math.max(0, spring(u - 0.35, 0.5, 2.4)); sign.scale.setScalar(Math.max(0.001, sg)); sign.position.y = (1 - sg) * -1.2;
+      const drop = seg(u, 0.1, 0.62), land = u - 0.62;
+      let y = 0, sy = 1, sxz = 1;
+      if (u < 0.62) { y = 4.2 * (1 - drop * drop); sy = 1 + 0.12 * drop; sxz = 1 / Math.sqrt(sy); } else { const k = 1 - spring(land, 0.35, 3.6); sy = 1 - 0.2 * k; sxz = 1 + 0.1 * k; }
+      hero.hop.position.y = 0.06 + y; hero.hop.scale.set(sxz, sy, sxz); hero.hop.rotation.y = 0;
+      if (u > 1.7) hopAnim(hero, u, 1.8, { height: 0.5, spin: true }), hero.hop.position.y += 0.06;
+      poseChar(hero, t);
+      DESSERT_RING.forEach(d => {
+        const a = 0.95 + d.i * 0.22, k = Math.max(0, spring(u - a, 0.45, 2.8));
+        d.g.scale.setScalar(Math.max(0.001, k)); d.g.position.y = 0.06 + 0.08 * Math.sin(t * 2.4 + d.i);
+        d.inner.rotation.y = t * 0.9 + d.i; burst(t, TL.s1[0] + a + 0.05, new THREE.Vector3(d.g.position.x, 1.2, d.g.position.z), 6, 20 + d.i, { spread: 1.1, up: 1.4, life: 0.6, size: 0.8 });
+      });
+      caps.push(['Run your own cozy dessert shop', 1.2, 3.1, '🍰']);
+    } else {
+      table.rotation.y = -u * 0.22;
+      RING.forEach((c, i) => {
+        poseChar(c, t);
+        const world = i / 7 * TAU + table.rotation.y; if (c.m && c.m.head) c.m.head.rotation.y = -0.4 * Math.sin(world);
+        hopAnim(c, u, 0.15 + 0.28 * i, { height: 0.5 });
+      });
+      overlay2D = () => endTitle(u);
+      caps.push(['Bake · Serve · Cash up', 2.2, 4.4, '']);
+    }
+  } else if (si === 1) {
+    // ---- the kitchen ----
+    const ease = inOutCubic, camX = u < 2.7 ? KIT.bowl[0] : u < 3.2 ? lerp(KIT.bowl[0], KIT.oven[0], ease(seg(u, 2.7, 3.2))) : u < 4.5 ? KIT.oven[0] : lerp(KIT.oven[0], KIT.plate[0], ease(seg(u, 4.5, 5.2)));
+    camera.position.set(camX + Math.sin(t * 0.5) * 0.12, 3.0 + 0.1 * Math.sin(t * 0.7), 7.6); camera.lookAt(camX, 1.45, 0);
+    // chef: stands beside whichever station is in use, walking between them
+    const chefX = u < 2.7 ? -4.3 : u < 3.2 ? lerp(-4.3, -1.4, inOutCubic(seg(u, 2.7, 3.2))) : u < 4.5 ? -1.4 : lerp(-1.4, 5.0, inOutCubic(seg(u, 4.5, 5.2)));
+    const walking = (u > 2.7 && u < 3.2) || (u > 4.5 && u < 5.2);
+    chef.hop.parent.position.set(chefX, 0.6, -0.9); chef.hop.parent.rotation.y = walking ? PI / 2 : 0.35;
+    poseChar(chef, t, walking, t * 1.7);
+    hopAnim(chef, u, 6.55, { height: 0.5 });
+    // ingredients drop into the bowl, then the spoon stirs
+    [0.3, 0.6, 0.9].forEach((a, i) => {
+      const m = INGS[i], k = seg(u, a, a + 0.5);
+      m.visible = k > 0 && k < 1;
+      if (m.visible) { m.position.set(KIT.bowl[0] + (i - 1) * 0.7 * (1 - k), lerp(4.2, 1.5, k * k) + Math.sin(k * PI) * 0.4, KIT.bowl[2]); m.rotation.y = k * 9; }
+      burst(t, TL.s2[0] + a + 0.5, new THREE.Vector3(KIT.bowl[0], 1.5, KIT.bowl[2]), 8, 40 + i, { spread: 1.0, up: 2.4, life: 0.6, grav: 8, colors: ['#fff6e4', '#fff0cf'], size: 0.7 });
+    });
+    spoon.rotation.y = -Math.max(0, u - 1.5) * 11;
+    batter.material = M(u < 1.5 ? '#fff6e4' : '#ffe9bd'); batter.scale.set(1 + 0.03 * Math.sin(t * 12), 1, 1 + 0.03 * Math.cos(t * 12));
+    if (u > 1.5 && u < 2.7) for (let k = 0; k < 3; k++) { const a = 1.5 + k * 0.38 + hash(k, 3) * 0.1; burst(t, TL.s2[0] + a, new THREE.Vector3(KIT.bowl[0] + 0.3 * Math.cos(-spoon.rotation.y), 1.5, KIT.bowl[2] - 0.3 * Math.sin(-spoon.rotation.y)), 3, 60 + k, { spread: 0.7, up: 2.2, life: 0.5, grav: 8, colors: ['#fff0cf'], size: 0.6 }); }
+    // the oven: the cake rises behind the glass, a ding, the door swings down and the cake comes out onto the plate
+    const baking = u >= 3.2 && u < 4.8;
+    ovenCake.visible = baking;
+    ovenCake.scale.setScalar(1.0 * (1 + 0.35 * seg(u, 3.2, 4.4)));
+    glass.opacity = 0.32 + 0.2 * (0.5 + 0.5 * Math.sin(t * 6));
+    steam.forEach((m, i) => { const k = ((t * 0.5) + i / 4) % 1; m.visible = u > 3.0 && u < 5.0; m.position.set(-0.7 + i * 0.45, 2.3 + k * 1.0, 0.3); m.scale.setScalar(0.6 + k); m.material.opacity = 0.55 * (1 - k); });
+    const open = inOutCubic(seg(u, 4.4, 4.8)); door.rotation.x = open * 1.45;
+    const fly = seg(u, 4.7, 5.3);
+    flyCake.visible = fly > 0 && fly < 1;
+    if (flyCake.visible) { const p0 = [KIT.oven[0], 1.6, 1.1], p1 = [KIT.plate[0], 0.68, KIT.plate[2]]; flyCake.position.set(lerp(p0[0], p1[0], fly), lerp(p0[1], p1[1], fly) + Math.sin(fly * PI) * 1.4, lerp(p0[2], p1[2], fly)); flyCake.scale.setScalar(1.45 + 0.15 * fly); flyCake.rotation.y = fly * TAU; }
+    if (u >= 4.7 && u < 4.8) ovenCake.visible = false;
+    const cut = u >= 6.5;
+    plateCake.visible = u >= 5.3 && !cut;
+    const landK = u >= 5.3 ? 1 - spring(u - 5.3, 0.35, 3.6) : 0; plateCake.scale.set(1.6 * (1 + 0.09 * landK), 1.6 * (1 - 0.16 * landK), 1.6 * (1 + 0.09 * landK));
+    // toppings drop onto the cake
+    [[0.45, 0.35, 0.1, 5.4], [-0.1, -0.15, -0.12, 5.6], [0.15, 0.3, 0.2, 5.8]].forEach(([tx, ty, tz, a], i) => {
+      const m = TOPS[i], k = seg(u, a, a + 0.4), landed = u >= a + 0.4 && !cut;
+      m.visible = (k > 0 && !cut) || false;
+      const topY = 0.62 + (i === 0 ? 0.08 : 0);
+      if (k > 0) m.position.set(lerp(tx * 2.2, tx * 0.9, k), lerp(3.3, topY, k * k) + Math.sin(k * PI) * 0.4, lerp(1.2, tz, k)); m.rotation.y = k * 8 + i;
+      if (!landed && k >= 1) m.position.set(tx * 0.9, topY, tz);
+      burst(t, TL.s2[0] + a + 0.4, new THREE.Vector3(KIT.plate[0] + tx * 0.9, 1.5, KIT.plate[2] + tz), 5, 80 + i, { spread: 0.9, up: 1.3, life: 0.5, size: 0.7 });
+    });
+    // cut in four: the slices pop outward and spin
+    slices.forEach((g, i) => {
+      const a = i * PI / 2 + PI / 4, k = Math.max(0, spring(u - 6.5, 0.5, 2.8));
+      g.visible = cut; g.position.set(Math.sin(a) * 0.62 * k, 0.08 + 0.18 * Math.sin(PI * seg(u, 6.5, 6.95)), Math.cos(a) * 0.62 * k); g.rotation.y = a + PI + (1 - k) * 2;
+      g.scale.setScalar(Math.max(0.001, k));
+    });
+    burst(t, TL.s2[0] + 6.5, new THREE.Vector3(KIT.plate[0], 1.2, KIT.plate[2]), 22, 90, { spread: 2.6, up: 2.2, life: 0.9, size: 1.1 });
+    // step chips and the caption
+    const chipPos = (a, b, text, accent) => { const k = popSpan(u, a, b); chip(text, SIZE / 2, 150, k, accent); };
+    overlay2D = () => {
+      chipPos(1.4, 2.8, '🥄  Stir', '#ffb3c8');
+      chipPos(3.3, 4.7, '🔥  Bake', '#ffb36b');
+      chipPos(5.3, 6.9, '🎀  Decorate', '#ff7ea6');
+    };
+    caps.push(['Bake every dessert by hand', 0.4, 7.2, '👩‍🍳']);
+  } else if (si === 2) {
+    // ---- the café ----
+    camera.position.set(Math.sin(u * 0.3) * 0.7, 8.4, 14.6 - u * 0.2); camera.lookAt(0, 0.7, 0.2);
+    // Miw's walk: counter → table 1 → table 2 → table 3, pausing to serve
+    const KF = [[0.0, -0.8, -2.5], [0.85, -3.5, 1.65], [1.15, -3.5, 1.65], [1.75, -0.1, 1.65], [2.05, -0.1, 1.65], [2.65, 3.3, 1.65], [3.0, 3.3, 1.65], [4.0, 3.3, 1.65]];
+    let x = KF[0][1], z = KF[0][2], moving = false, hx = 0, hz = 0;
+    for (let i = 1; i < KF.length; i++) {
+      const a = KF[i - 1], b = KF[i];
+      if (u >= a[0] && u <= b[0]) { const k = inOutCubic(seg(u, a[0], b[0])); x = lerp(a[1], b[1], k); z = lerp(a[2], b[2], k); moving = (b[1] !== a[1] || b[2] !== a[2]); hx = b[1] - a[1]; hz = b[2] - a[2]; break; }
+      if (u > b[0]) { x = b[1]; z = b[2]; }
+    }
+    miwCafe.position.set(x, 0, z);
+    const target = CAFE[x < -2 ? 0 : x < 1.5 ? 1 : 2];
+    miwCafe.rotation.y = moving ? Math.atan2(hx, hz) : Math.atan2(target.x + 0.2 - x, target.z - z);
+    poseChar(miwChar, t, moving, t * 1.8);
+    hopAnim(miwChar, u, 3.1, { height: 0.5 });
+    const serveAt = [1.0, 1.95, 2.85];
+    CAFE.forEach((d, i) => {
+      const a = serveAt[i], k = seg(u, a, a + 0.3), served = u >= a + 0.3;
+      trayItems[i].visible = u < a;
+      d.fly.visible = k > 0 && k < 1;
+      if (d.fly.visible) d.fly.position.set(lerp(x, d.x + 0.2, k), lerp(1.4, 1.1, k) + Math.sin(k * PI) * 0.5, lerp(z + 0.5, d.z, k));
+      d.food.visible = served;
+      poseChar(d.char, t);
+      hopAnim(d.char, u, a + 0.3, { height: 0.35, spin: false });
+      burst(t, TL.s3[0] + a + 0.3, new THREE.Vector3(d.x + 0.2, 1.4, d.z), 8, 100 + i, { spread: 1.5, up: 1.6, life: 0.7, size: 0.9 });
+    });
+    if (u > 3.1) CAFE.forEach(d => hopAnim(d.char, u, 3.15 + 0.12 * CAFE.indexOf(d), { height: 0.3, spin: false }));
+    overlay2D = () => CAFE.forEach((d, i) => {
+      const a = serveAt[i], k = popSpan(u, 0.15 + 0.12 * i, a + 0.3), [bx, by] = toScreen(d.seatPos);
+      bubble(bx, by - 70, k, d.want, clamp01(1 - (u - 0.15) / 3.5));
+      const [hx2, hy2] = toScreen(new THREE.Vector3(d.x + 0.6, 2.4, d.z));
+      rise('+12 🪙', hx2, hy2, u, a + 0.35); rise('💗', hx2 + 80, hy2 + 30, u, a + 0.45, '#e0568a', false);
+    });
+    caps.push(['Serve your hungry friends', 0.35, 3.85, '🧁']);
+  } else if (si === 3) {
+    // ---- cash up ----
+    camera.position.set(0, 1.9, 10.2); camera.lookAt(0, 1.5, 0);
+    poseChar(cashCat, t); poseChar(cashMiw, t);
+    hopAnim(cashCat, u, 2.05, { height: 0.55 }); hopAnim(cashMiw, u, 2.15, { height: 0.55 });
+    overlay2D = () => {
+      calculator(u);
+      const [lx, ly] = [235, 590];
+      rise('+19 🪙', SIZE / 2, 270, u, 2.05, '#b07a0c');
+      coinsRain(u, 2.0);
+      void lx; void ly;
+    };
+    caps.push(['Count the change, collect the tips', 0.5, 3.0, '🧮']);
+  }
+
+  // ---------- compose: 3D, then the 2D layer ----------
+  if (si === 0 || si === 4) {
+    camera.layers.set(BACK); scene.background = WALL;
+    renderer.render(scene, camera);
+    ctx.filter = 'blur(2.4px)'; ctx.drawImage(renderer.domElement, -12, -12, SIZE + 24, SIZE + 24); ctx.filter = 'none';
+    camera.layers.set(0); scene.background = null; renderer.setClearColor(0x000000, 0);
+    renderer.render(scene, camera);
+    ctx.drawImage(renderer.domElement, 0, 0, SIZE, SIZE);
+    const vig = ctx.createRadialGradient(SIZE / 2, SIZE * 0.55, SIZE * 0.35, SIZE / 2, SIZE * 0.55, SIZE * 0.78);
+    vig.addColorStop(0, 'rgba(120,60,70,0)'); vig.addColorStop(1, 'rgba(120,60,70,0.16)'); ctx.fillStyle = vig; ctx.fillRect(0, 0, SIZE, SIZE);
+  } else {
+    camera.layers.set(0);
+    if (si === 3) { pinkBackdrop(u); scene.background = null; renderer.setClearColor(0x000000, 0); }
+    else scene.background = BG[si];
+    camera.aspect = 1; camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    ctx.drawImage(renderer.domElement, 0, 0, SIZE, SIZE);
+    if (si !== 3) { const vig = ctx.createRadialGradient(SIZE / 2, SIZE * 0.5, SIZE * 0.35, SIZE / 2, SIZE * 0.5, SIZE * 0.78); vig.addColorStop(0, 'rgba(120,60,70,0)'); vig.addColorStop(1, 'rgba(120,60,70,0.14)'); ctx.fillStyle = vig; ctx.fillRect(0, 0, SIZE, SIZE); }
+  }
+  if (overlay2D) overlay2D();
+  // captions: a pill at the bottom, popping in and out
+  caps.forEach(([text, a, b, emoji]) => pill(text, SIZE / 2, SIZE - 112, popSpan(u, a, b), { emoji }));
+  iris(t);
+};
+
+// ---------- the soundtrack: the same cosy music box, and a sound for every move ----------
+const BAR = 1.5;
+const CHORDS = [[48, 52, 55], [45, 48, 52], [41, 45, 48], [43, 47, 50], [48, 52, 55], [41, 45, 48], [43, 47, 50]];
+const TUNE = [[72, 76, 79, 76], [72, 76, 81, 79], [77, 76, 72, 69], [74, 79, 77, 74], [76, 79, 84, 79], [77, 81, 79, 77], [74, 79, 76, 74]];
+const AUDIO_LEN = DUR + 2.5;   // room for the last bell to ring out
+function score() {
+  const ev = [], add = (at, sound, o = {}) => ev.push({ at, sound, ...o });
+  for (let b = 0; b * BAR < DUR; b++) {
+    const t0 = b * BAR, ch = CHORDS[b % 7], tu = TUNE[b % 7];
+    add(t0, 'pad', { notes: ch.map(n => n + 12), dur: BAR }); add(t0, 'bass', { note: ch[0] - 12 }); add(t0 + BAR / 2, 'bass', { note: ch[0] - 12, gain: 0.12 });
+    tu.forEach((n, k) => add(t0 + k * BAR / 4, 'musicbox', { note: n, pan: k % 2 ? 0.25 : -0.25 }));
+  }
+  const S = TL, at = (s, u) => S[s][0] + u + F1;
+  // 1. title
+  add(F1, 'bell'); add(at('s1', 0.35), 'whoosh', { dur: 0.5 }); add(at('s1', 0.62), 'thump'); add(at('s1', 0.62), 'boing', { gain: 0.1 });
+  [0.95, 1.17, 1.39, 1.61].forEach((a, i) => { add(at('s1', a), 'pop', { pan: -0.4 + i * 0.27 }); add(at('s1', a + 0.05), 'tick', { note: [84, 88, 91, 96][i] }); });
+  add(at('s1', 1.8), 'boing'); add(at('s1', 2.27), 'thump', { gain: 0.3 });
+  // 2. bake
+  [0.3, 0.6, 0.9].forEach((a, i) => { add(at('s2', a + 0.5), 'pop', { gain: 0.2 }); add(at('s2', a + 0.5), 'tick', { note: [84, 88, 91][i], gain: 0.08 }); });
+  [1.5, 1.88, 2.26].forEach(a => add(at('s2', a), 'whoosh', { dur: 0.42, gain: 0.06 }));
+  [1.45, 3.25, 5.35].forEach((a, i) => add(at('s2', a), 'pop', { gain: 0.16, pan: -0.2 + i * 0.2 }));
+  add(at('s2', 2.8), 'whoosh', { dur: 0.5 });
+  add(at('s2', 4.4), 'bell', { gain: 0.14, pan: 0.1 }); add(at('s2', 4.45), 'boing', { gain: 0.14 });
+  add(at('s2', 4.55), 'whoosh', { dur: 0.6, gain: 0.06 }); add(at('s2', 5.3), 'thump');
+  [5.8, 6.0, 6.2].forEach((a, i) => add(at('s2', a), 'tick', { note: [88, 91, 96][i], gain: 0.1 }));
+  add(at('s2', 6.5), 'whoosh', { dur: 0.4 }); add(at('s2', 6.52), 'boing', { gain: 0.16 });
+  [0, 1, 2, 3].forEach(i => add(at('s2', 6.56 + i * 0.07), 'tick', { note: [91, 95, 98, 103][i], gain: 0.09, pan: -0.4 + i * 0.27 }));
+  // 3. serve
+  [0.15, 0.27, 0.39].forEach((a, i) => add(at('s3', a), 'pop', { gain: 0.18, pan: -0.4 + i * 0.4 }));
+  [1.0, 1.95, 2.85].forEach((a, i) => {
+    add(at('s3', a + 0.3), 'boing', { gain: 0.15, pan: -0.4 + i * 0.4 }); add(at('s3', a + 0.35), 'tick', { note: 88, gain: 0.1 }); add(at('s3', a + 0.42), 'tick', { note: 95, gain: 0.1 });
+    add(at('s3', a + 0.5), 'thump', { gain: 0.2 });
+  });
+  add(at('s3', 3.15), 'boing', { gain: 0.12 });
+  // 4. cash up
+  add(at('s4', 0.05), 'whoosh', { dur: 0.5 }); add(at('s4', 0.55), 'thump', { gain: 0.2 });
+  add(at('s4', 0.95), 'tick', { note: 84, gain: 0.12 }); add(at('s4', 1.3), 'tick', { note: 88, gain: 0.12 });
+  add(at('s4', 1.95), 'pop', { gain: 0.28 }); add(at('s4', 1.98), 'bell', { gain: 0.1, pan: 0 });
+  for (let i = 0; i < 12; i++) add(at('s4', 2.05 + hash(i, 12) * 0.9), 'tick', { note: 88 + (i * 5) % 12, gain: 0.08, pan: hash(i, 13) - 0.5 });
+  add(at('s4', 2.05), 'boing', { gain: 0.14 }); add(at('s4', 2.15), 'boing', { gain: 0.12 });
+  // 5. the end card
+  for (let i = 0; i < 7; i++) { add(at('s5', 0.15 + 0.28 * i + 0.15), 'boing', { gain: 0.14, pan: -0.5 + i / 6 }); add(at('s5', 0.15 + 0.28 * i + 0.47), 'thump', { gain: 0.22 }); }
+  add(at('s5', 1.5), 'pop', { gain: 0.28 });
+  [...'Cheesecake Rush'].forEach((_, k) => add(at('s5', 1.5 + 0.12 + 0.035 * k + 0.12), 'tick', { note: [84, 86, 88, 91, 93, 96, 98][k % 7], pan: -0.3 + 0.6 * k / 14 }));
+  add(at('s5', 2.2), 'bell', { gain: 0.12 });
+  return ev;
+}
+
+// ---------- play, freeze (?t=), capture (?capture) or render the soundtrack (?audio) ----------
+const q = new URLSearchParams(location.search);
+Object.keys(fillers).forEach(n => loadModel(n, () => fillers[n].forEach(f => f())));
+whenModelsLoaded(() => document.fonts.load('600 58px Fredoka').then(() => document.fonts.load('500 50px Fredoka')).then(() => document.fonts.load('600 120px Fredoka')).then(async () => {
+  title.redraw(); makeThumbs();
+  window.__ready = true;
+  if (q.has('t')) return renderAt(parseFloat(q.get('t')) || 0);
+  if (q.has('audio')) {
+    await fetch('audio/rush', { method: 'POST', body: await renderLoop(score(), AUDIO_LEN) });
+    window.__audio = true; document.title = 'audio saved';
+    return;
+  }
+  if (q.has('capture')) {
+    for (let f = 0; f < FRAMES; f++) {
+      renderAt(f / FPS);
+      const png = await new Promise(r => out.toBlob(r, 'image/png'));
+      await fetch(`frame/rush/${String(f).padStart(4, '0')}`, { method: 'POST', body: png });
+      document.title = `${f + 1}/${FRAMES}`;
+    }
+    window.__captured = FRAMES;
+    return;
+  }
+  const t0 = performance.now();
+  (function tick() { renderAt(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(tick); })();
+}), 20000);
+</script>
+</body>
+</html>
