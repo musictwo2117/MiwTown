@@ -58,10 +58,7 @@ def straight_end(low):   # squash everything below `low` (in the blob's own unit
         if co.z < low: co.z = low + (co.z - low) * 0.04
     return f
 blob('hair', head, (0, 0.025, 0.03), (0.385, 0.37, 0.39), HAIR, seg=40, ring=24, shape=cap)
-blob('hair_back', head, (0, 0.1, -0.17), (0.385, 0.3, 0.4), HAIR, seg=40, ring=24, shape=straight_end(-0.6))
-for sd in (-1, 1):
-    s = "LR"[sd > 0]
-    blob(f'lock_{s}', head, (sd * 0.378, -0.02, -0.2), (0.022, 0.19, 0.3), HAIR_DK, seg=28, ring=18, shape=straight_end(-0.6), rot=(0, sd * 0.06, 0))
+blob('hair_back', head, (0, 0.1, -0.17), (0.372, 0.3, 0.4), HAIR, seg=40, ring=24, shape=straight_end(-0.6))
 for i, yaw in enumerate([-0.78, -0.63, -0.48, -0.33, -0.18, -0.03, 0.12, 0.27, 0.42, 0.57, 0.72]):
     yaw = yaw + 0.03
     h.stroke(f'fringe_{i}', [(yaw * 0.5, 1.35), (yaw * 0.8, 0.8), (yaw, 0.5), (yaw * 1.04, 0.24)], HAIR_DK if i % 2 else HAIR,
@@ -83,16 +80,15 @@ for f in feet:
     blob(f'lace{f.name[-2:]}', f, (0, -0.045, 0.05), (0.05, 0.05, 0.02), SNEAK_Y)
     blob(f'sole{f.name[-2:]}', f, (0, -0.04, -0.06), (0.09, 0.14, 0.018), SOLE)
 
-# pivots for animation: arms swing from the shoulder, braids sway, eyes blink, and the legs go with the boots
+# pivots for animation: arms swing from the shoulder, eyes blink, and the legs go with the boots
 arms = [group(f'arm_pivot_{s}', body, (sd * 0.14, 0.0, 0.7), [f'arm_{s}', f'hand_{s}', f'sleeve_{s}', f'cuff_{s}']) for s, sd in (('L', -1), ('R', 1))]
-braids = [group(f'lock_pivot_{s}', head, (sd * 0.33, 0.07, -0.05), [f'lock_{s}']) for s, sd in (('L', -1), ('R', 1))]
 for f in feet:
     leg = bpy.data.objects[f'leg{f.name[-2:]}']
     leg.parent = f
     leg.location = leg.location - f.location
 chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84)
 animate(body, head, tail, feet,
-        limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0), (braids[0], 1, 0.12, 0), (braids[1], 1, 0.12, 0)],
+        limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0)],
         eyes=[eye_group(head, s) for s in 'LR'])
 
 pastel()
