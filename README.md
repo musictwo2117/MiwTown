@@ -28,11 +28,19 @@ Each Claude Code session moves in as a little character. When it reads files it 
 
 A cozy café game (`/game`, or 🍰 Cheesecake Rush in the town's toolbar) built on the same models. Friends sit down and order a dessert and often a drink. Miw serves them, they queue at the cashier, and you give the right change on a little calculator.
 
-1. **Bake.** Before each day, and again when a shelf runs out, drag the ingredients into the bowl, stir in circles, take the cake out of the oven when the marker is in the green, and place the toppings. Better baking sells for more. Strawberries are picked from the café's strawberry plot.
-2. **Serve.** Tap a dessert or drink to pick it up (two at a time), or tap a friend's table and Miw fetches everything they ordered. Quick service earns bigger tips.
+![The Cheesecake Rush café: a block-built floating island with a pink-striped counter, the baker bunny, tables of friends waiting for their orders, a juice bar, a pond with a rainbow and a strawberry plot](docs/game-cafe.jpg)
+
+1. **Bake.** Before each day (you get 90 seconds), and again when a shelf runs out, cook each dessert step by step in its own 3D kitchen scene, Cooking Mama style. A cheesecake is crushed cookies, a pressed base, mixing, stirring, pouring and the oven; donuts are mixed, kneaded, rolled, cut, fried in a hot pan, dipped in glaze and sprinkled. Pour too much, bake too long or leave the donuts in the oil and the batch is ruined, with a red warning first. Better baking sells for more, and a batch makes six. Strawberries are picked from the café's strawberry plot.
+2. **Serve.** Tap a dessert or drink to put it on Miw's tray (up to four), or tap a friend's table and Miw fetches everything they ordered. Quick service earns bigger tips.
 3. **Cash up.** Friends pay with a note, exact money or QR. The right change on the first try earns the tip, the combo and a speed bonus.
 
-Each day has a goal that climbs gently, with more tables and new desserts and drinks to unlock, and one to three stars. Every friend has a favorite and a quirk: the cat loves the Kitty Cupcake, some tip big, some are in a hurry. The home screen has three save slots (kept in this browser), how to play, settings and credits, and the whole game is in Thai when the language is set to ไทย.
+![Two kitchen steps: a cheesecake glowing orange inside the oven with a timing bar to take it out when golden, and six donuts frying in an iron pan over a gas flame](docs/game-kitchen.jpg)
+
+![The cashier: a pink calculator showing a bill of 24, paid 50, with 26 keyed in as change, over the café](docs/game-cashier.jpg)
+
+Each day has a goal that climbs gently, with more tables and new desserts and drinks to unlock, and one to three stars. Every friend has a favorite and a quirk: the cat loves the Kitty Cupcake, some tip big, some are in a hurry. The home screen has three save slots (kept in this browser), how to play, settings and credits, and the whole game is in Thai when the language is set to ไทย. The emoji in the game are swapped for little pictures of Blender models as they load.
+
+<img src="docs/game-home.jpg" alt="The Cheesecake Rush home screen: the title over a blurred view of the café, with Play, How to play, Settings, Credits and Back to the town buttons" width="640">
 
 ## Sculpted in Blender
 
@@ -61,7 +69,7 @@ sh models/build.sh            # everything
 sh models/build.sh cat cafe   # just these
 ```
 
-Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy), the game's desserts from `models/menu.py` (the cheesecake and pretzel cake also come whole, as `cheesefull` and `pretzelfull`, for the oven), and the intro video's cheesecake shop (the set, the giant cake and the hanging lamp) from `models/shop.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
+Characters are `models/<name>.py`; the buildings all come from `models/town.py`, the furniture from `models/room.py`, the trees, flowers and lamp posts from `models/props.py` (one model each, recolored per copy), the game's desserts from `models/menu.py` (the cheesecake and pretzel cake also come whole, as `cheesefull` and `pretzelfull`, for the oven), the game's little icons (ingredients, coins, hearts, the clock...) from `models/icons.py`, and the intro video's cheesecake shop (the set, the giant cake and the hanging lamp) from `models/shop.py`. Shared helpers (rounded shapes, faces, the walk cycle, the shadow bake) live in `models/kit.py`.
 
 ## Features
 
@@ -135,12 +143,13 @@ The server listens on `127.0.0.1` only, and:
 | `room.html` | The 3D cat room |
 | `game.html` | Cheesecake Rush: the café, the kitchen, serving and the cashier |
 | `home.js` | The game's home screen (save slots, how to play, settings, credits) and pause menu |
+| `icons.js` | Swaps the game's emoji for pictures of their Blender models |
 | `i18n.js` | The game's Thai translation, swapped in over the English text |
 | `styletest.html` | Side-by-side looks tried for the café (`/style`) |
 | `panel.js` | Shared UI: task drawer, agent cards, wardrobe, timelines, places, sound, bubbles |
 | `scenery.js` | Shared 3D bits: pretzels, floating islands, icing, and merging static scenery to keep it fast |
 | `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
-| `models/` | Blender scripts for the characters, buildings, furniture, props and desserts, the `.glb` files they make, and `build.sh` |
+| `models/` | Blender scripts for the characters, buildings, furniture, props, desserts and icons, the `.glb` files they make, and `build.sh` |
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
 | `video/` | The video studio: clip pages, the frame and sound capture server, the FFmpeg encoder and the Remotion 9:16 cut (see [Videos](#videos)) |
 
@@ -181,3 +190,18 @@ FADE=0.8 NOLOOP=1 sh video/encode.sh rush  # after ?capture and ?audio have save
 ```
 
 For Reels, TikTok and Shorts, `cd video/remotion && npm run render:rush` frames it for 9:16 (`video/out/rush/rush-vertical.mp4`): a bouncy title on top, the clip in a picture frame, and Bake, Serve and Cash up lighting up below as the clip reaches each part.
+
+**Cheesecake Rush, filmed in the game** (`video/capture-game.js`): a 72 s vertical promo, 1080×1920 at 30 fps, filmed from the real game rather than drawn for the video. Captions run along the bottom and it ends on a title card.
+
+![Five frames from the vertical promo: a cheesecake in the oven ("bake it step by step"), donuts frying in a pan ("knead, roll, fry…"), Miw in the café ("serve your friends"), the change calculator ("give the right change"), and the Cheesecake Rush end card](docs/game-promo.jpg)
+
+- **Played by a script.** `video/rushv-play.js` runs inside the game page and plays it for the camera: it opens on the home screen, bakes a cheesecake and a batch of donuts step by step, serves the friends, gives change and visits the strawberry plot and the pond. It also moves the camera, sets how fast the game runs and shows the captions.
+- **Same frames every time.** `capture-game.js` opens `game.html` in headless Chrome (`video/cdp.js`, a tiny DevTools client with no dependencies) and steps the game's frame loop by hand on a virtual clock, one game frame per film frame.
+- **The game's own sounds.** Every sound the game made while it was filmed is saved to `cues.json`, and `video/rushv.html` plays them back over a music-box tune for the soundtrack.
+
+```bash
+python3 -m http.server 19101                  # serve the game (or GAME_URL=http://localhost:19100/game)
+node video/capture-game.js                    # frames into video/out/rushv/frames/, prints the film's length
+node video/serve.js                           # then open http://localhost:19200/rushv?audio&len=<seconds>
+EXT=jpg NOLOOP=1 sh video/encode.sh rushv     # video/out/rushv/rushv.mp4
+```
