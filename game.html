@@ -1264,22 +1264,48 @@ const kst = (() => {
   const W = 720, H = 520;   // drawn at twice the old size so the kitchen is easy to see and to touch
   const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.setSize(W, H);
-  r.domElement.style.cssText = 'width:min(100%,calc(50vh * 720 / 520));aspect-ratio:720/520;height:auto;display:block;margin:0 auto;border-radius:18px;background:linear-gradient(#ffeef3,#fff3e6);touch-action:none;cursor:pointer';
+  r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+  r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.2;
+  r.domElement.style.cssText = 'width:min(100%,calc(50vh * 720 / 520));aspect-ratio:720/520;height:auto;display:block;margin:0 auto;border-radius:18px;background:linear-gradient(#f6ecdd,#ebdcc6);touch-action:none;cursor:pointer';
   const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, W / H, 0.1, 50);
+  const glossM = {};   // one glossy material per color, so ceramic, steel, plates and icing catch the light
+  const mesh = (geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast = true, mat } = {}) => {
+    const m = new THREE.Mesh(geo, mat || (glossM[color] = glossM[color] || new THREE.MeshPhongMaterial({ color, shininess: 40, specular: 0x3d3830 })));
+    m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+    if (s) Array.isArray(s) ? m.scale.set(...s) : m.scale.setScalar(s);
+    m.castShadow = cast; m.receiveShadow = true;
+    return m;
+  };
   const GOALS = { crush: [[0.5, 3.2, 4.2], [0.5, 0.8, 0.2]], pan: [[0.5, 3.6, 3.7], [0.5, 0.6, 0.2]], dn: [[0.5, 3.5, 3.9], [0.5, 0.85, 0.25]], idle: [[0, 2.3, 5.4], [0, 1.0, 0]], mix: [[0.5, 2.9, 4.3], [0.5, 1.25, 0.3]], bake: [[0.6, 2.0, 4.8], [0.6, 1.2, 0]], deco: [[0.5, 3.0, 3.4], [0.5, 0.8, 0.2]] };
   const look = new THREE.Vector3(0, 1, 0); cam.position.set(0, 2.3, 5.4);
   const goalOf = k => GOALS[k === 'add' || k === 'stir' ? 'mix' : k === 'bake' || k === 'bake-out' ? 'bake' : k === 'deco' || k === 'done' ? 'deco' : k === 'crush' ? 'crush' : k === 'press' || k === 'pour' ? 'pan' : DN_MODES.includes(k) ? 'dn' : 'idle'];
-  sc.add(new THREE.HemisphereLight(0xfff4ea, 0xd9b0b4, 0.9));
-  const sun = new THREE.DirectionalLight(0xffe6c4, 0.6); sun.position.set(3, 6, 4); sc.add(sun);
-  sc.add(mesh(box(8, 0.5, 2.8), '#fff6ef', { y: 0.25, z: -0.2 }), mesh(box(8.2, 0.12, 3), '#ffc4d6', { y: 0.54, z: -0.2 }));
-  const TOP = 0.6, BATTER = { cheesecake: '#fff0cf', donut: '#f0c9a0', kittycupcake: '#ffd1a6', pretzelcake: '#e8c48a' };
+  sc.add(new THREE.HemisphereLight(0xfff6ea, 0x8f7c66, 0.5));
+  const sun = new THREE.DirectionalLight(0xfff0dc, 1.0); sun.position.set(-3.4, 6.5, 4.4); sc.add(sun);   // a window's light from the upper left
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02; sun.shadow.radius = 3;
+  Object.assign(sun.shadow.camera, { left: -4.5, right: 4.5, top: 4, bottom: -2.5, near: 1, far: 18 }); sun.target.position.set(0.5, 0.6, 0); sc.add(sun.target);
+  const fillL = new THREE.DirectionalLight(0xdfe8ff, 0.28); fillL.position.set(4.5, 2.5, 3.5); sc.add(fillL);
+  const woodTex = canvasTex(512, 128, (x, w, h) => {
+    x.fillStyle = '#d6b588'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) { x.strokeStyle = `rgba(${95 + rnd() * 40 | 0},${62 + rnd() * 28 | 0},${28 + rnd() * 14 | 0},${0.07 + rnd() * 0.13})`; x.lineWidth = 0.8 + rnd() * 2.2; const y = rnd() * h; x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(w * 0.3, y + rnd() * 8 - 4, w * 0.62, y + rnd() * 8 - 4, w, y + rnd() * 5 - 2.5); x.stroke(); }
+  });
+  const tileTex = canvasTex(256, 256, (x, w, h) => {
+    x.fillStyle = '#d8d1c4'; x.fillRect(0, 0, w, h);
+    for (let r = 0; r < 8; r++) for (let c = -1; c < 4; c++) { const ox = (r % 2) * 32, v = 236 + (rnd() * 12 | 0); x.fillStyle = `rgb(${v},${v - 2},${v - 8})`; x.fillRect(c * 64 + ox + 2, r * 32 + 2, 60, 28); }
+  });
+  tileTex.repeat.set(5, 3);
+  sc.add(mesh(box(8, 0.5, 2.8), '#e8dccb', { y: 0.25, z: -0.2 }),
+    mesh(box(8.2, 0.12, 3), '', { y: 0.54, z: -0.2, mat: new THREE.MeshPhongMaterial({ map: woodTex, shininess: 45, specular: 0x403a30 }) }),
+    mesh(box(15, 6, 0.1), '', { x: 0.5, y: 3.4, z: -1.95, mat: new THREE.MeshPhongMaterial({ map: tileTex, shininess: 60, specular: 0x444444 }) }));
+  const TOP = 0.6, BATTER = { cheesecake: '#fff0cf', donut: '#f1dfb9', kittycupcake: '#f4e1b6', pretzelcake: '#ecd5a3' };
   let mode = null, id = null, t = 0, modeT = 0, chef = null, hop = 0, nextDeco = null, stirV = 0, cakeTop = 0.8, insideModel = null;
   const parts = [], placed3d = [], tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
-  let insideBase = 1;
+  let insideBase = 1, frameN = 0;
 
   // the bowl and spoon
   const mixG = new THREE.Group(); mixG.position.set(0.5, TOP, 0.2); sc.add(mixG);
-  mixG.add(mesh(cyl(0.9, 0.62, 0.8, 28), '#ffe1ea', { y: 0.4 }));
+  const bowlPts = [[0.001, 0], [0.6, 0], [0.64, 0.04], [0.9, 0.8], [0.9, 0.84], [0.85, 0.84], [0.84, 0.8], [0.56, 0.1], [0.001, 0.1]].map(([x, y]) => new THREE.Vector2(x, y));
+  const bowlM = new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 56), new THREE.MeshPhongMaterial({ color: '#79afc8', shininess: 55, specular: 0x4a5a63, side: THREE.DoubleSide }));
+  bowlM.castShadow = bowlM.receiveShadow = true; mixG.add(bowlM);   // hollow, so you can see how much batter is in it
   // the batter is a shallow glossy dome (many small triangles) so it can ripple, swirl and dip where the spoon goes
   const batterGeo = (() => {
     const R = 0.8 / Math.sin(0.5), g = new THREE.SphereGeometry(R, 56, 20, 0, PI * 2, 0, 0.5);
@@ -1288,8 +1314,8 @@ const kst = (() => {
     return g;
   })();
   const batterBase = batterGeo.attributes.position.array.slice();
-  const batter = new THREE.Mesh(batterGeo, new THREE.MeshPhongMaterial({ color: '#f6e7c4', shininess: 70, specular: new THREE.Color(0x888888), vertexColors: true }));
-  batter.position.y = 0.815; mixG.add(batter);   // a little above the bowl's top, so no ripple dips under it
+  const batter = new THREE.Mesh(batterGeo, new THREE.MeshPhongMaterial({ color: '#f1d996', shininess: 70, specular: new THREE.Color(0x888888), vertexColors: true }));
+  batter.position.y = 0.2; mixG.add(batter);   // it sits low in the bowl and rises as things go in
   const rim = mesh(new THREE.TorusGeometry(0.8, 0.03, 8, 56), '#fff6dc', { rx: PI / 2, y: 0.817, cast: false }); mixG.add(rim);   // batter climbing the bowl wall
   let fill = 0, fillT = 0, batchTok = 0;   // how full the bowl is, now and heading to
   const lumps = new THREE.Group(); mixG.add(lumps);   // clumps of flour and cream cheese that stirring melts away
@@ -1298,7 +1324,7 @@ const kst = (() => {
 
   // the oven, with a glass door that swings down
   const ovenG = new THREE.Group(); ovenG.position.set(0.6, TOP, 0); sc.add(ovenG);
-  ovenG.add(mesh(box(2.4, 1.9, 1.5), '#ffc4d6', { y: 0.95 }), mesh(box(2.5, 0.12, 1.6), '#fffaf3', { y: 1.9 }), mesh(box(1.8, 1.1, 0.02), '#7a4630', { y: 0.85, z: 0.76 }));
+  ovenG.add(mesh(box(2.4, 1.9, 1.5), '#cfc8bc', { y: 0.95 }), mesh(box(2.5, 0.12, 1.6), '#b9b1a4', { y: 1.9 }), mesh(box(1.8, 1.1, 0.02), '#7a4630', { y: 0.85, z: 0.76 }));
   [-0.6, 0.6].forEach(x => ovenG.add(mesh(sph(0.1, 10), '#ffffff', { x, y: 1.62, z: 0.78 })));
   const door = new THREE.Group(); door.position.set(0, 0.3, 1.0); ovenG.add(door);
   const glass = new THREE.MeshBasicMaterial({ color: '#ffb36b', transparent: true, opacity: 0.5 });
@@ -1338,16 +1364,16 @@ const kst = (() => {
   const tool = mesh(cyl(0.26, 0.24, 0.4, 22), '#fff6ef', { y: 0.45 }); panG.add(tool);   // the glass you press with
   // ----- pouring the batter into the pan: a tilted bowl, a stream, and a level with a target line and an overflow line -----
   const POUR_T = 0.72, lvlY = L => 0.095 + L * 0.42;
-  const fillM = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R - 0.02, PAN_R - 0.02, 1, 40), new THREE.MeshPhongMaterial({ color: '#f6e7c4', shininess: 70, specular: new THREE.Color(0x888888) })); fillM.visible = false; panG.add(fillM);
+  const fillM = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R - 0.02, PAN_R - 0.02, 1, 40), new THREE.MeshPhongMaterial({ color: '#f1d996', shininess: 70, specular: new THREE.Color(0x888888) })); fillM.visible = false; panG.add(fillM);
   const ringAt = (y, color) => mesh(new THREE.TorusGeometry(PAN_R + 0.006, 0.014, 6, 56), color, { rx: PI / 2, y, cast: false });
   const tRing = ringAt(lvlY(POUR_T), '#4fb860'), oRing = ringAt(lvlY(1), '#ef5f7e');
   const pourG = new THREE.Group(); pourG.position.set(-0.35, 1.2, 0); pourG.scale.setScalar(0.55);
-  pourG.add(mesh(cyl(0.9, 0.62, 0.8, 28), '#ffe1ea', { y: 0.4 }), mesh(cyl(0.8, 0.8, 0.05, 28), '#f6e7c4', { y: 0.8 }));
-  const streamM = mesh(cyl(0.05, 0.05, 1, 10), '#f6e7c4', { cast: false }); streamM.visible = false;
+  pourG.add(mesh(cyl(0.9, 0.62, 0.8, 28), '#79afc8', { y: 0.4 }), mesh(cyl(0.8, 0.8, 0.05, 28), '#f1d996', { y: 0.8 }));
+  const streamM = mesh(cyl(0.05, 0.05, 1, 10), '#f1d996', { cast: false }); streamM.visible = false;
   const pourOnly = [tRing, oRing, pourG, streamM]; pourOnly.forEach(o => { o.visible = false; panG.add(o); });
   let level = 0, pouring = false, tilt = 0;
   // ----- baking in the pan: the filling goes from pale to golden and, if forgotten, to dark brown -----
-  const HEAT = [[0, '#fff0cf'], [0.45, '#f0d48c'], [0.69, '#d9a041'], [0.85, '#9a5a24'], [1, '#3a1f0e']];
+  const HEAT = [[0, '#fbf1d4'], [0.45, '#f1dcaa'], [0.69, '#dfb877'], [0.85, '#a9722f'], [1, '#3a1f0e']];
   const heatColor = p => { p = Math.max(0, Math.min(1, p)); let i = 0; while (i < HEAT.length - 2 && p > HEAT[i + 1][0]) i++; const [a, ca] = HEAT[i], [b, cb] = HEAT[i + 1]; return new THREE.Color(ca).lerp(new THREE.Color(cb), (p - a) / (b - a)); };
   let bakeHeat = 0, lastHeat = 0.69, ovenFill = null;
   function plainCake() {   // the baked cheesecake before it is decorated
@@ -1409,7 +1435,7 @@ const kst = (() => {
   let sideA = 0, flipT = 1;
   // the glaze bowl, with the tray of donuts held over it
   const glzG = new THREE.Group(); dnG.add(glzG);
-  glzG.add(mesh(cyl(1.3, 1.15, 0.5, 36), '#ffe1ea', { y: 0.25, s: [1, 1, 0.75] }));
+  glzG.add(mesh(cyl(1.3, 1.15, 0.5, 36), '#fbf8f1', { y: 0.25, s: [1, 1, 0.75] }));
   const glazePool = new THREE.Mesh(cyl(1.22, 1.22, 0.04, 36), new THREE.MeshPhongMaterial({ color: DN_GLAZE, shininess: 90, specular: new THREE.Color(0xffffff) })); glazePool.position.y = 0.52; glazePool.scale.z = 0.75; glzG.add(glazePool);
   const tray = new THREE.Group(); glzG.add(tray); tray.add(mesh(box(2.1, 0.05, 1.0), '#fffaf3', { y: -0.025 }));
   const trayDonuts = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x * 0.92, 0.09, z * 0.9); tray.add(d); return d; });
@@ -1418,7 +1444,7 @@ const kst = (() => {
 
   const TOPS = [
     () => { const g = new THREE.Group(); g.add(mesh(sph(0.12, 10), '#ef5470', { s: [1, 1.1, 1] }), mesh(sph(0.06, 6), '#7cc68a', { y: 0.12, s: [1.4, 0.5, 1.4] })); return g; },
-    () => mesh(sph(0.1, 10), '#6b3a2a', { s: [1.5, 0.5, 1.1] }),
+    () => mesh(sph(0.1, 10), '#4f2c1c', { s: [1.5, 0.5, 1.1] }),
     () => mesh(new THREE.OctahedronGeometry(0.11), '#ffe08a'),
   ];
   const INGS = {
@@ -1427,8 +1453,8 @@ const kst = (() => {
     cheese: () => mesh(box(0.22, 0.18, 0.22), '#ffe9a8', { ry: 0.5 }),
     cookie: () => mesh(cyl(0.15, 0.15, 0.05, 16), '#c98b4b'),
     milk: () => mesh(cyl(0.1, 0.1, 0.3, 12), '#ffffff'),
-    butter: () => mesh(box(0.26, 0.12, 0.17), '#ffe27a'),
-    choc: () => mesh(box(0.22, 0.06, 0.15), '#6b3a2a'),
+    butter: () => mesh(box(0.26, 0.12, 0.17), '#f2d560'),
+    choc: () => mesh(box(0.22, 0.06, 0.15), '#4f2c1c'),
     pretzel: () => { const p = makePretzel({ salt: false }); p.scale.setScalar(0.14); return p; },
     berry: () => { const g = new THREE.Group(); g.add(mesh(sph(0.12, 10), '#ef5470', { s: [1, 1.1, 1] }), mesh(sph(0.06, 6), '#7cc68a', { y: 0.12, s: [1.4, 0.5, 1.4] })); return g; },
   };
@@ -1452,7 +1478,7 @@ const kst = (() => {
     const keep = mode === 'add' && kind === 'stir';
     mode = kind; id = newId; modeT = 0; nextDeco = null;
     if (!keep) clearParts();
-    if (kind === 'add') { batter.material.color.set('#f6e7c4'); lumps.clear(); stirV = 0; fill = fillT = 0; batchTok++; }
+    if (kind === 'add') { batter.material.color.set('#f1d996'); lumps.clear(); stirV = 0; fill = fillT = 0; batchTok++; }
     if (kind === 'stir') fillT = 1;
     if (kind === 'crush') { crushP = 0; swing = 0; swingHit = true; cookies.forEach(g => { g.visible = true; g.scale.set(1, 1, 1); }); pile.scale.set(0.01, 0.01, 0.01); mallet.position.set(0, 0.8, 0.05); }
     if (kind === 'press') { crustReset(); toolX = toolZ = 0; toolDown = false; }
@@ -1471,11 +1497,11 @@ const kst = (() => {
   // ----- how each ingredient goes into the bowl: every one is a small animation { g, run(dt) → true when finished } -----
   const ease = k => k * k * (3 - 2 * k), lerp = (a, b, k) => a + (b - a) * k, k01 = k => Math.max(0, Math.min(1, k));
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
-  const SURF = 0.84;                                   // where the batter is, in the bowl's own coordinates
+  let SURF = 0.16;                                     // where the batter is, in the bowl's own coordinates (it rises as the bowl fills)
   let pulse = 0, swirlA = 0;
   const addLump = local => {
     for (let k = 0; k < 2; k++) {
-      const a = Math.random() * PI * 2, r = 0.1 + Math.random() * 0.45, m = mesh(sph(0.07 + Math.random() * 0.05, 8), '#fffaf0', { x: Math.cos(a) * r, y: 0.84, z: Math.sin(a) * r, s: [1, 0.6, 1], cast: false });
+      const a = Math.random() * PI * 2, r = 0.1 + Math.random() * 0.45, m = mesh(sph(0.07 + Math.random() * 0.05, 8), '#fffaf0', { x: Math.cos(a) * r, y: SURF + 0.01, z: Math.sin(a) * r, s: [1, 0.6, 1], cast: false });
       m.scale.multiplyScalar(0.01); m.userData.grow = 1; lumps.add(m);
     }
   };
@@ -1496,7 +1522,7 @@ const kst = (() => {
       const m = lumps.children[i];
       if (m.userData.grow) { m.scale.multiplyScalar(1.18); if (m.scale.x >= 1) { m.scale.set(1, 0.6, 1); m.userData.grow = 0; } }
       else { m.scale.multiplyScalar(1 - Math.min(0.5, stirV * dt * 0.35)); if (m.scale.x < 0.12) lumps.remove(m); }
-      m.position.y = 0.84 + 0.004 * Math.sin(time * 5 + i);
+      m.position.y = SURF + 0.01 + 0.004 * Math.sin(time * 5 + i);
     }
   }
   const tint = (c, k) => batter.material.color.lerp(new THREE.Color(c), k01(k));
@@ -1528,7 +1554,7 @@ const kst = (() => {
     const topH = new THREE.Group(), botH = new THREE.Group(); topH.visible = botH.visible = false; g.add(topH, botH);
     topH.add(mesh(dome(), '', { mat: shell, s: [1, 1.25, 1], cast: false }));
     botH.add(mesh(dome(), '', { mat: shell, s: [1, 1.25, 1], rx: PI, cast: false }));
-    const yolk = mesh(sph(0.108, 12), '#ffc531', { cast: false }), white = mesh(sph(0.15, 12), '', { cast: false, mat: new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.92 }) });
+    const yolk = mesh(sph(0.108, 12), '#f3a51c', { cast: false }), white = mesh(sph(0.15, 12), '', { cast: false, mat: new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.92 }) });
     yolk.visible = white.visible = false; g.add(yolk, white);
     const start = V3(-1.7, 1.0, 0.8), hover = V3(0.05, 1.4, 0.98), c0 = V3(0.05, 1.1, 0.96), c1 = V3(-0.04, SURF + 0.07, 0.25);
     const chips = () => { for (let i = 0; i < 5; i++) emit(mixG.localToWorld(V3(0.05 + (Math.random() - 0.5) * 0.2, 0.9, 1.0)), V3((Math.random() - 0.5) * 1.2, 0.8 + Math.random() * 0.8, 0.3 + Math.random() * 0.6), 0.5, '#fff3e0', 0.02, 7); };
@@ -1583,19 +1609,19 @@ const kst = (() => {
         if (spill === 'dust') {
           for (let i = 0; i < 3; i++) emit(lipW.clone().add(V3((Math.random() - 0.5) * 0.06, 0, (Math.random() - 0.5) * 0.06)), V3(-0.15 + Math.random() * 0.2, -1.0 - Math.random() * 0.5, (Math.random() - 0.5) * 0.2), 0.7, '#ffffff', 0.035, 2);
           if (Math.random() < 0.5) emit(mixG.localToWorld(V3(0.1, SURF + 0.03, 0.3)), V3((Math.random() - 0.5) * 0.4, 0.5, (Math.random() - 0.5) * 0.4), 0.6, '#f4f1ea', 0.07, -0.2, 0.5);
-          tint('#fffdf6', dt * 1.1);
+          tint('#f6ecd0', dt * 1.1);
         } else {
           const top = mixG.worldToLocal(lipW.clone()), len = Math.max(0.05, top.y - SURF);
           stream.visible = true; stream.position.set(top.x, top.y - len / 2, top.z); stream.scale.set(1, len, 1);
           if (Math.random() < 0.5) emit(mixG.localToWorld(V3(top.x, SURF + 0.03, top.z)), V3((Math.random() - 0.5) * 0.8, 1.0, (Math.random() - 0.5) * 0.8), 0.5, '#ffffff', 0.035, 7);
-          pulse = Math.max(pulse, 0.5); tint('#fff9ec', dt * 0.8);
+          pulse = Math.max(pulse, 0.5); tint('#f4e6bf', dt * 0.8);
         }
       } else if (stream) stream.visible = false;
       return t > 2.3;
     } };
   }
   const flourAnim = () => bagAnim(b => {
-    b.add(mesh(box(0.3, 0.44, 0.15), '#ffffff', { y: 0.22, cast: false }), mesh(box(0.31, 0.12, 0.16), '#ffc4d6', { y: 0.2, cast: false }), mesh(box(0.3, 0.07, 0.15), '#e9e4dc', { y: 0.46, cast: false }));
+    b.add(mesh(box(0.3, 0.44, 0.15), '#ffffff', { y: 0.22, cast: false }), mesh(box(0.31, 0.12, 0.16), '#d9b98c', { y: 0.2, cast: false }), mesh(box(0.3, 0.07, 0.15), '#e9e4dc', { y: 0.46, cast: false }));
   }, null, V3(-0.15, 0.47, 0), 1.9, '#ffffff', 'dust');
   const milkAnim = () => bagAnim(b => {
     b.add(mesh(box(0.24, 0.34, 0.24), '#ffffff', { y: 0.17, cast: false }), mesh(box(0.25, 0.1, 0.25), '#9fd8f5', { y: 0.15, cast: false }), mesh(new THREE.CylinderGeometry(0, 0.17, 0.13, 4), '#ffffff', { y: 0.4, ry: PI / 4, cast: false }));
@@ -1626,7 +1652,7 @@ const kst = (() => {
 
   function breakAnim(kind) {                        // a cookie or a bar of chocolate: tap or snap it, the pieces fall in
     const g = new THREE.Group(); mixG.add(g); const item = new THREE.Group(); g.add(item);
-    const cookie = kind === 'cookie', col = cookie ? '#c98b4b' : '#6b3a2a', crumb = cookie ? '#b7773a' : '#4a2a1e';
+    const cookie = kind === 'cookie', col = cookie ? '#c98b4b' : '#4f2c1c', crumb = cookie ? '#b7773a' : '#4a2a1e';
     const halves = [-1, 1].map(sd => { const h = new THREE.Group(); item.add(h); h.userData.sd = sd;
       if (cookie) { h.add(mesh(cyl(0.16, 0.16, 0.05, 18), col, { x: sd * 0.0, cast: false }), mesh(sph(0.025, 6), '#4a2a1e', { x: sd * 0.07, y: 0.03, z: 0.03, cast: false }), mesh(sph(0.025, 6), '#4a2a1e', { x: sd * 0.1, y: 0.03, z: -0.05, cast: false })); }
       else { h.add(mesh(box(0.16, 0.06, 0.2), col, { x: sd * 0.085, cast: false }), mesh(box(0.14, 0.015, 0.02), '#8a5a44', { x: sd * 0.085, y: 0.035, z: 0.04, cast: false }), mesh(box(0.14, 0.015, 0.02), '#8a5a44', { x: sd * 0.085, y: 0.035, z: -0.04, cast: false })); }
@@ -1676,7 +1702,7 @@ const kst = (() => {
     const g = new THREE.Group(); mixG.add(g);
     const mk = () => {
       const b = new THREE.Group(); b.visible = false;
-      b.add(mesh(sph(0.11, 12), '#ef3d5c', { s: [1, 1.15, 1], cast: false }), mesh(sph(0.055, 6), '#6fbf64', { y: 0.12, s: [1.5, 0.5, 1.5], cast: false }));
+      b.add(mesh(sph(0.11, 12), '#d4324a', { s: [1, 1.15, 1], cast: false }), mesh(sph(0.055, 6), '#4f9d4c', { y: 0.12, s: [1.5, 0.5, 1.5], cast: false }));
       for (let i = 0; i < 5; i++) b.add(mesh(sph(0.012, 4), '#fff1a8', { x: Math.cos(i * 1.3) * 0.1, y: (i - 2) * 0.03, z: Math.sin(i * 1.3) * 0.1, cast: false }));
       g.add(b); return b;
     };
@@ -1697,7 +1723,7 @@ const kst = (() => {
       return time > 2.1;
     } };
   }
-  const ING_ANIM = { egg: eggAnim, flour: flourAnim, milk: milkAnim, cheese: () => slideAnim('#fff0c0', [0.3, 0.16, 0.24], '#fff0c0'), butter: () => slideAnim('#ffe27a', [0.3, 0.13, 0.18], '#ffe27a'), cookie: () => breakAnim('cookie'), choc: () => breakAnim('choc'), pretzel: pretzelAnim, berry: berryAnim };
+  const ING_ANIM = { egg: eggAnim, flour: flourAnim, milk: milkAnim, cheese: () => slideAnim('#f6efd9', [0.3, 0.16, 0.24], '#f6efd9'), butter: () => slideAnim('#f2d560', [0.3, 0.13, 0.18], '#f2d560'), cookie: () => breakAnim('cookie'), choc: () => breakAnim('choc'), pretzel: pretzelAnim, berry: berryAnim };
   const anims = []; let idleCb = null;
   // ----- Miw's arm: it stretches from her shoulder to whatever she is holding, then goes back to her side -----
   const skin = M('#ffd9c4'), sleeveM = M('#ffd23f');
@@ -1839,6 +1865,7 @@ const kst = (() => {
     },
     update(dt, now) {
       t += dt; modeT += dt;
+      if (frameN++ % 8 === 0) sc.traverse(o => { if (o.isMesh && o.material && !o.material.transparent && !o.userData.fx) { o.castShadow = true; o.receiveShadow = true; } });
       const g = goalOf(mode);
       cam.position.lerp(tmpA.set(...g[0]), Math.min(1, dt * 3)); look.lerp(tmpB.set(...g[1]), Math.min(1, dt * 3)); cam.lookAt(look);
       if (!chef) {
@@ -1873,7 +1900,7 @@ const kst = (() => {
         tRing.visible = oRing.visible = pourG.visible = true; pourG.rotation.z = -tilt;
         pourG.updateMatrixWorld(true); const lip = panG.worldToLocal(pourG.localToWorld(V3(0.9, 0.8, 0))), surf = 0.095 + h;
         streamM.visible = pouring && tilt > 0.55; streamM.scale.set(1, Math.max(0.01, lip.y - surf), 1); streamM.position.set(lip.x, (lip.y + surf) / 2, lip.z);
-        if (streamM.visible && Math.random() < 0.5) emit(panG.localToWorld(V3(lip.x, surf, lip.z)), V3((Math.random() - 0.5) * 0.9, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 0.9), 0.45, '#f6e7c4', 0.03, 7);
+        if (streamM.visible && Math.random() < 0.5) emit(panG.localToWorld(V3(lip.x, surf, lip.z)), V3((Math.random() - 0.5) * 0.9, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 0.9), 0.45, '#f1d996', 0.03, 7);
       }
       if (mode === 'crush') {
         swing = Math.max(0, swing - dt * 5.5);
@@ -1925,7 +1952,11 @@ const kst = (() => {
       mixG.visible = mode === 'add' || mode === 'stir'; ovenG.visible = mode === 'bake' || mode === 'bake-out'; decoG.visible = mode === 'deco' || mode === 'done';
       if (mode === 'stir' || mode === 'add') {
         stirV = Math.max(0, stirV - dt * 4); fill += (fillT - fill) * Math.min(1, dt * 3);
-        batter.visible = fill > 0.03; rim.visible = fill > 0.85; const rad = 0.3 + 0.7 * Math.min(1, fill); batter.scale.set(rad, 1, rad);
+        const lvl = 0.14 + 0.44 * Math.min(1, fill); SURF = lvl + 0.02;                        // the batter stays well below the rim
+        const rin = 0.56 + 0.28 * Math.max(0, (lvl - 0.1) / 0.7), rad = rin * 0.97 / 0.8;     // as wide as the bowl is at that height
+        batter.visible = fill > 0.03; batter.scale.set(rad, 1, rad);
+        rim.visible = fill > 0.05; rim.position.y = lvl + 0.006; rim.scale.set(rad, rad, 1);   // the edge where the batter meets the bowl
+        spoon.position.y = SURF - 0.02;
         ripple(t, dt);
       }
       if (mode === 'bake' || mode === 'bake-out') {
@@ -1946,7 +1977,7 @@ const kst = (() => {
       if (mode === 'done') { decoG.rotation.y += dt * 4; hold.position.y = 0.08 + Math.abs(Math.sin(modeT * 6)) * 0.08 * Math.max(0, 1 - modeT / 1.2); if (modeT > 1.6) { mode = null; decoG.rotation.y = 0; hold.position.y = 0.08; } }
       for (let i = anims.length - 1; i >= 0; i--) if (anims[i].run(dt)) { anims[i].g.parent && anims[i].g.parent.remove(anims[i].g); anims.splice(i, 1); }
       if (!anims.length && idleCb) { const cb = idleCb; idleCb = null; cb(); }
-      pulse = Math.max(0, pulse - dt * 3); batter.position.y = 0.815 + pulse * 0.008 * Math.sin(t * 28);
+      pulse = Math.max(0, pulse - dt * 3); batter.position.y = 0.14 + 0.44 * Math.min(1, fill) + pulse * 0.008 * Math.sin(t * 28);
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         if (p.toss) {
