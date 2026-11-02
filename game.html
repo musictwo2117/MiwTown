@@ -1276,7 +1276,7 @@ const kst = (() => {
     m.castShadow = cast; m.receiveShadow = true;
     return m;
   };
-  const GOALS = { crush: [[0.5, 3.2, 4.2], [0.5, 0.8, 0.2]], pan: [[0.5, 3.6, 3.7], [0.5, 0.6, 0.2]], dn: [[0.5, 3.5, 3.9], [0.5, 0.85, 0.25]], idle: [[0, 2.3, 5.4], [0, 1.0, 0]], mix: [[0.5, 2.9, 4.3], [0.5, 1.25, 0.3]], bake: [[0.6, 2.0, 4.8], [0.6, 1.2, 0]], deco: [[0.5, 3.0, 3.4], [0.5, 0.8, 0.2]] };
+  const GOALS = { crush: [[0.5, 3.2, 4.2], [0.5, 0.8, 0.2]], pan: [[0.5, 3.6, 3.7], [0.5, 0.6, 0.2]], dn: [[0.5, 3.5, 3.9], [0.5, 0.85, 0.25]], idle: [[0, 2.3, 5.4], [0, 1.0, 0]], mix: [[0.5, 2.9, 4.3], [0.5, 1.25, 0.3]], bake: [[0.6, 2.5, 5.3], [0.6, 0.95, 0.45]], deco: [[0.5, 3.0, 3.4], [0.5, 0.8, 0.2]] };
   const look = new THREE.Vector3(0, 1, 0); cam.position.set(0, 2.3, 5.4);
   const goalOf = k => GOALS[k === 'add' || k === 'stir' ? 'mix' : k === 'bake' || k === 'bake-out' ? 'bake' : k === 'deco' || k === 'done' ? 'deco' : k === 'crush' ? 'crush' : k === 'press' || k === 'pour' ? 'pan' : DN_MODES.includes(k) ? 'dn' : 'idle'];
   sc.add(new THREE.HemisphereLight(0xfff6ea, 0x8f7c66, 0.5));
@@ -1324,12 +1324,26 @@ const kst = (() => {
 
   // the oven, with a glass door that swings down
   const ovenG = new THREE.Group(); ovenG.position.set(0.6, TOP, 0); sc.add(ovenG);
-  ovenG.add(mesh(box(2.4, 1.9, 1.5), '#cfc8bc', { y: 0.95 }), mesh(box(2.5, 0.12, 1.6), '#b9b1a4', { y: 1.9 }), mesh(box(1.8, 1.1, 0.02), '#7a4630', { y: 0.85, z: 0.76 }));
+  // a real oven: a hollow steel box. The tray slides in on the open door, the door shuts, and the inside glows orange as it heats
+  const OPEN = 1.45;
+  let doorA = OPEN, trayK = 0, ovenHot = 0;
+  const wallM = new THREE.MeshPhongMaterial({ color: '#7c5338', emissive: new THREE.Color('#ff5a14'), emissiveIntensity: 0, shininess: 20 });
+  const floorM = new THREE.MeshPhongMaterial({ color: '#4d4038', emissive: new THREE.Color('#ff5a14'), emissiveIntensity: 0, shininess: 50, specular: 0x555555 });
+  ovenG.add(mesh(box(0.3, 1.9, 1.5), '#cfc8bc', { x: -1.05, y: 0.95 }), mesh(box(0.3, 1.9, 1.5), '#cfc8bc', { x: 1.05, y: 0.95 }),
+    mesh(box(1.8, 0.5, 1.5), '#cfc8bc', { y: 1.65 }), mesh(box(1.8, 0.3, 1.5), '#cfc8bc', { y: 0.15 }), mesh(box(2.5, 0.12, 1.6), '#b9b1a4', { y: 1.9 }));
+  ovenG.add(mesh(box(1.8, 1.1, 0.05), '', { y: 0.85, z: -0.7, mat: wallM }), mesh(box(0.05, 1.1, 1.4), '', { x: -0.88, y: 0.85, mat: wallM }), mesh(box(0.05, 1.1, 1.4), '', { x: 0.88, y: 0.85, mat: wallM }),
+    mesh(box(1.8, 0.05, 1.4), '', { y: 1.38, mat: wallM }), mesh(box(1.8, 0.04, 1.4), '', { y: 0.32, mat: floorM }));
+  const rodM = new THREE.MeshBasicMaterial({ color: '#6b4a3a' });   // the heating elements: dull when cold, glowing when hot
+  [1.32, 0.4].forEach(y => ovenG.add(mesh(cyl(0.025, 0.025, 1.6, 8), '', { y, z: 0.05, rz: PI / 2, mat: rodM, cast: false })));
+  const ovenLight = new THREE.PointLight('#ff8a3c', 0, 3.6, 2); ovenLight.position.set(0, 0.85, 0.3); ovenG.add(ovenLight);
   [-0.6, 0.6].forEach(x => ovenG.add(mesh(sph(0.1, 10), '#ffffff', { x, y: 1.62, z: 0.78 })));
-  const door = new THREE.Group(); door.position.set(0, 0.3, 1.0); ovenG.add(door);
-  const glass = new THREE.MeshBasicMaterial({ color: '#ffb36b', transparent: true, opacity: 0.5 });
-  door.add(mesh(box(1.8, 1.1, 0.06), '', { y: 0.55, mat: glass }), mesh(box(1.95, 0.08, 0.1), '#ffffff', { y: 1.12 }));
-  const inside = new THREE.Group(); inside.position.set(0, 0.4, 0.88); ovenG.add(inside);
+  const door = new THREE.Group(); door.position.set(0, 0.3, 0.78); door.rotation.x = OPEN; ovenG.add(door);   // hinged at the bottom of the opening
+  const glass = new THREE.MeshBasicMaterial({ color: '#2a1c16', transparent: true, opacity: 0.4 });
+  door.add(mesh(box(1.8, 1.1, 0.06), '', { y: 0.55, mat: glass, cast: false }), mesh(box(1.95, 0.08, 0.1), '#ffffff', { y: 1.12 }));
+  const glowTex = canvasTex(64, 64, (x, w) => { const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(255,175,80,.95)'); g.addColorStop(0.55, 'rgba(255,110,30,.5)'); g.addColorStop(1, 'rgba(255,90,20,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
+  const glowM = new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const glowP = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.2), glowM); glowP.position.set(0, 0.55, 0.045); door.add(glowP);   // the orange glow seen through the glass
+  const inside = new THREE.Group(); inside.position.set(0, 0.36, 1.55); ovenG.add(inside);
   const steam = [0, 1, 2, 3].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true })); ovenG.add(m); return m; });
 
   // the plate for decorating
@@ -1487,8 +1501,8 @@ const kst = (() => {
     if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.userData.body.material.color.set('#f3d2a2'); }); }
     if (kind === 'glaze') { trayY = 1.15; trayRot = PI; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; }); }
     if (kind === 'bake') { bakeHeat = 0; ovenFill = null; }
-    if (kind === 'bake' && id === 'cheesecake') { inside.clear(); insideModel = panGroup(); insideBase = 0.74; insideModel.scale.setScalar(insideBase); inside.add(insideModel); door.rotation.x = 0; inside.position.y = 0.4; }
-    else if (kind === 'bake') { inside.clear(); insideModel = batchModel(id); insideBase = WHOLE[id] ? 1.0 : 0.85; insideModel.scale.setScalar(insideBase); inside.add(insideModel); door.rotation.x = 0; inside.position.y = 0.4; }
+    if (kind === 'bake' && id === 'cheesecake') { inside.clear(); insideModel = panGroup(); insideBase = 0.74; insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
+    else if (kind === 'bake') { inside.clear(); insideModel = batchModel(id); insideBase = WHOLE[id] ? 1.0 : 0.85; insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
     if (kind === 'deco') {
       hold.clear(); placed3d.splice(0).forEach(o => decoG.remove(o)); hold.position.y = 0.08; const m = id === 'cheesecake' ? plainCake() : batchModel(id); m.scale.setScalar(WHOLE[id] ? 1.6 : 0.95); hold.add(m); decoG.rotation.y = 0;
       sc.updateMatrixWorld(true); cakeTop = new THREE.Box3().setFromObject(m).max.y - TOP;
@@ -1960,19 +1974,26 @@ const kst = (() => {
         ripple(t, dt);
       }
       if (mode === 'bake' || mode === 'bake-out') {
-        glass.opacity = 0.32 + 0.2 * (0.5 + 0.5 * Math.sin(t * 3));
         if (ovenFill) {
           ovenFill.material.color.copy(heatColor(bakeHeat)); ovenFill.scale.y = 1 + 0.1 * Math.min(1, bakeHeat * 1.4);   // it puffs up as it bakes
-          glass.color.set(bakeHeat > 0.82 ? '#ff5a3a' : '#ffb36b');
           if (bakeHeat > 0.88 && Math.random() < 0.4) emit(ovenG.localToWorld(V3((Math.random() - 0.5) * 1.2, 1.5, 0.9)), V3((Math.random() - 0.5) * 0.4, 0.7, 0), 0.9, '#4a4a4a', 0.09, -0.3, 0.8);
         }
         steam.forEach((m, i) => { const k = ((t * 0.45) + i / 4) % 1; m.position.set(-0.6 + i * 0.4, 2.0 + k * 0.9, 0.2); m.scale.setScalar(0.6 + k); m.material.opacity = 0.55 * (1 - k); });
-        if (mode === 'bake') insideModel.scale.setScalar(insideBase * (1 + (ovenFill ? 0.04 : WHOLE[id] ? 0.35 : 0.18) * Math.min(1, modeT / 4)));   // it rises while it bakes
-        else {
-          const k = Math.min(1, modeT / 0.6);
-          door.rotation.x = k * 1.45; inside.position.y = 0.4 + Math.sin(k * PI) * 0.15 + k * 0.1;
-          if (modeT > 0.8) { mode = null; if (nextDeco) enter('deco', nextDeco); }
-        }
+        // the door starts open: the tray slides in, the door shuts; to take it out the door opens and the tray slides back out
+        let dT, tT;
+        if (mode === 'bake') { tT = k01((modeT - 0.15) / 0.85); dT = modeT < 1.0 ? OPEN : OPEN * (1 - ease(k01((modeT - 1.0) / 0.55))); }
+        else { tT = 1 - k01((modeT - 0.45) / 0.8); dT = OPEN * ease(k01(modeT / 0.5)); }
+        doorA += (dT - doorA) * Math.min(1, dt * 12); trayK += (tT - trayK) * Math.min(1, dt * 9);
+        door.rotation.x = doorA; inside.position.z = lerp(1.55, 0.05, ease(trayK));
+        const closed = doorA < 0.35, fl = 0.86 + 0.14 * Math.sin(t * 23) + 0.07 * Math.sin(t * 7.3);   // a flicker
+        ovenHot += ((mode === 'bake' && closed ? 1 : 0) - ovenHot) * Math.min(1, dt * 2.6);
+        const over = bakeHeat > 0.82, hotC = over ? '#ff3b1a' : '#ff8a22';
+        wallM.emissiveIntensity = floorM.emissiveIntensity = ovenHot * 0.6 * fl; wallM.emissive.set(over ? '#ff3b1a' : '#ff5a14'); floorM.emissive.copy(wallM.emissive);
+        rodM.color.set('#6b4a3a').lerp(new THREE.Color(hotC), Math.min(1, ovenHot * fl));
+        ovenLight.intensity = ovenHot * 2.8 * fl; ovenLight.color.set(over ? '#ff5a30' : '#ff8a3c');
+        glowM.opacity = closed ? ovenHot * (0.4 + 0.18 * fl) : 0;
+        if (mode === 'bake') insideModel.scale.setScalar(insideBase * (1 + (ovenFill ? 0.04 : WHOLE[id] ? 0.35 : 0.18) * Math.min(1, Math.max(0, modeT - 1.5) / 4)));   // it rises while it bakes
+        else if (modeT > 1.5) { mode = null; if (nextDeco) enter('deco', nextDeco); }
       }
       if (mode === 'done') { decoG.rotation.y += dt * 4; hold.position.y = 0.08 + Math.abs(Math.sin(modeT * 6)) * 0.08 * Math.max(0, 1 - modeT / 1.2); if (modeT > 1.6) { mode = null; decoG.rotation.y = 0; hold.position.y = 0.08; } }
       for (let i = anims.length - 1; i >= 0; i--) if (anims[i].run(dt)) { anims[i].g.parent && anims[i].g.parent.remove(anims[i].g); anims.splice(i, 1); }
