@@ -536,13 +536,25 @@ const sparks = (() => {
   p.frustumCulled = false; scene.add(p);
   return { p, pos, N };
 })();
-const rainbow = new THREE.Group(); rainbow.position.set(POND.x + 0.5, 0.05, POND.z - 0.3); rainbow.rotation.y = 0.25; scene.add(rainbow);
-['#ff9fb5', '#ffe08a', '#a8dcf5'].forEach((c, i) => rainbow.add(mesh(new THREE.TorusGeometry(1.5 - i * 0.16, 0.07, 8, 32, PI), '', { cast: false, mat: new THREE.MeshBasicMaterial({ color: c }) })));
+// a soft, see-through rainbow with real thickness: six round tubes lit like everything else, a faint haze round them, and mist at both feet
+const rainbow = new THREE.Group(); rainbow.position.set(POND.x, 0.05, POND.z - 0.35); rainbow.rotation.y = 0.25; scene.add(rainbow);
+const rainbowBands = ['#ff8fa3', '#ffb86b', '#ffe58a', '#9fe3a8', '#8fd0ff', '#b9a6f5'].map((c, i) => {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(2.05 - i * 0.2, 0.125, 12, 56, PI), new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, transparent: true, opacity: 0.72, depthWrite: false }));
+  m.renderOrder = 2; rainbow.add(m); return m;
+});
+const haze = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.62, 12, 56, PI), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.14, depthWrite: false }));
+haze.renderOrder = 1; haze.scale.z = 1.6; rainbow.add(haze);
+const rainbowMist = [-1, 1].flatMap(sd => [0, 1, 2].map(i => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.3 + i * 0.07, 12, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.3, depthWrite: false }));
+  m.position.set(sd * (1.55 + (i - 1) * 0.12), 0.18 + i * 0.1, (i - 1) * 0.2); m.scale.set(1.5, 0.7, 1.2); m.userData.base = m.position.y; m.renderOrder = 3; rainbow.add(m); return m;
+}));
 const rings = [0, 1].map(() => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.02, 6, 36), new THREE.MeshBasicMaterial({ color: '#fff', transparent: true })); r.rotation.x = PI / 2; r.position.set(POND.x + 0.2, 0.1, POND.z + 0.2); scene.add(r); return r; });
 function worldFx(now, dt) {
   const p = sparks.pos;
   for (let i = 0; i < sparks.N; i++) { p[i * 3 + 1] += dt * (0.25 + (i % 5) * 0.06); p[i * 3] += Math.sin(now + i) * dt * 0.15; if (p[i * 3 + 1] > 5.5) p[i * 3 + 1] = 0.3; }
   sparks.p.geometry.attributes.position.needsUpdate = true;
+  rainbowBands.forEach((m, i) => { m.material.opacity = 0.66 + 0.08 * Math.sin(now * 0.9 + i * 0.7); });   // a gentle shimmer
+  rainbowMist.forEach((m, i) => { m.position.y = m.userData.base + Math.sin(now * 0.7 + i) * 0.05; m.material.opacity = 0.42 + 0.1 * Math.sin(now * 0.6 + i * 1.3); });
   rings.forEach((r, i) => { const k = ((now * 0.5) + i * 0.5) % 1; r.scale.setScalar(0.5 + k * 2.2); r.material.opacity = 0.8 * (1 - k); });
 }
 
