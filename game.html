@@ -250,7 +250,7 @@ let settings = { muted: false, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
 const storeSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch {} };
 // the current slot keeps the progress and what's left on the shelves
-const store = () => { if (!slot) return; try { localStorage.setItem(SLOT_KEY(slot), JSON.stringify({ ...save, stock: kitchen.stock, qual: kitchen.qual, updated: Date.now() })); } catch {} };
+const store = () => { if (!slot) return; try { localStorage.setItem(SLOT_KEY(slot), JSON.stringify({ ...save, stock: kitchen.stock, qual: kitchen.qual, berries: kitchen.berries, ripe: plot.ready, updated: Date.now() })); } catch {} };
 
 // ---------- renderer / camera / lights ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -710,7 +710,7 @@ function stepActor(a, dt) {
   a.t += dt;
   const { body, head } = a.look;
   // happy hops and worried wobbles; sitting on a stool they're gentle (a small bob, a slow head-tilt) instead of jumping or trembling
-  const seated = a.root.position.y > 0.3;
+  const seated = !!a.seated;
   body.position.set(0, walking ? Math.abs(Math.sin(a.t * 11)) * 0.06 : a.hop ? Math.abs(Math.sin(a.t * 7)) * (seated ? 0.025 : 0.12) : 0, 0);
   if (head) head.rotation.z = a.shake ? Math.sin(a.t * 9) * 0.1 : a.hop ? Math.sin(a.t * 7) * (seated ? 0.06 : 0.12) : 0;
   if (a.look.pose) a.look.pose(walking, dt);
@@ -917,7 +917,7 @@ function spawn() {
   c.bubble.style.display = 'none';
   t.customer = c;
   customers.push(c);
-  walkTo(c.actor, t.seat, () => { c.state = 'think'; c.timer = 0.9; c.actor.face = -PI / 2; c.actor.root.position.y = 0.52; c.bubble.style.display = ''; c.bubble.textContent = '💭'; sfx.bell(); });
+  walkTo(c.actor, t.seat, () => { c.state = 'think'; c.timer = 0.9; c.actor.face = -PI / 2; c.actor.root.position.y = 0.52; c.actor.seated = true; c.bubble.style.display = ''; c.bubble.textContent = '💭'; sfx.bell(); });
 }
 function drawBubble(c) {
   const p = c.patience / c.max, col = p > 0.5 ? '#6cc47a' : p > 0.25 ? '#f2b64a' : '#ef5f7e';
@@ -956,13 +956,13 @@ function serve(t) {
   c.cash = c.kind !== 'cash' ? base : base <= 20 ? (Math.random() < 0.4 ? 50 : 20) : base <= 50 ? (game.day >= 3 && Math.random() < 0.3 ? 100 : 50) : 100;
   if (fav) setTimeout(() => popup(c.actor.root.position, '💗 favorite!'), 350);
   showCombo();
-  c.state = 'eat'; c.timer = 2.4; c.actor.hop = true;
+  c.state = 'eat'; c.timer = 2.4; c.actor.hop = true; c.actor.shake = false;
   c.bubble.className = 'bub think'; c.bubble.textContent = '😋';
 }
 // when they've eaten they get up, free the table, and queue at the register
 function toRegister(c) {
   c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null;
-  c.actor.root.position.y = 0; c.actor.hop = false;
+  c.actor.root.position.y = 0; c.actor.hop = false; c.actor.seated = false;
   c.state = 'walkpay'; c.payMax = c.payLeft = Math.max(24, 34 - (game.day - 1) * 0.8);
   payQueue.push(c); repackQueue();
 }
@@ -1027,7 +1027,7 @@ function finishPay() {
 }
 document.querySelectorAll('#pay .keys button').forEach(b => b.onclick = () => pressKey(b.dataset.k));
 addEventListener('keydown', e => {
-  if ($('pay').hidden || !pay.c) return;
+  if ($('pay').hidden || !pay.c || menuOpen || document.body.classList.contains('homing')) return;
   if (/^\d$/.test(e.key)) pressKey(e.key); else if (e.key === 'Backspace') pressKey('B'); else if (e.key === 'Enter') finishPay(); else return;
   e.preventDefault();
 });
@@ -1036,7 +1036,7 @@ $('payX').onclick = closePay;
 function leave(c, happy, why) {
   c.state = 'out'; c.actor.hop = c.actor.shake = false;
   c.bubble.remove();
-  c.actor.root.position.y = 0;
+  c.actor.root.position.y = 0; c.actor.seated = false;
   if (c.t.customer === c) { c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null; }
   const qi = payQueue.indexOf(c); if (qi >= 0) { payQueue.splice(qi, 1); repackQueue(); }
   if (pay.c === c) { pay.c = null; $('pay').hidden = true; }
@@ -1607,6 +1607,7 @@ function restock(id) {
   if (INGR[id].includes('berry') && kitchen.berries < 1) { toast('🍓 Out of strawberries! Tap the garden to pick more'); sfx.nope(); return; }
   if (pay.c) closePay();   // put the checkout card away first
   queue.forEach(a => a.mark.remove()); queue = [];
+  miw.target = miw.path = miw.onArrive = null;   // and forget the job she was walking to
   openKitchen(game.day, { resume: true, pick: id });
 }
 function closeRestock() {
@@ -1771,30 +1772,12 @@ function endDay() {
   $('goBtn').onclick = () => openKitchen(won ? game.day + 1 : game.day);
   if (won) $('againBtn').onclick = () => openKitchen(game.day);
 }
-function title() {
-  const d = save.day, menu = Object.keys(DESSERTS).map(id => {
-    const x = DESSERTS[id];
-    return `<div class="${x.day <= d ? '' : 'locked'}"><i>${icon(id)}</i>${x.name}<em>${x.day <= d ? x.price + ' 🪙' : '🔒 day ' + x.day}</em></div>`;
-  }).join('');
-  $('panel').innerHTML = `
-    <h1>🍰 Cheesecake Rush</h1>
-    <p>The friends are hungry! First bake desserts in the kitchen. Then tap a dessert on the counter to pick it up (two at a time) and tap a friend's table to serve it. When they've eaten they queue at the cashier: tap the register and give the right change!</p>
-    <div class="menu">${menu}</div>
-    <div class="quirks">${Object.entries(SPECIES).map(([k, s]) => `<span>${EMOJI[k]} ${s.note}</span>`).join('')}</div>
-    <button class="go" id="goBtn">${d > 1 ? `Continue day ${d} →` : 'Open the shop →'}</button>
-    ${d > 1 ? '<button class="alt" id="againBtn">Start over from day 1</button>' : ''}`;
-  $('overlay').hidden = false;
-  $('goBtn').onclick = () => { wakeAudio(); openKitchen(d); };
-  if (d > 1) $('againBtn').onclick = () => { save.day = 1; store(); resetKitchen(); wakeAudio(); openKitchen(1); };
-}
-
 // load every model, then refresh the pictures that use them
 ['cat', 'bunny', 'bear', 'frog', 'chick', 'penguin', 'miw', 'cheesefull', 'pretzelfull'].forEach(sp => loadModel(sp));
 Object.keys(DESSERTS).filter(id => DESSERTS[id].drink).forEach(makeThumb);
 Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).forEach(id => loadModel(id, () => {
   makeThumb(id); dressStations(); renderHands();
   customers.forEach(c => c.state === 'wait' && drawBubble(c));
-  if (!$('overlay').hidden && !game.running && !game.served) title();
 }));
 
 // ---------- loop ----------
@@ -1824,7 +1807,7 @@ function frame() {
     nextAction(dt);
     stepCustomers(dt);
   }
-  stepActor(miw, dt);
+  if (!game.paused && !menuOpen) stepActor(miw, dt);   // frozen while the shop is paused, so she can't finish a job behind the kitchen or the menu
   STATIONS.forEach((st, i) => { st.show.rotation.y = now * 0.6 + i; });
   pond[1].face += dt * 0.6; baker.hop = payQueue.some(c => c.state === 'pay'); [...pond, baker].forEach(a => stepActor(a, dt)); worldFx(now, dt);
   plot.timer += dt; if (plot.timer >= 6) { plot.timer = 0; if (plot.ready < plot.max) { plot.ready++; setPlotView(); if ($('pickBtn')) $('pickBtn').textContent = pickLabel(); } }

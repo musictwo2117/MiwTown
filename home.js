@@ -38,7 +38,7 @@
   .hmenu2 div.locked{opacity:.45}.hmenu2 em{display:block;font:500 11px 'Fredoka',sans-serif;font-style:normal;color:#b07a0c}
   .quirks3{text-align:left;font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:8px}
   #menuBtn{font-size:20px}
-  body.homing #top,body.homing #hands,body.homing #labels,body.homing #toast{visibility:hidden}
+  body.homing #top,body.homing #hands,body.homing #labels,body.homing #toast,body.homing #pay{visibility:hidden}
   `;
   document.head.appendChild(css);
 
@@ -65,7 +65,7 @@
   function startSlot(n, fresh) {
     slot = n;
     if (fresh) { save = defaultSave(); resetKitchen(); }
-    else { const d = readSlot(n) || {}; save = { ...defaultSave(), day: d.day || 1, best: d.best || 0, total: d.total || 0 }; kitchen.stock = d.stock || {}; kitchen.qual = d.qual || {}; }
+    else { const d = readSlot(n) || {}; save = { ...defaultSave(), day: d.day || 1, best: d.best || 0, total: d.total || 0 }; kitchen.stock = d.stock || {}; kitchen.qual = d.qual || {}; kitchen.berries = d.berries ?? 6; plot.ready = d.ripe ?? 8; setPlotView(); updateBerryHud(); }
     store(); hideHome(); wakeAudio(); openKitchen(save.day);
   }
 
@@ -187,7 +187,9 @@
   }
   function closeMenu() { menuOpen = false; hideHome(); $('overlay').hidden = !overlayWas; }
   function saveAndQuit() {
-    hands.forEach(id => { kitchen.stock[id] = (kitchen.stock[id] || 0) + 1; }); hands = [];
+    hands.forEach(id => { if (!DESSERTS[id].drink) kitchen.stock[id] = (kitchen.stock[id] || 0) + 1; }); hands = [];
+    closePay(); payQueue.length = 0;   // a checkout in progress goes away with the day
+    miw.target = miw.path = miw.onArrive = null;
     customers.forEach(c => { removeActor(c.actor); c.bubble.remove(); });
     TABLES.forEach(t => { t.food.forEach(m => scene.remove(m)); t.food = []; t.customer = null; });
     queue.forEach(a => a.mark.remove());
