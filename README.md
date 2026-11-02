@@ -151,57 +151,6 @@ The server listens on `127.0.0.1` only, and:
 | `models.js` | Loads the Blender models, colors them per agent and plays their walk, idle and blink clips |
 | `models/` | Blender scripts for the characters, buildings, furniture, props, desserts and icons, the `.glb` files they make, and `build.sh` |
 | `claude-settings-snippet.json` | Hook settings to paste into `~/.claude/settings.json` |
-| `video/` | The video studio: clip pages, the frame and sound capture server, the FFmpeg encoder and the Remotion 9:16 cut (see [Videos](#videos)) |
+| `video/` | The video studio: clip pages, the frame and sound capture server, the FFmpeg encoder and the Remotion 9:16 cut |
 
 Built with [three.js](https://threejs.org) r128.
-
-## Videos
-
-`video/` is a little studio for cute clips made from code, using the same Blender characters. Each clip is one HTML page with a `renderAt(t)` that draws exactly time `t`, so every frame comes out the same every time.
-
-```bash
-node video/serve.js           # http://localhost:19200 plays the intro loop
-```
-
-- `?t=2.5` freezes on the frame at 2.5 seconds, handy for checking stills.
-- `?capture` renders every frame into `video/out/<clip>/frames/`, and `?audio` renders its soundtrack to `video/out/<clip>/<clip>.wav`. Every sound is synthesized in code (`video/sound.js`) and timed from the same numbers as the animation.
-- `sh video/encode.sh intro` then makes the MP4 for X (with the soundtrack mixed to -14 LUFS), a looping GIF, a contact sheet and a three-loop seam check (needs [FFmpeg](https://ffmpeg.org): `brew install ffmpeg`).
-- For Reels, TikTok and Shorts, `cd video/remotion && npm install && npm run render` makes a 9:16 cut with [Remotion](https://www.remotion.dev): the loop twice, framed with a bouncy title and an end card (`video/out/intro/intro-vertical.mp4`).
-
-**Meet the friends** (`video/intro.html`): a 10.5 s seamless loop, 1080×1080 at 30 fps. In Miw's Cheesecake shop, a giant strawberry cheesecake turns to bring each friend to the front, where it hops, spins and gets its name tag.
-
-- **The set** is sculpted in Blender (`models/shop.py`): a window with a striped awning, a chalkboard sign, scalloped shelves of cheesecakes and jam, a cheesecake-wheel clock, bunting and hanging lamps.
-- **Lit like a lens.** The shop behind is softly out of focus while the cake, the friends and the sign stay sharp, with a warm beam through the window, glowing lamps, a pink rim light and a gentle vignette.
-- **Always something moving.** Steam curls from a cup of tea, sugar dust twinkles in the window light, clouds drift past and the clock's hand goes round. Everything repeats a whole number of times per loop, so the seam never shows.
-- **The friends react.** The name tag pops in with GSAP, letter by letter; the others turn to watch, bounce when the hopper lands and sway as the cake turns.
-- **Sound.** A music-box tune over soft chords, with a boing, a thump, a pop and little ticks for every hop and name tag, a whoosh as the cake turns and a shop bell, each one frame after its picture.
-
-**Cheesecake Rush promo** (`video/rush.html`): a 21.2 s clip, 1080×1080 at 30 fps, with English captions. It doesn't loop; it plays through five scenes and a pink iris wipes between them.
-
-1. **Title.** Miw drops onto the giant cheesecake and four desserts pop up round her under the chalkboard sign.
-2. **Bake.** Ingredients fall into the bowl, the spoon stirs, the cake rises in the oven, toppings drop on and it is cut into four.
-3. **Serve.** The friends order and Miw carries her tray from table to table.
-4. **Cash up.** The calculator from the game's checkout: key in the change, press Enter, coins rain.
-5. **End card.** The friends hop one after another and the title bounces in.
-
-```bash
-node video/serve.js                        # http://localhost:19200/rush
-FADE=0.8 NOLOOP=1 sh video/encode.sh rush  # after ?capture and ?audio have saved the frames and the soundtrack
-```
-
-For Reels, TikTok and Shorts, `cd video/remotion && npm run render:rush` frames it for 9:16 (`video/out/rush/rush-vertical.mp4`): a bouncy title on top, the clip in a picture frame, and Bake, Serve and Cash up lighting up below as the clip reaches each part.
-
-**Cheesecake Rush, filmed in the game** (`video/capture-game.js`): a 72 s vertical promo, 1080×1920 at 30 fps, filmed from the real game rather than drawn for the video. Captions run along the bottom and it ends on a title card.
-
-![Five frames from the vertical promo: a cheesecake in the oven ("bake it step by step"), donuts frying in a pan ("knead, roll, fry…"), Miw in the café ("serve your friends"), the change calculator ("give the right change"), and the Cheesecake Rush end card](docs/game-promo.jpg)
-
-- **Played by a script.** `video/rushv-play.js` runs inside the game page and plays it for the camera: it opens on the home screen, bakes a cheesecake and a batch of donuts step by step, serves the friends, gives change and visits the strawberry plot and the pond. It also moves the camera, sets how fast the game runs and shows the captions.
-- **Same frames every time.** `capture-game.js` opens `game.html` in headless Chrome (`video/cdp.js`, a tiny DevTools client with no dependencies) and steps the game's frame loop by hand on a virtual clock, one game frame per film frame.
-- **The game's own sounds.** Every sound the game made while it was filmed is saved to `cues.json`, and `video/rushv.html` plays them back over a music-box tune for the soundtrack.
-
-```bash
-python3 -m http.server 19101                  # serve the game (or GAME_URL=http://localhost:19100/game)
-node video/capture-game.js                    # frames into video/out/rushv/frames/, prints the film's length
-node video/serve.js                           # then open http://localhost:19200/rushv?audio&len=<seconds>
-EXT=jpg NOLOOP=1 sh video/encode.sh rushv     # video/out/rushv/rushv.mp4
-```
