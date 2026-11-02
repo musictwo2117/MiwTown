@@ -57,16 +57,16 @@ Each day has a goal, unlocks more tables, desserts and drinks, and gives one to 
 
 <p>
 <img src="docs/game-cafe.jpg" alt="The café: a floating island with a pink-striped counter, the baker bunny, friends at tables, a juice bar, a pond and a strawberry plot" width="49%">
-<img src="docs/game-cashier.jpg" alt="The cashier: a pink calculator showing a bill of 24, paid 50, with 26 keyed in as change" width="49%">
+<img src="docs/game-cashier.jpg" alt="The cashier: a pink calculator showing a bill of 17, paid 50, with 33 keyed in as change" width="49%">
 </p>
 
 ![Two kitchen steps: a cheesecake glowing inside the oven with a timing bar, and six donuts frying in an iron pan](docs/game-kitchen.jpg)
 
 ## Sculpted in Blender
 
-Every character, building, piece of furniture, prop, dessert and icon is modelled from a Python script in `models/` and exported as a `.glb`. They're little vinyl toys: big round heads, bead eyes, rosy cheeks, bevelled edges and a soft shadow baked into each vertex. Characters have walk, idle, ear-twitch and blink animations. The pages draw simple built-in shapes first and swap each model in as it loads.
+Every character, building, piece of furniture, prop, dessert and icon is modelled from a Python script in `models/` and exported as a `.glb`. They're little vinyl toys: big round heads, bead eyes, rosy cheeks, bevelled edges and a soft shadow baked into each vertex. The six animal friends each hold a slice of strawberry cheesecake, and Miw herself has long dark hair with blunt bangs, round gold glasses, a big yellow sweater, brown shorts, sneakers and a little backpack. Characters have walk, idle, ear-twitch and blink animations. The pages draw simple built-in shapes first and swap each model in as it loads.
 
-![The seven characters, each holding a slice of strawberry cheesecake: a cat, a bunny, a bear, a frog, a chick, a penguin and Miw](docs/characters.jpg)
+![The seven characters: a cat, a bunny, a bear, a frog, a chick and a penguin, each holding a slice of strawberry cheesecake, and Miw with long dark hair, round gold glasses and a yellow sweater](docs/characters.jpg)
 
 <p>
 <img src="docs/buildings.jpg" alt="The town's nine buildings" width="49%">
