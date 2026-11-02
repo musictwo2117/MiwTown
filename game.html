@@ -860,7 +860,7 @@ pond[1].root.position.set(POND.x + 2.9, 0, POND.z - 1.0); pond[1].hop = true;
 
 // ---------- the game ----------
 const game = { day: save.day, running: false, open: false, time: DAY_SECONDS, coins: 0, shown: 0, combo: 0, served: 0, missed: 0, spawnIn: 0 };
-let hands = [], queue = [], customers = [], miwPause = 0;
+let hands = [], queue = [], customers = [], miwPause = 0, soldOutArm = { id: null, until: 0 };
 const HAND_MAX = 4, QUEUE_MAX = 12;   // a tray of four, and as many steps queued ahead
 
 function renderHands() {
@@ -907,7 +907,11 @@ renderer.domElement.addEventListener('pointerdown', e => {
     const d = hit.object.userData;
     if (d.kind === 'field') return enqueue({ kind: 'field', at: FIELD_SPOT });
     if (d.kind === 'station' && !unlocked(d.st.id, game.day)) return toast(`${DESSERTS[d.st.id].name} opens on day ${DESSERTS[d.st.id].day}`);
-    if (d.kind === 'station' && !stockOf(d.st.id)) return restock(d.st.id);   // sold out: straight back to the kitchen
+    if (d.kind === 'station' && !stockOf(d.st.id)) {   // sold out: a second tap within a few seconds goes back to the kitchen to bake more
+      if (soldOutArm.id === d.st.id && performance.now() < soldOutArm.until) { soldOutArm.id = null; return restock(d.st.id); }
+      soldOutArm = { id: d.st.id, until: performance.now() + 4000 };
+      return toast(`${DESSERTS[d.st.id].name} is sold out! Tap it again to bake more 🍳`);
+    }
     if (d.kind === 'table') return tapTable(d.t);
     return enqueue(d.kind === 'station' ? { kind: 'station', st: d.st, at: d.st.pick } : { kind: 'register', at: REG.back });
   }
@@ -937,12 +941,14 @@ function autoServe(t) {
   const fetch = [];
   c.order.forEach((id, i) => { if (c.served[i]) return; const k = v.indexOf(id); if (k >= 0) v.splice(k, 1); else fetch.push(id); });
   if (fetch.length > free) fetch.length = Math.max(0, free);   // the rest on the next trip
-  const reserved = {};
+  const reserved = {}, missing = [], covered = [];
   for (const id of fetch) {
-    reserved[id] = (reserved[id] || 0) + 1;
-    const pending = queue.filter(a => a.kind === 'station' && a.st.id === id).length + reserved[id];
-    if (stockOf(id) < pending) return restock(id);   // the shelf can't cover it: back to the kitchen
+    const pending = queue.filter(a => a.kind === 'station' && a.st.id === id).length + (reserved[id] || 0) + 1;
+    if (stockOf(id) < pending) { if (!missing.includes(id)) missing.push(id); } else { reserved[id] = (reserved[id] || 0) + 1; covered.push(id); }
   }
+  if (missing.length) toast(`${missing.map(id => DESSERTS[id].name).join(' + ')} sold out! Tap its plate twice to bake more 🍳`);
+  fetch.length = 0; fetch.push(...covered);
+  if (missing.length && !fetch.length && !c.order.some((id, i) => !c.served[i] && trayAfterQueue().includes(id))) return;   // nothing she can bring right now
   if (queue.length + fetch.length + 1 > QUEUE_MAX) return toast('One thing at a time! 🙈');
   if (!fetch.length && !c.order.some((id, i) => !c.served[i] && trayAfterQueue().includes(id))) return toast('Tray is full! Serve someone first 🙌');
   fetch.forEach(id => { const st = STATIONS.find(q => q.id === id); enqueue({ kind: 'station', st, at: st.pick }); });
@@ -962,9 +968,9 @@ function nextAction(dt) {
     if (act.kind === 'station') {
       miw.face = act.st.face ?? PI;
       if (hands.length >= HAND_MAX) { toast('Tray is full! Serve something first 🙌'); sfx.nope(); }
-      else if (!stockOf(act.st.id)) restock(act.st.id);
+      else if (!stockOf(act.st.id)) { toast(`${DESSERTS[act.st.id].name} ran out! Tap its plate twice to bake more 🍳`); sfx.nope(); }
       else { if (!DESSERTS[act.st.id].drink) kitchen.stock[act.st.id]--; hands.push(act.st.id); renderHands(); updatePlates(); sfx.pick(); miwPause = 0.15;
-        if (!stockOf(act.st.id)) toast(`${DESSERTS[act.st.id].name} just sold out! Tap its plate to bake more 🍳`); }
+        if (!stockOf(act.st.id)) toast(`${DESSERTS[act.st.id].name} just sold out! Tap its plate twice to bake more 🍳`); }
     } else if (act.kind === 'table') {
       miw.face = Math.atan2(act.t.g.position.x + 0.2 - miw.root.position.x, act.t.g.position.z - miw.root.position.z);
       const cust = act.t.customer, before = cust ? cust.served.filter(Boolean).length : 0;
@@ -986,10 +992,19 @@ function spawn() {
   if (!free.length) return;
   const t = free[Math.random() * free.length | 0];
   const kinds = Object.keys(SPECIES), species = kinds[Math.random() * kinds.length | 0], sp = SPECIES[species];
-  const all = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink), shelf = all.filter(stockOf), menu = shelf.length ? shelf : all;
-  const pick = () => shelf.includes(sp.fav) && Math.random() < 0.45 ? sp.fav : menu[Math.random() * menu.length | 0];
+  // only promise what can really be served: the shelf plus the tray, minus what friends already ordered and haven't been given
+  const all = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink), avail = {};
+  all.forEach(id => { avail[id] = stockOf(id) + hands.filter(h => h === id).length; });
+  customers.forEach(c => { if (['in', 'think', 'wait'].includes(c.state)) c.order.forEach((id, i) => { if (!c.served[i] && avail[id] !== undefined) avail[id]--; }); });
+  const have = () => all.filter(id => avail[id] > 0);
+  if (!have().length) {   // nothing left to promise: they wait outside until there is, and the player is told
+    if (performance.now() - (spawn.warnedAt || -1e9) > 12000) { spawn.warnedAt = performance.now(); toast('🍰 Nothing left to sell! Tap a sold-out plate twice to bake more'); }
+    return;
+  }
+  const pick = () => { const s = have(); if (!s.length) return null; const id = s.includes(sp.fav) && Math.random() < 0.45 ? sp.fav : s[Math.random() * s.length | 0]; avail[id]--; return id; };
   const two = sp.two || (game.day >= 2 && Math.random() < 0.12 + game.day * 0.04);
-  const order = two ? [pick(), pick()] : [pick()];
+  const order = [pick()];
+  if (two) { const second = pick(); if (second) order.push(second); }
   const drinks = Object.keys(DESSERTS).filter(id => DESSERTS[id].drink && unlocked(id, game.day));
   if (drinks.length && Math.random() < 0.45 + game.day * 0.05) order.push(drinks[Math.random() * drinks.length | 0]);   // and a drink to go with it
   const patience = Math.max(26, 38 - (game.day - 1) * 0.8) * sp.patience * (order.length > 1 ? 1.3 : 1);
@@ -1221,13 +1236,14 @@ $('mute').textContent = settings.muted ? '🔇' : '🔊';
 // ---------- the kitchen: bake the day's desserts before opening ----------
 // each batch is stir → bake (stop the marker in the green) → decorate, and makes BATCH desserts;
 // how well it was baked sets the price, and what's left over carries into the next day
-const BATCH = 4, PREP_SECONDS = 90, RESTOCK_SECONDS = 50, STAR_MUL = [0.9, 1, 1.2];
+const BATCH = 4, PREP_SECONDS = 120, RESTOCK_SECONDS = 80, STAR_MUL = [0.9, 1, 1.2];
 // each recipe has its own steps; the ones not listed yet use the classic four. The new ones make six pieces.
 const FLOW = { cheesecake: ['crush', 'press', 'add', 'stir', 'pour', 'bake', 'deco'], donut: ['add', 'stir', 'knead', 'roll', 'cut', 'fry', 'glaze', 'sprinkle'] };
 const TIMED_BAKE = { cheesecake: true };   // these bake in a pan against a heat meter (burnt = ruined) instead of stopping a swinging marker
 const YIELD = { cheesecake: 6, donut: 6 };
 const flowOf = id => FLOW[id] || ['add', 'stir', 'bake', 'deco'];
 const yieldOf = id => YIELD[id] || BATCH;
+const yieldRange = () => { const ys = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink).map(yieldOf); const lo = Math.min(...ys), hi = Math.max(...ys); return lo === hi ? lo : `${lo}–${hi}`; };
 const kitchen = { stock: {}, qual: {}, berries: 6, left: 0, step: null, run: null, msg: '', on: false };
 const stockOf = id => DESSERTS[id].drink ? 99 : (kitchen.stock[id] || 0);
 const priceOf = id => Math.round(DESSERTS[id].price * (kitchen.qual[id] || 1));
@@ -2044,12 +2060,12 @@ function restock(id) {
   if (game.paused || !game.running) return;
   if (INGR[id].includes('berry') && kitchen.berries < 1) { toast('🍓 Out of strawberries! Tap the garden to pick more'); sfx.nope(); return; }
   if (pay.c) closePay();   // put the checkout card away first
-  queue.forEach(a => a.mark.remove()); queue = [];
-  miw.target = miw.path = miw.onArrive = null;   // and forget the job she was walking to
+  miw.target = miw.path = miw.onArrive = null;   // she stops where she is; the rest of the queue waits and carries on afterwards
   openKitchen(game.day, { resume: true, pick: id });
 }
 function closeRestock() {
-  kitchen.on = false; kitchen.resume = false; game.paused = false;
+  kitchen.on = false; kitchen.resume = false; kitchen.overtime = false; game.paused = false;
+  queue = queue.filter(a => { if (a.kind === 'station' && !stockOf(a.st.id)) { a.mark.remove(); return false; } return true; }); numberQueue();   // picks that still have nothing to pick would only come straight back
   $('overlay').hidden = true; updatePlates(); renderHands(); toast('Back to work! 💪'); sfx.bell();
   // draw every friend's order bubble afresh, in case anything was left half-way while the shop was paused
   customers.forEach(c => { if (c.state === 'wait') drawBubble(c); else if (c.state === 'walkpay' || c.state === 'pay' || c.state === 'paying') drawPayBubble(c); else if (c.state === 'think') { c.bubble.style.display = ''; c.bubble.textContent = '💭'; } });
@@ -2058,14 +2074,14 @@ function openKitchen(d, opts = {}) {
   game.day = d;
   if (opts.resume) game.paused = true; else game.running = false;
   const total = opts.resume ? RESTOCK_SECONDS : PREP_SECONDS;
-  Object.assign(kitchen, { left: total, total, step: null, msg: '', on: true, warned: false, resume: !!opts.resume });
+  Object.assign(kitchen, { left: total, total, step: null, msg: '', on: true, warned: false, overtime: false, resume: !!opts.resume });
   kitchen.run = null;
   if (opts.resume) beginRecipe(opts.pick);
   dressStations(); dressTables();
   $('panel').classList.add('wide');   // the kitchen gets a wide panel with a big picture
   $('panel').innerHTML = `
     <h2>${opts.resume ? `🍳 ${DESSERTS[opts.pick].name} ran out!` : `👩‍🍳 Kitchen · Day ${d}`}</h2>
-    <p>${opts.resume ? 'The shop is paused. Bake a quick extra batch, then get back to your friends.' : `Bake desserts before you open. Each batch makes ${BATCH}; the better you bake, the more each one sells for. What's left over keeps.`}</p>
+    <p>${opts.resume ? 'The shop is paused. Bake a quick extra batch, then get back to your friends.' : `Bake desserts before you open. Each batch makes ${yieldRange()}; the better you bake, the more each one sells for. What's left over keeps.`}</p>
     <div class="ktime"><div id="kbar"><i></i></div><span id="ksec"></span></div>
     <div id="kcanvas"></div><div id="kstage"></div>
     <div class="kfoot"><div class="kstock" id="kstock"></div><button class="alt" id="pickBtn"></button><button class="go" id="goBtn">${opts.resume ? 'Back to the shop →' : 'Open the shop →'}</button></div>`;
@@ -2136,7 +2152,7 @@ function newStep(kind, id) {
   if (kind === 'bake') return { ...base, timed: !!TIMED_BAKE[id], secs: Math.max(6, 8.5 - game.day * 0.2) };
   return base;
 }
-function beginRecipe(id) { kitchen.run = { id, grades: [], idx: 0 }; kitchen.step = newStep(flowOf(id)[0], id); }
+function beginRecipe(id) { if (kitchen.overtime) return; kitchen.run = { id, grades: [], idx: 0 }; kitchen.step = newStep(flowOf(id)[0], id); }
 // finish a step (with its stars, or null for one that isn't graded) and move on to the recipe's next one
 function nextStep(stars) {
   const run = kitchen.run; if (!run) return;
@@ -2149,6 +2165,7 @@ function ruin(why) {
   const st = kitchen.step; if (!st || st.kind === 'ruined') return;
   kst.puff(); sfx.sad();
   kitchen.run = null; kitchen.step = { kind: 'ruined', id: st.id, why }; renderStage();
+  if (kitchen.overtime) setTimeout(endKitchenTime, 2400);   // the time was already up: show what went wrong, then go
 }
 // the last step is done: the batch's stars are the average of every step's grade
 function finishBatch(id, last) {
@@ -2157,6 +2174,13 @@ function finishBatch(id, last) {
   addBatch(id, stars); (stars === 3 ? sfx.fanfare : sfx.serve)(); kst.done();
   kitchen.msg = `${DESSERTS[id].emoji} +${yieldOf(id)} ${'⭐'.repeat(stars)} ${PRAISE[stars - 1]} Pick the next one!`;
   kitchen.run = null; kitchen.step = null; renderStock(); renderStage();
+  if (kitchen.overtime) setTimeout(endKitchenTime, 2400);   // the time was already up: show the result, then go
+}
+// the kitchen time is over: back to the shop (a restock) or open for the day. A batch that is still under way gets to finish first.
+function endKitchenTime() {
+  if (!kitchen.on || !kitchen.overtime && kitchen.left > 0) return;
+  kitchen.overtime = false;
+  if (kitchen.resume) closeRestock(); else { kitchen.on = false; toast('⏰ Time to open!'); startDay(game.day); }
 }
 function tickKitchen(dt, now) {
   const st = kitchen.step; if (!st) return;
@@ -2406,13 +2430,17 @@ function frame() {
     kst.update(dt, now); tickKitchen(dt, now);
     kitchen.left -= dt;
     const ks = $('ksec'), kb = $('kbar');
-    if (ks) ks.textContent = Math.max(0, Math.ceil(kitchen.left)) + 's';
+    if (ks) ks.textContent = kitchen.overtime ? 'finish it!' : Math.max(0, Math.ceil(kitchen.left)) + 's';
     if (kb) kb.firstElementChild.style.width = Math.max(0, kitchen.left / kitchen.total * 100) + '%';
     if (kitchen.step && kitchen.step.kind === 'bake') {
       kitchen.step.pos = 0.5 + 0.5 * Math.sin(now * (2.2 + game.day * 0.2));
       const m = $('kmark'); if (m) m.style.left = kitchen.step.pos * 100 + '%';
     }
-    if (kitchen.left <= 0) { if (kitchen.resume) closeRestock(); else { kitchen.on = false; toast('⏰ Time to open!'); startDay(game.day); } }
+    if (kitchen.left <= 0) {
+      kitchen.left = 0;
+      if (kitchen.run && kitchen.step && kitchen.step.kind !== 'ruined') { if (!kitchen.overtime) { kitchen.overtime = true; toast('⏰ Time is up: finish the batch you started! 🍰'); } }
+      else if (!kitchen.overtime) endKitchenTime();
+    }
   }
   if (game.running && !game.paused && !menuOpen) {
     if (game.open) {

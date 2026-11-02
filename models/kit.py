@@ -363,7 +363,7 @@ def cheesecake_slice(parent, loc=(0, -0.47, 0.3)):
     return g
 
 # small face details keep their full colour so faces stay crisp; everything else goes light pastel
-FULL_COLOR = {'eye', 'shine', 'mouth', 'blush', 'nose', 'glasses', 'lips', 'berry', 'glaze', 'button'}
+FULL_COLOR = {'eye', 'shine', 'mouth', 'blush', 'nose', 'glasses', 'lips', 'berry', 'glaze', 'button', 'hairfull', 'hairfulldk'}
 def pastel(target=0.8, lift=0.5):
     """Light pastel: lift each color's lightness halfway towards target, keeping its saturation, so it gets
     softer without going pale. models.js does the same to the agent colors it paints onto "skin"."""
