@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8"><title>Cheesecake Rush, vertical promo: soundtrack</title>
+<!-- The soundtrack of the vertical promo (capture-game.js films the real game; this page scores it).
+     It plays back every sound the game made while it was filmed (out/rushv/cues.json) on top of a music-box bed.
+     http://localhost:19200/rushv?audio&len=<film seconds> renders it and saves out/rushv/rushv.wav (sh video/encode.sh does the rest). -->
+<script src="sound.js"></script>
+<script>
+(async () => {
+  const cues = await (await fetch('cues/rushv')).json();
+  const len = +new URLSearchParams(location.search).get('len') || Math.ceil(Math.max(...cues.map(c => c.t + c.dur)) + 1.5), BPM = 108, beat = 60 / BPM;
+  // a bed in C major: C – Am – F – G, one bar each, a little tune on top
+  const chords = [[48, [60, 64, 67]], [45, [57, 60, 64]], [41, [57, 60, 65]], [43, [55, 59, 62]]];
+  const tune = [76, 79, 84, 79, 81, 79, 76, 72, 77, 81, 84, 81, 79, 83, 86, 83];
+  const ev = [];
+  for (let bar = 0; bar * 4 * beat < len; bar++) {
+    const [root, notes] = chords[bar % 4], t = bar * 4 * beat;
+    ev.push({ at: t, sound: 'pad', notes, dur: 4 * beat, gain: 0.03 }, { at: t, sound: 'bass', note: root, gain: 0.16 }, { at: t + 2 * beat, sound: 'bass', note: root + 7, gain: 0.1 });
+    for (let i = 0; i < 4; i++) if (t + i * beat < len - 1) ev.push({ at: t + i * beat, sound: 'musicbox', note: tune[(bar * 4 + i) % 16], gain: 0.07, pan: (i % 2 ? 0.25 : -0.25) });
+  }
+  ev.push({ at: 0.2, sound: 'whoosh', dur: 0.8 }, { at: len - 3, sound: 'bell', gain: 0.1 });
+  for (const c of cues) ev.push({ at: c.t, sound: 'blip', freq: c.f, wave: c.type, gain: Math.min(0.2, c.vol * 0.8), dur: Math.min(0.5, c.dur) });
+  ev.sort((a, b) => a.at - b.at);
+  const blob = await renderLoop(ev, len);
+  if (new URLSearchParams(location.search).has('audio')) { await fetch('audio/rushv', { method: 'POST', body: blob }); document.title = 'audio saved'; }
+})();
+</script>

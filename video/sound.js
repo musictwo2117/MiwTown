@@ -84,6 +84,8 @@
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + dur * 0.5); g.gain.linearRampToValueAtTime(0, t + dur);
       n.connect(bp).connect(g).connect(out); n.start(t); n.stop(t + dur + 0.02);
     },
+    // one of the game's own sounds, played back as the game made it: a short tone at a pitch
+    blip: (ctx, out, t, { freq, wave = 'sine', gain = 0.1, dur = 0.12, pan = 0 }) => tone(ctx, out, t, { freq, type: wave, gain, attack: 0.004, decay: Math.max(0.05, dur), pan }),
     // the shop's door bell: inharmonic partials, a long shimmer
     bell: (ctx, out, t, { gain = 0.1, pan = -0.4 }) => [[1, 1], [2.76, 0.5], [5.4, 0.25], [8.93, 0.12]].forEach(([k, a]) =>
       tone(ctx, out, t, { freq: 1180 * k, gain: gain * a, attack: 0.002, decay: 1.6 / Math.sqrt(k), pan })),
