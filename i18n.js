@@ -7,6 +7,16 @@
     // the desserts and the friends
     ['Strawberry Cheesecake', 'ชีสเค้กสตรอว์เบอร์รี่'], ['Strawberry Donut', 'โดนัทสตรอว์เบอร์รี่'], ['Kitty Cupcake', 'คัพเค้กแมวเหมียว'], ['Pretzel Cake', 'เค้กคาราเมลเพรทเซล'],
     ['loves the ', 'ชอบ'], ['loves cheesecake', 'ชอบชีสเค้ก'], ['tips big', 'ทิปเยอะ'], ['always orders two', 'สั่งสองอย่างเสมอ'], ['in a hurry', 'ใจร้อน'], ['happy to wait', 'รอได้สบาย ๆ'],
+    // the step-by-step kitchen
+    ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
+    ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
+    ["Take it out when it's golden. Don't let it burn!", 'เอาออกตอนสีเหลืองทอง อย่าให้ไหม้นะ!'], ['Take out!', 'เอาออก!'], ['Tap the cake to place toppings!', 'แตะที่เค้กเพื่อวางท็อปปิ้ง!'],
+    ['Try again', 'ลองใหม่'], ['Oh no, it burnt!', 'ไม่นะ ไหม้แล้ว!'], ['Oh no, it overflowed!', 'ไม่นะ ล้นออกมา!'], ['Oh no, way too much glaze!', 'ไม่นะ ไอซิ่งเยอะเกินไป!'], ['The whole batch is ruined.', 'ขนมทั้งชุดเสียหมดเลย'],
+    ['Knead the dough: press left, right, left, right!', 'นวดแป้ง: กดซ้าย ขวา ซ้าย ขวา!'], ['👈 Left', '👈 ซ้าย'], ['Right 👉', 'ขวา 👉'],
+    ['Roll the dough flat: drag the rolling pin back and forth!', 'รีดแป้งให้แบน: ลากไม้นวดไปมา!'], ['Tap each ring to cut out a donut!', 'แตะวงกลมแต่ละอันเพื่อตัดโดนัท!'],
+    ['Flip the donuts when the first side is golden!', 'พลิกโดนัทตอนด้านแรกเหลืองทอง!'], ['Now the other side! Take them out when golden.', 'ทีนี้อีกด้าน! เอาออกตอนเหลืองทอง'], ['Flip!', 'พลิก!'],
+    ['Hold to dip the donuts, let go in the green. Too deep and the glaze goes everywhere!', 'กดค้างเพื่อจุ่มโดนัท ปล่อยตอนอยู่ในโซนเขียว จุ่มลึกไปไอซิ่งจะเลอะ!'], ['Hold to dip', 'กดค้างเพื่อจุ่ม'],
+    ['Shake the sprinkles over the donuts!', 'เขย่าช็อกโกแลตเม็ดสีโรยบนโดนัท!'], ['Shake!', 'เขย่า!'], ['Nice!', 'ดีเลย!'], ['Great!', 'เก่งมาก!'], ['Pick the next one!', 'เลือกอันต่อไป!'],
     // the HUD, toasts and popups
     ['One thing at a time! 🙈', 'ทีละอย่างนะ! 🙈'], ['Hands full! Serve something first 🙌', 'มือเต็มแล้ว! เสิร์ฟก่อนนะ 🙌'],
     ['just sold out! Tap its plate to bake more 🍳', 'เพิ่งหมด! แตะป้ายเพื่ออบเพิ่ม 🍳'], ['Nobody is waiting to pay yet 💤', 'ยังไม่มีใครรอจ่ายเงิน 💤'],
