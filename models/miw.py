@@ -26,9 +26,9 @@ lathe('hem', body, (0, 0, 0), [(0.272, 0.36), (0.285, 0.33), (0.275, 0.295), (0.
 for sd in (-1, 1):
     blob(f'collar_{"LR"[sd > 0]}', body, (sd * 0.07, -0.13, 0.765), (0.085, 0.06, 0.025), WHITE, rot=(0.25, 0, sd * 0.3))
 
-# a little backpack with a flap, and straps over the shoulders
-rbox('pack', body, (0.34, 0.34, 0.2), (0, 0.27, 0.5), PACK, r=0.07)
-rbox('pack_flap', body, (0.35, 0.2, 0.215), (0, 0.27, 0.6), PACK_DK, r=0.06)
+# a little backpack with a flap, and straps over the shoulders (rbox takes three.js axes: x, up, forward)
+rbox('pack', body, (0.34, 0.34, 0.2), (0, 0.5, -0.27), PACK, r=0.07)
+rbox('pack_flap', body, (0.35, 0.2, 0.215), (0, 0.62, -0.27), PACK_DK, r=0.06)
 blob('pack_pocket', body, (0, 0.375, 0.44), (0.1, 0.03, 0.08), PACK_DK)
 for sd in (-1, 1):
     tube(f'strap_{"LR"[sd > 0]}', body, [(sd * 0.12, 0.17, 0.7), (sd * 0.16, 0.0, 0.8), (sd * 0.15, -0.13, 0.66), (sd * 0.14, -0.14, 0.55)], [1, 1, 1, 1], PACK_DK, bevel=0.025)
@@ -46,7 +46,7 @@ for sd in (-1, 1):
 h = Ell(head, (0, 0, 0), (0.36, 0.34, 0.36))
 h.body('face', FACE, seg=40, ring=24)
 for sd in (-1, 1):
-    blob(f'ear_{"LR"[sd > 0]}', head, (sd * 0.36, 0.01, -0.03), (0.06, 0.04, 0.07), FACE)
+    blob(f'ear_{"LR"[sd > 0]}', head, (sd * 0.335, 0.01, -0.03), (0.05, 0.035, 0.065), FACE)
 
 # hair: long and straight. A cap over the skull, a curtain down the back, a flat-cut lock on each side of the face,
 # and blunt bangs straight across the forehead
@@ -61,7 +61,7 @@ blob('hair', head, (0, 0.025, 0.03), (0.385, 0.37, 0.39), HAIR, seg=40, ring=24,
 blob('hair_back', head, (0, 0.1, -0.17), (0.385, 0.3, 0.4), HAIR, seg=40, ring=24, shape=straight_end(-0.6))
 for sd in (-1, 1):
     s = "LR"[sd > 0]
-    blob(f'lock_{s}', head, (sd * 0.385, -0.03, -0.2), (0.06, 0.19, 0.3), HAIR_DK, seg=28, ring=18, shape=straight_end(-0.6), rot=(0, sd * 0.06, 0))
+    blob(f'lock_{s}', head, (sd * 0.378, -0.02, -0.2), (0.022, 0.19, 0.3), HAIR_DK, seg=28, ring=18, shape=straight_end(-0.6), rot=(0, sd * 0.06, 0))
 for i, yaw in enumerate([-0.78, -0.63, -0.48, -0.33, -0.18, -0.03, 0.12, 0.27, 0.42, 0.57, 0.72]):
     yaw = yaw + 0.03
     h.stroke(f'fringe_{i}', [(yaw * 0.5, 1.35), (yaw * 0.8, 0.8), (yaw, 0.5), (yaw * 1.04, 0.24)], HAIR_DK if i % 2 else HAIR,
@@ -90,7 +90,7 @@ for f in feet:
     leg = bpy.data.objects[f'leg{f.name[-2:]}']
     leg.parent = f
     leg.location = leg.location - f.location
-cheesecake_slice(chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84), (0, -0.44, 0.28))   # in front of her dress, below her chin
+chibi(body, head, head_z=0.9, grow=1.28, shrink=0.84)
 animate(body, head, tail, feet,
         limbs=[(arms[0], 0, 0.45, math.pi), (arms[1], 0, 0.45, 0), (braids[0], 1, 0.12, 0), (braids[1], 1, 0.12, 0)],
         eyes=[eye_group(head, s) for s in 'LR'])
