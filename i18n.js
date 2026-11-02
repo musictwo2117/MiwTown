@@ -68,7 +68,7 @@
     [/Continue day (\d+) →/g, 'เล่นวันที่ $1 ต่อ →'], [/opens on day (\d+)/g, 'เปิดวันที่ $1'], [/Opens on day (\d+)/g, 'เปิดวันที่ $1'], [/Day (\d+) · goal (\d+)/g, 'วันที่ $1 · เป้า $2'],
     [/\bDay (\d+)\b/g, 'วันที่ $1'], [/\bday (\d+)\b/g, 'วันที่ $1'], [/Combo ×(\d+)/g, 'คอมโบ ×$1'], [/\bBill (\d+)/g, 'ยอดรวม $1'], [/hands you (\d+)/g, 'ยื่นเงินให้ $1'],
     [/Short by (\d+)!/g, 'ทอนขาดไป $1!'], [/Too much! -(\d+)/g, 'ทอนเกิน! -$1'], [/💰 pay ×(\d+)/g, '💰 จ่ายเงิน ×$1'], [/\bwants /g, 'อยากได้ '], [/\bsold out\b/g, 'หมดแล้ว'],
-    [/Bake desserts before you open\. Each batch makes (\d+); the better you bake, the more each one sells for\. What's left over keeps\./g, 'อบขนมก่อนเปิดร้านนะ แต่ละชุดได้ $1 ชิ้น อบดีเท่าไรก็ขายได้แพงเท่านั้น ที่เหลือเก็บไว้ใช้วันต่อไปได้'],
+    [/Bake desserts before you open\. Each batch makes (\d+(?:–\d+)?); the better you bake, the more each one sells for\. What's left over keeps\./g, 'อบขนมก่อนเปิดร้านนะ แต่ละชุดได้ $1 ชิ้น อบดีเท่าไรก็ขายได้แพงเท่านั้น ที่เหลือเก็บไว้ใช้วันต่อไปได้'],
     [/⭐ best day (\d+) · 🪙 (\d+) earned/g, '⭐ วันที่ดีที่สุด $1 · 🪙 หาได้ $2'],
   ];
   const sorted = S.slice().sort((a, b) => b[0].length - a[0].length);
