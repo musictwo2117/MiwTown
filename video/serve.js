@@ -8,7 +8,7 @@ const path = require('path');
 
 const PORT = Number(process.env.MIW_VIDEO_PORT || 19200);
 const ROOT = path.join(__dirname, '..');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.glb': 'model/gltf-binary' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.glb': 'model/gltf-binary', '.json': 'application/json' };
 
 http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
@@ -31,9 +31,11 @@ http.createServer((req, res) => {
     req.on('end', () => { fs.writeFileSync(path.join(dir, audio[1] + '.wav'), Buffer.concat(chunks)); res.end('ok'); });
     return;
   }
+  // the sounds the real game made while it was filmed (capture-game.js), for rushv.html to build the soundtrack from
   // /<clip> is video/<clip>.html; models and models.js come from the town so clips use the same characters
   let file;
-  if (url === '/') file = path.join(__dirname, 'intro.html');
+  if (url === '/cues/rushv') file = path.join(__dirname, 'out', 'rushv', 'cues.json');
+  else if (url === '/') file = path.join(__dirname, 'intro.html');
   else if (/^\/[a-z0-9-]+$/.test(url) && fs.existsSync(path.join(__dirname, url.slice(1) + '.html'))) file = path.join(__dirname, url.slice(1) + '.html');
   else if (url === '/sound.js') file = path.join(__dirname, 'sound.js');
   else if (url === '/models.js' || /^\/models\/[a-z]+\.glb$/.test(url)) file = path.join(ROOT, url.slice(1));

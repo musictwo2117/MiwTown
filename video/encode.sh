@@ -6,7 +6,7 @@ set -e
 CLIP=${1:-intro}; FPS=${FPS:-30}
 OUT="$(dirname "$0")/out/$CLIP"
 # H.264 High, yuv420p, starts playing at once
-ffmpeg -y -loglevel error -framerate $FPS -i "$OUT/frames/%04d.png" -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 18 -movflags +faststart "$OUT/$CLIP.mp4"
+ffmpeg -y -loglevel error -framerate $FPS -i "$OUT/frames/%04d.${EXT:-png}" -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 18 -movflags +faststart "$OUT/$CLIP.mp4"
 # with a soundtrack (open http://localhost:19200/<clip>?audio): normalise it to -14 LUFS, peaks under -1 dBTP,
 # and mux it in as AAC, cut to the picture
 if [ -f "$OUT/$CLIP.wav" ]; then
@@ -18,9 +18,9 @@ if [ -f "$OUT/$CLIP.wav" ]; then
   mv "$OUT/$CLIP.sound.mp4" "$OUT/$CLIP.mp4"
 fi
 # one palette for the whole GIF so colors don't flicker, 720 px wide
-ffmpeg -y -loglevel error -framerate $FPS -i "$OUT/frames/%04d.png" -vf "fps=15,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 "$OUT/$CLIP.gif"
+ffmpeg -y -loglevel error -framerate $FPS -i "$OUT/frames/%04d.${EXT:-png}" -vf "fps=15,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 "$OUT/$CLIP.gif"
 # every 15th frame, 6 across: read it like a storyboard
-ffmpeg -y -loglevel error -i "$OUT/frames/%04d.png" -vf "select='not(mod(n\,15))',scale=300:-1,tile=6x4" -frames:v 1 "$OUT/contact.png"
+ffmpeg -y -loglevel error -i "$OUT/frames/%04d.${EXT:-png}" -vf "select='not(mod(n\,15))',scale=300:-1,tile=6x4" -frames:v 1 "$OUT/contact.png"
 # three loops back to back, to watch the seam (NOLOOP=1 skips it, for clips that don't loop)
 [ -n "$NOLOOP" ] || ffmpeg -y -loglevel error -stream_loop 2 -i "$OUT/$CLIP.mp4" -c copy "$OUT/loop_check.mp4"
 echo "$OUT/$CLIP.mp4"
