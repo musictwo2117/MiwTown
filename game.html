@@ -1389,6 +1389,8 @@ const kst = (() => {
   // ----- baking in the pan: the filling goes from pale to golden and, if forgotten, to dark brown -----
   const HEAT = [[0, '#fbf1d4'], [0.45, '#f1dcaa'], [0.69, '#dfb877'], [0.85, '#a9722f'], [1, '#3a1f0e']];
   const heatColor = p => { p = Math.max(0, Math.min(1, p)); let i = 0; while (i < HEAT.length - 2 && p > HEAT[i + 1][0]) i++; const [a, ca] = HEAT[i], [b, cb] = HEAT[i + 1]; return new THREE.Color(ca).lerp(new THREE.Color(cb), (p - a) / (b - a)); };
+  const FRYC = [[0, '#ecd5a8'], [0.45, '#dcae66'], [0.69, '#c4843b'], [0.85, '#8a4f22'], [1, '#3a1f0e']];   // raw dough → golden brown → burnt
+  const fryColor = p => { p = Math.max(0, Math.min(1, p)); let i = 0; while (i < FRYC.length - 2 && p > FRYC[i + 1][0]) i++; const [a, ca] = FRYC[i], [b, cb] = FRYC[i + 1]; return new THREE.Color(ca).lerp(new THREE.Color(cb), (p - a) / (b - a)); };
   let bakeHeat = 0, lastHeat = 0.69, ovenFill = null;
   function plainCake() {   // the baked cheesecake before it is decorated
     const g = new THREE.Group(), c = heatColor(lastHeat), hx = col => '#' + col.getHexString();
@@ -1443,10 +1445,19 @@ const kst = (() => {
   let kneadK = 0, kneadP = 0, rollP = 0, rollX = 0, rollDown = false, cutN = 0; const cutAge = new Array(6).fill(1), cutDone = new Array(6).fill(false);
   // the pot of oil
   const potG = new THREE.Group(); dnG.add(potG);
-  potG.add(mesh(cyl(1.35, 1.25, 0.6, 36), '#d85b6b', { y: 0.3, s: [1, 1, 0.75] }), mesh(new THREE.TorusGeometry(1.35, 0.04, 8, 40), '#b34a5a', { rx: PI / 2, y: 0.6, s: [1, 0.75, 1], cast: false }), mesh(box(0.55, 0.08, 0.12), '#b34a5a', { x: 1.6, y: 0.5 }));
-  const oil = new THREE.Mesh(cyl(1.3, 1.3, 0.04, 36), new THREE.MeshPhongMaterial({ color: '#f2b54a', shininess: 80, specular: new THREE.Color(0xffffff) })); oil.position.y = 0.56; oil.scale.z = 0.75; potG.add(oil);
-  const fryers = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x, 0.6, z); potG.add(d); return d; });
-  let sideA = 0, flipT = 1;
+  // a black iron frying pan on a gas hob, deep in hot oil: flames lick up round the base and the oil bubbles
+  potG.add(mesh(box(3.9, 0.12, 2.9), '#2b2b30', { y: 0.06, s: [1, 1, 1] }), mesh(new THREE.TorusGeometry(0.82, 0.06, 8, 40), '#58585f', { rx: PI / 2, y: 0.14, s: [1, 0.75, 1] }));
+  const flames = Array.from({ length: 16 }, (_, i) => {
+    const a = i / 16 * PI * 2, f = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.4, 7), new THREE.MeshBasicMaterial({ color: i % 2 ? '#ff7a1c' : '#ffb03a', transparent: true, opacity: 0.92 }));
+    f.position.set(Math.cos(a) * 1.02, 0.33, Math.sin(a) * 1.02 * 0.75); potG.add(f); return f;
+  });
+  const panM = new THREE.Mesh(new THREE.LatheGeometry([[0.001, 0], [1.0, 0], [1.05, 0.04], [1.42, 0.56], [1.42, 0.6], [1.36, 0.6], [1.34, 0.54], [0.98, 0.1], [0.001, 0.1]].map(([x, y]) => new THREE.Vector2(x, y)), 56), new THREE.MeshPhongMaterial({ color: '#3b3b42', shininess: 70, specular: 0x777777, side: THREE.DoubleSide }));
+  panM.position.y = 0.2; panM.scale.z = 0.75; panM.castShadow = panM.receiveShadow = true; potG.add(panM);
+  potG.add(mesh(box(1.0, 0.07, 0.16), '#2a2a2f', { x: 1.9, y: 0.58 }), mesh(box(0.7, 0.1, 0.18), '#8a5a36', { x: 2.55, y: 0.58 }));   // a long handle with a wooden grip
+  const oil = new THREE.Mesh(cyl(1.17, 1.17, 0.04, 36), new THREE.MeshPhongMaterial({ color: '#d99428', shininess: 90, specular: new THREE.Color(0xffffff), transparent: true, opacity: 0.93 })); oil.position.y = 0.55; oil.scale.z = 0.75; potG.add(oil);
+  const fryLight = new THREE.PointLight('#ff9a40', 0, 3.4, 2); fryLight.position.set(0, 0.45, 0); potG.add(fryLight);
+  const fryers = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x * 0.88, 1.6, z * 0.88); potG.add(d); return d; });
+  let sideA = 0, flipT = 1, dipTime = 0;
   // the glaze bowl, with the tray of donuts held over it
   const glzG = new THREE.Group(); dnG.add(glzG);
   glzG.add(mesh(cyl(1.3, 1.15, 0.5, 36), '#fbf8f1', { y: 0.25, s: [1, 1, 0.75] }));
@@ -1498,7 +1509,7 @@ const kst = (() => {
     if (kind === 'press') { crustReset(); toolX = toolZ = 0; toolDown = false; }
     if (kind === 'pour' || kind === 'glaze') { level = 0; pouring = false; tilt = 0; }
     if (kind === 'knead') { kneadK = 0; kneadP = 0; rollP = 0; rollDown = false; cutN = 0; cutDone.fill(false); cutAge.fill(1); }
-    if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.userData.body.material.color.set('#f3d2a2'); }); }
+    if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; dipTime = 0; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.position.y = 1.6; d.userData.splashed = false; d.userData.body.material.color.set('#f3d2a2'); }); }
     if (kind === 'glaze') { trayY = 1.15; trayRot = PI; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; }); }
     if (kind === 'bake') { bakeHeat = 0; ovenFill = null; }
     if (kind === 'bake' && id === 'cheesecake') { inside.clear(); insideModel = panGroup(); insideBase = 0.74; insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
@@ -1943,13 +1954,20 @@ const kst = (() => {
         cutRings.forEach((d, i) => { cutAge[i] = Math.min(1, cutAge[i] + dt * 5); d.visible = mode === 'cut' && cutDone[i]; d.scale.setScalar(0.3 + 0.7 * ease(cutAge[i])); d.position.y = 0.22 + Math.sin(cutAge[i] * PI) * 0.15; });
       }
       if (mode === 'fry') {
+        flames.forEach((f, i) => { f.scale.set(0.9 + 0.2 * Math.sin(t * 13 + i), 0.8 + 0.5 * Math.abs(Math.sin(t * 9 + i * 1.7)), 0.9 + 0.2 * Math.sin(t * 11 + i)); });
+        fryLight.intensity = (0.9 + 0.3 * Math.sin(t * 17)) * (bakeHeat > 0.82 ? 1.5 : 1);
         flipT = Math.min(1, flipT + dt * 2.2);
-        const h = bakeHeat, col = heatColor(sideA > 0 ? (sideA + h) / 2 : h);
+        const h = bakeHeat, col = fryColor(sideA > 0 ? (sideA + h) / 2 : h);
+        dipTime += dt;
         fryers.forEach((d, i) => {
-          d.position.y = 0.6 + 0.012 * Math.sin(t * 3 + i) + Math.sin(flipT * PI) * 0.4; d.rotation.z = flipT < 1 ? flipT * PI * 2 : 0;
+          const k = k01((dipTime - i * 0.12) / 0.8), down = lerp(1.6, 0.56, ease(k)) - 0.07 * Math.sin(k01((k - 0.8) / 0.2) * PI);   // lowered in, dunked a little, then it floats
+          d.position.y = down + (k >= 1 ? 0.012 * Math.sin(t * 3 + i) : 0) + Math.sin(flipT * PI) * 0.4; d.rotation.z = flipT < 1 ? flipT * PI * 2 : 0;
           d.userData.body.material.color.copy(col);
+          if (k > 0.82 && !d.userData.splashed) { d.userData.splashed = true; for (let n = 0; n < 7; n++) emit(potG.localToWorld(V3(d.position.x + (Math.random() - 0.5) * 0.4, 0.58, d.position.z + (Math.random() - 0.5) * 0.3)), V3((Math.random() - 0.5) * 1.2, 1.4 + Math.random(), (Math.random() - 0.5) * 1.2), 0.7, '#f6c35a', 0.04, 9); tone(260 + i * 20, 0, 0.12, 'sawtooth', 0.03); }
+          if (k >= 1 && Math.random() < 0.5) emit(potG.localToWorld(V3(d.position.x + (Math.random() - 0.5) * 0.55, 0.57, d.position.z + (Math.random() - 0.5) * 0.4)), V3(0, 0.3, 0), 0.5, '#fff1c4', 0.022, -0.1, 0.4);   // bubbles round the dough
         });
-        oil.material.color.set(h > 0.82 ? '#d98b2f' : '#f2b54a');
+        if (dipTime > 0.9 && Math.random() < 0.35) tone(1800 + Math.random() * 2200, 0, 0.018, 'square', 0.012);   // the sizzle
+        oil.material.color.set(h > 0.82 ? '#b9691d' : '#d99428');
         if (Math.random() < 0.6) emit(potG.localToWorld(V3((Math.random() - 0.5) * 2.2, 0.62, (Math.random() - 0.5) * 1.2)), V3(0, 0.5, 0), 0.5, '#fff6d8', 0.03, -0.1);
         if (h > 0.88 && Math.random() < 0.4) emit(potG.localToWorld(V3((Math.random() - 0.5) * 2, 0.8, 0)), V3((Math.random() - 0.5) * 0.4, 0.7, 0), 0.9, '#4a4a4a', 0.09, -0.3, 0.8);
       }
