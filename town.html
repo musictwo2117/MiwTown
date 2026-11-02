@@ -88,7 +88,7 @@ h1,h2,.fred{font-family:'Fredoka',sans-serif}
 .tag em{font:600 10px 'Fredoka';font-style:normal;color:#ffe08a;margin-left:5px}
 .bubble{font:600 12.5px 'Nunito';background:#fff;border:2px solid var(--s);border-radius:14px;padding:4px 11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;transition:opacity .4s;box-shadow:0 4px 12px rgba(160,80,115,.18)}
 .bubble::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-6px;border:6px solid transparent;border-top-color:var(--s);border-bottom:0}
-.hide-names .tag,.hide-bubbles .bubble{display:none}
+.hide-names .tag,.hide-bubbles .bubble,.hide-places .place{display:none}
 @media (max-width:760px){#tools{top:auto;bottom:118px;right:16px}#tools .txt{display:none}#guide{display:none}}
 </style>
 </head>
@@ -116,6 +116,7 @@ h1,h2,.fred{font-family:'Fredoka',sans-serif}
   <span id="clock"></span>
   <button id="tNames" aria-pressed="true">🏷️<span class="txt">Names</span></button>
   <button id="tBubbles" aria-pressed="true">💬<span class="txt">Bubbles</span></button>
+  <button id="tPlaces" aria-pressed="true">🏠<span class="txt">Places</span></button>
   <button id="tCam">🎥<span class="txt">Reset view</span></button>
   <a href="room">🥨<span class="txt">Cat room</span></a>
   <a href="game">🍰<span class="txt">Cheesecake Rush</span></a>
@@ -1585,7 +1586,7 @@ function toggle(btn, cls) {
   };
 }
 if (innerWidth < 1100 || innerHeight < 760) $('guide').open = false;
-toggle($('tNames'), 'hide-names'); toggle($('tBubbles'), 'hide-bubbles');
+toggle($('tNames'), 'hide-names'); toggle($('tBubbles'), 'hide-bubbles'); toggle($('tPlaces'), 'hide-places');
 $('tCam').onclick = () => { camera.position.copy(CAM_HOME); camera.zoom = 1; camera.updateProjectionMatrix(); controls.target.copy(CENTER); };
 
 // ---------- loop ----------
