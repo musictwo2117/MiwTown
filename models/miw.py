@@ -48,29 +48,13 @@ h.body('face', FACE, seg=40, ring=24)
 for sd in (-1, 1):
     blob(f'ear_{"LR"[sd > 0]}', head, (sd * 0.335, 0.01, -0.03), (0.05, 0.035, 0.065), FACE)
 
-# hair: long and straight. A cap over the skull, a curtain down the back, a flat-cut lock on each side of the face,
-# and blunt bangs straight across the forehead
-def cap(co):
-    if co.y < -0.15 and co.z < 0.3:
-        co.y = -0.15 + (co.y + 0.15) * 0.05
-def soft_end(low):   # pull everything below `low` in towards a gently rounded end, so long hair tapers instead of ending in a flat chop
-    def f(co):
-        if co.z < low: co.z = low + (co.z - low) * 0.35
-    return f
-blob('hair', head, (0, 0.025, 0.03), (0.385, 0.37, 0.39), HAIR, seg=40, ring=24, shape=cap)
-blob('hair_back', head, (0, 0.17, -0.15), (0.33, 0.2, 0.4), HAIR, seg=40, ring=24, shape=soft_end(-0.6))
-# long strands that run from the crown over the side of the head and hang straight down past the chin, round to the back
-for sd in (-1, 1):
-    s_ = "LR"[sd > 0]
-    for i, yaw in enumerate([0.86 + 0.12 * k for k in range(12)]):
-        pts = [h.at(sd * yaw, pitch, 0.012 + 0.01 * (pitch < 0))[0] for pitch in (1.15, 0.5, -0.1, -0.6)]
-        end = pts[-1].copy(); end.z = -0.4; end.x *= 0.97; end.y = end.y * 1.0 + 0.02
-        mid = pts[-1].copy(); mid.z = -0.18; mid.x *= 0.99
-        tube(f'sidehair_{s_}{i}', head, [tuple(p_) for p_ in pts] + [tuple(mid), tuple(end)], [1, 1, 1, 1, 0.95, 0.55], HAIR_DK if i % 2 else HAIR, bevel=0.065)
-for i, yaw in enumerate([-0.78, -0.63, -0.48, -0.33, -0.18, -0.03, 0.12, 0.27, 0.42, 0.57, 0.72]):
-    yaw = yaw + 0.03
-    h.stroke(f'fringe_{i}', [(yaw * 0.5, 1.35), (yaw * 0.8, 0.8), (yaw, 0.5), (yaw * 1.04, 0.24)], HAIR_DK if i % 2 else HAIR,
-             0.075, out=0.012, radii=[1, 1, 1, 0.95])
+# hair: one smooth shell, long and straight. It covers the skull and falls past the chin, tapering softly at the ends; at the
+# front it is cut away below a straight line across the forehead, which makes the blunt bangs, and the sides frame the face
+SX, SY, SZ, CY, CZ = 0.4, 0.43, 0.5, 0.02, -0.08
+def hair_shell(co):
+    if co.z < -0.55: co.z = -0.55 + (co.z + 0.55) * 0.35                    # ends taper instead of a flat chop
+    if co.y * SY + CY < -0.15 and co.z * SZ + CZ < 0.09: co.y = (-0.15 - CY) / SY + (co.y * SY + CY + 0.15) * 0.05 / SY   # the face shows through
+blob('hair', head, (0, CY, CZ), (SX, SY, SZ), HAIR, seg=56, ring=44, shape=hair_shell)
 
 # face: bead eyes behind pink glasses, rosy cheeks and a tiny w mouth
 eyes(h, 0.43, -0.16, size=0.042)
