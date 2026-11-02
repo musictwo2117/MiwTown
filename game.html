@@ -317,6 +317,16 @@ function inst(geo, mat, items) {
   scene.add(m);
   return m;
 }
+// a sign's little picture (sculpted in Blender, see icons.js) is drawn on its canvas once it is ready
+function signIcon(tex, name, size) {
+  const t = setInterval(() => {
+    if (!thumbs[name]) return;
+    clearInterval(t);
+    const c = tex.image, img = new Image();
+    img.onload = () => { c.getContext('2d').drawImage(img, c.width / 2 - size * 2, (c.height - size) / 2, size, size); tex.needsUpdate = true; };
+    img.src = thumbs[name];
+  }, 400);
+}
 function canvasTex(w, h, draw, nearest) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
@@ -460,8 +470,8 @@ for (let j = 0; j < GD; j++) for (let i = 0; i < GW; i++) { const x = i - 10.5, 
   [-6.75, 6.75].forEach(x => scene.add(mesh(box(0.25, 3.4, 2.95), '#fff0e3', { x, y: Y + 1.7, z: Z + 0.02 }), mesh(box(0.3, 0.9, 2.95), '#ffd3e0', { x: x * 0.998, y: Y + 0.45, z: Z + 0.02 })));
   // a window and a plaque on the back wall
   scene.add(mesh(box(2.8, 1.3, 0.08), '#ffffff', { x: 0.4, y: Y + 2.1, z: -7.8 }), mesh(box(2.5, 1.0, 0.1), '', { x: 0.4, y: Y + 2.1, z: -7.79, mat: new THREE.MeshBasicMaterial({ color: '#cfeaff' }) }));
-  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: canvasTex(256, 64, (x, w, h) => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.strokeStyle = '#ffb3c8'; x.lineWidth = 6; x.strokeRect(3, 3, w - 6, h - 6); x.fillStyle = '#4b3442'; x.font = '600 32px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('🍳 Kitchen', w / 2, h / 2 + 2); }) }));
-  plaque.position.set(-3.4, Y + 2.6, -7.8); scene.add(plaque);
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: canvasTex(256, 64, (x, w, h) => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.strokeStyle = '#ffb3c8'; x.lineWidth = 6; x.strokeRect(3, 3, w - 6, h - 6); x.fillStyle = '#4b3442'; x.font = '600 32px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('Kitchen', w / 2 + 22, h / 2 + 2); }) }));
+  plaque.position.set(-3.4, Y + 2.6, -7.8); scene.add(plaque); signIcon(plaque.material.map, 'pan', 40);
   // oven (left): pink with a glowing window
   scene.add(mesh(box(2.0, 1.75, 1.3), '#ffc4d6', { x: -4.4, y: Y + 0.88, z: -7.15 }), mesh(box(2.1, 0.1, 1.4), '#fffaf3', { x: -4.4, y: Y + 1.78, z: -7.15 }),
     mesh(box(1.4, 0.8, 0.05), '', { x: -4.4, y: Y + 0.85, z: -6.5, mat: new THREE.MeshBasicMaterial({ color: '#ffb36b' }) }), mesh(box(1.5, 0.06, 0.1), '#ffffff', { x: -4.4, y: Y + 1.3, z: -6.47 }));
@@ -557,13 +567,13 @@ function dessertModel(id) {
 const thumbs = {};
 const icon = id => thumbs[id] ? `<img src="${thumbs[id]}" alt="${DESSERTS[id].name}">` : DESSERTS[id].emoji;
 let thumbRenderer = null;
-function makeThumb(id) {
+function makeThumb(id, build) {
   try {
     if (!thumbRenderer) { thumbRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); thumbRenderer.setSize(128, 128); }
     const s = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
     s.add(new THREE.HemisphereLight(0xfff4ea, 0xd9b0b4, 0.75));
     const l = new THREE.DirectionalLight(0xfff3e6, 0.55); l.position.set(2, 4, 3); s.add(l);
-    const g = dessertModel(id); s.add(g);
+    const g = build ? build() : dessertModel(id); s.add(g);
     const bb = new THREE.Box3().setFromObject(g), c = bb.getCenter(new THREE.Vector3()), r = bb.getSize(new THREE.Vector3()).length() / 2;
     cam.position.set(c.x, c.y + r * 1.3, c.z + r * 3.4); cam.lookAt(c);
     thumbRenderer.render(s, cam);
@@ -634,8 +644,8 @@ const BAR = { x: -8.4, zs: [-2.6, -1.4, -0.2] };
     const c = i % 2 ? '#ffffff' : '#7fcfa8';
     scene.add(mesh(box(1.5, 0.07, 0.65), c, { x: BAR.x, y: 3.35, z: -3.1 + i * 0.65 + 0.32, rz: -0.25 }), mesh(sph(0.33, 12), c, { x: BAR.x + 0.72, y: 3.15, z: -3.1 + i * 0.65 + 0.32, s: [0.35, 0.5, 1], cast: false }));
   }
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: canvasTex(256, 64, (x, w, h) => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.strokeStyle = '#7fcfa8'; x.lineWidth = 6; x.strokeRect(3, 3, w - 6, h - 6); x.fillStyle = '#4b3442'; x.font = '600 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('🧋 Drinks', w / 2, h / 2 + 2); }) }));
-  sign.rotation.y = PI / 2; sign.position.set(BAR.x + 0.56, 0.52, -1.4); scene.add(sign);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: canvasTex(256, 64, (x, w, h) => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.strokeStyle = '#7fcfa8'; x.lineWidth = 6; x.strokeRect(3, 3, w - 6, h - 6); x.fillStyle = '#4b3442'; x.font = '600 34px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('Drinks', w / 2 + 22, h / 2 + 2); }) }));
+  sign.rotation.y = PI / 2; sign.position.set(BAR.x + 0.56, 0.52, -1.4); scene.add(sign); signIcon(sign.material.map, 'milktea', 40);
   blob(BAR.x, 0, -1.4, 1.2, 2.3);
   ['milktea', 'cocoa', 'lemonade'].forEach((id, i) => {
     const z = BAR.zs[i], st = { id, x: BAR.x, lx: BAR.x + 0.9, lz: z, mz: z, my: 1.9, pick: new THREE.Vector3(-7.0, 0, z), face: -PI / 2 };
@@ -1774,7 +1784,7 @@ function endDay() {
 }
 // load every model, then refresh the pictures that use them
 ['cat', 'bunny', 'bear', 'frog', 'chick', 'penguin', 'miw', 'cheesefull', 'pretzelfull'].forEach(sp => loadModel(sp));
-Object.keys(DESSERTS).filter(id => DESSERTS[id].drink).forEach(makeThumb);
+Object.keys(DESSERTS).filter(id => DESSERTS[id].drink).forEach(id => makeThumb(id));
 Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).forEach(id => loadModel(id, () => {
   makeThumb(id); dressStations(); renderHands();
   customers.forEach(c => c.state === 'wait' && drawBubble(c));
@@ -1830,6 +1840,7 @@ dressStations(); dressTables(); renderHands();
 frame();
 </script>
 <script src="i18n.js"></script>
+<script src="icons.js"></script>
 <script src="home.js"></script>
 </body>
 </html>
