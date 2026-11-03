@@ -6,13 +6,13 @@
 (() => {
   // the icons sculpted in models/icons.py (one .glb each)
   const ICONS = ['strawberry', 'egg', 'cheese', 'flour', 'cookie', 'milk', 'butter', 'chocolate', 'pretzel', 'sparkle', 'coin', 'banknote', 'moneybag', 'phone', 'receipt',
-    'heart', 'star', 'flame', 'angry', 'thought', 'clock', 'bell', 'lock', 'pan', 'spoon', 'bowl', 'ribbon', 'chefhat', 'sprout', 'mallet', 'finger', 'showcase', 'speaker', 'mute', 'gear', 'bin', 'disk'];
+    'heart', 'star', 'flame', 'angry', 'thought', 'clock', 'bell', 'lock', 'pan', 'spoon', 'bowl', 'ribbon', 'chefhat', 'sprout', 'mallet', 'finger', 'showcase', 'shopbag', 'speaker', 'mute', 'gear', 'bin', 'disk'];
   // emoji -> picture. The desserts and drinks use their own models; 🥮 stands for the pretzel cake (🥨 is the pretzel itself).
   const MAP = {
     '🍓': 'strawberry', '🥚': 'egg', '🧀': 'cheese', '🌾': 'flour', '🍪': 'cookie', '🥛': 'milk', '🧈': 'butter', '🍫': 'chocolate', '🥨': 'pretzel', '✨': 'sparkle',
     '🪙': 'coin', '💵': 'banknote', '💰': 'moneybag', '📱': 'phone', '🧾': 'receipt', '💗': 'heart', '💖': 'heart', '⭐': 'star', '🔥': 'flame', '💢': 'angry', '💭': 'thought',
     '⏱': 'clock', '⏰': 'clock', '🔔': 'bell', '🔒': 'lock', '🍳': 'pan', '🥄': 'spoon', '🥣': 'bowl', '🎀': 'ribbon', '👩‍🍳': 'chefhat', '🌱': 'sprout', '🔨': 'mallet',
-    '👆': 'finger', '🏪': 'showcase', '🔊': 'speaker', '🔇': 'mute', '⚙': 'gear', '🗑': 'bin', '💾': 'disk',
+    '👆': 'finger', '🏪': 'showcase', '🛍': 'shopbag', '🔊': 'speaker', '🔇': 'mute', '⚙': 'gear', '🗑': 'bin', '💾': 'disk',
     '🍰': 'cheesecake', '🍩': 'donut', '🧁': 'kittycupcake', '🥮': 'pretzelcake', '🧋': 'milktea', '☕': 'cocoa', '🍋': 'lemonade',
     '🐱': 'face_cat', '🐰': 'face_bunny', '🐻': 'face_bear', '🐸': 'face_frog', '🐥': 'face_chick', '🐧': 'face_penguin',
   };

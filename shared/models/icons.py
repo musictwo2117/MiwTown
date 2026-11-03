@@ -5,7 +5,7 @@
 #   ingredients  strawberry egg cheese flour cookie milk butter chocolate pretzel sparkle
 #   money        coin banknote moneybag phone receipt
 #   feelings     heart star flame angry thought
-#   shop         clock bell lock pan spoon bowl ribbon chefhat sprout mallet finger showcase
+#   shop         clock bell lock pan spoon bowl ribbon chefhat sprout mallet finger showcase shopbag
 #   buttons      speaker mute gear bin disk
 # Written in the pages' own coordinates (y up, the front faces +z), like the buildings and furniture.
 import os, sys, math, random; sys.path.insert(0, os.path.dirname(__file__))
@@ -257,6 +257,15 @@ def pan(g):
 def spoon(g):
     cyl('handle', g, 0.045, 0.06, 0.85, (-0.0, 0.42, 0), C(WOOD, 0.6), r=0.02, rot=(0, 0, -0.45), seg=14)
     ball('scoop', g, 0.22, (0.19, 0.9, 0), C('#d9a66e', 0.55), scale=(1, 1.3, 0.35), rot=(0, 0, -0.45), seg=18)
+
+@icon
+def shopbag(g):   # a pink paper shopping bag with rope handles and a little heart: the Shop button
+    rbox('bag', g, (0.78, 0.8, 0.38), (0, 0.4, 0), C('#ff9fbf', 0.6), r=0.06)
+    rbox('fold', g, (0.8, 0.12, 0.4), (0, 0.76, 0), C('#ff7ea6', 0.6), r=0.04)
+    torus('handle_l', g, 0.2, 0.03, (-0.14, 0.88, 0.0), C('#fffaf3', 0.6), rot=(0, 0, 0), arc=math.pi, seg=24, sides=8)
+    torus('handle_r', g, 0.2, 0.03, (0.14, 0.88, 0.0), C('#fffaf3', 0.6), rot=(0, 0, 0), arc=math.pi, seg=24, sides=8)
+    prism('heart', g, [(x * 0.4, y * 0.4) for x, y in heart_points()], 0.03, (0, 0.2, 0.19), C('#fffaf3', 0.4), r=0.01)
+    shine(g, 'shine', (-0.28, 0.58, 0.22), 0.05)
 
 @icon
 def showcase(g):   # a glass cloche on a cake plate: the counter's display case
