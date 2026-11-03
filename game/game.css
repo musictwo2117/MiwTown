@@ -52,6 +52,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .bub.shake{animation:shake .35s infinite}
 @keyframes shake{25%{margin-left:-2px}75%{margin-left:2px}}
 .plate{font:600 11.5px 'Nunito';background:rgba(255,255,255,.95);border-radius:99px;padding:3px 9px;white-space:nowrap;box-shadow:0 3px 10px rgba(160,80,115,.18)}
+.plate.tiny{font-size:9px;padding:2px 5px;letter-spacing:-.2px}
 .plate em{font:600 11px 'Fredoka';font-style:normal;color:#b07a0c;margin-left:4px}
 .plate.locked,.plate.sold{background:rgba(75,52,66,.75);color:#fff}
 @keyframes glow{50%{box-shadow:0 0 0 6px rgba(255,126,166,.55)}}
@@ -203,4 +204,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .shoprow em{font-style:normal;font:600 13px 'Nunito';color:var(--soft)}
 .shoprow button{border:0;border-radius:12px;padding:8px 14px;font:600 14px 'Fredoka';background:linear-gradient(140deg,#ff9fbf,#ff7ea6);color:#fff}
 .shoprow button:disabled{background:#e6dce0;color:#a8959d}
+.hint{font-size:13px;color:var(--soft);margin:8px 0 2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:4px 0 8px}
+.chips button{border:2px solid #f3d3de;background:#fff;border-radius:99px;padding:6px 12px;font:600 13px 'Nunito';color:var(--ink,#5b3a47)}
+.chips button.on{background:#ffe0ea;border-color:#ff9fbf}
 @media (max-width:560px){#day{min-width:0;padding:8px 11px}#day b{font-size:15px}#clock{font-size:17px;padding:7px 11px}#clock small{display:none}.slot{width:54px;height:54px}}

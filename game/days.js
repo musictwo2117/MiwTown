@@ -49,12 +49,29 @@ function openShop(day, back) {
     <div class="wallet">🪙 ${save.wallet}</div>
     <div class="shop">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
       return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>
+    ${caseSection()}
     <button class="go" id="backBtn">Back</button>`;
   $('panel').querySelectorAll('.shop button').forEach(b => b.onclick = () => {
     const id = b.dataset.id, d = DESSERTS[id]; if (owns(id) || save.wallet < d.cost) return;
     save.wallet -= d.cost; (save.recipes = save.recipes || []).push(id); store(); sfx.fanfare(); openShop(day, back);
   });
+  const up = $('caseBtn');
+  if (up) up.onclick = () => { const c = CASE_COST[(save.caseLv || 0) + 1]; if (save.wallet < c) return; save.wallet -= c; save.caseLv = (save.caseLv || 0) + 1; store(); sfx.fanfare(); openShop(day, back); };
+  $('panel').querySelectorAll('.chips button').forEach(b => b.onclick = () => {
+    const id = b.dataset.id, on = shelfIds().includes(id); save.shelf = save.shelf || []; save.off = save.off || [];
+    if (on) { if (shelfIds().length <= 1) return sfx.nope(); const keep = shelfIds().filter(x => x !== id); save.shelf = keep; save.off = dessertIds().filter(x => unlocked(x, game.day) && !keep.includes(x)); }   // the freed plate stays free for the one you pick next
+    else { if (shelfIds().length >= caseSlots()) { toast('The counter is full: take one off first'); return sfx.nope(); } save.off = save.off.filter(x => x !== id); save.shelf.push(id); }
+    store(); sfx.pick(); openShop(day, back);
+  });
   $('backBtn').onclick = back;
+}
+// the display case: buy more plates for the counter, and choose which of your desserts stand on them
+function caseSection() {
+  const lv = save.caseLv || 0, next = CASE_COST[lv + 1], mine = dessertIds().filter(id => unlocked(id, game.day)), on = shelfIds();
+  const upgrade = next === undefined ? `<div class="shoprow"><i>🧁</i><span><b>Display case</b><small>${caseSlots()} plates · full</small></span><em>✓ Max</em></div>`
+    : `<div class="shoprow"><i>🧁</i><span><b>Bigger display case</b><small>${caseSlots()} → ${CASE_SLOTS[lv + 1]} plates on the counter</small></span><button id="caseBtn" ${save.wallet < next ? 'disabled' : ''}>${next} 🪙</button></div>`;
+  const pick = mine.length > caseSlots() ? `<p class="hint">On the counter (${on.length}/${caseSlots()}): tap to swap</p><div class="chips">${mine.map(id => `<button data-id="${id}" class="${on.includes(id) ? 'on' : ''}">${DESSERTS[id].emoji} ${DESSERTS[id].name}</button>`).join('')}</div>` : '';
+  return `<div class="shop" style="margin-top:6px">${upgrade}</div>${pick}`;
 }
 // load every model, then refresh the pictures that use them
 ['cat', 'bunny', 'bear', 'frog', 'chick', 'penguin', 'miw', 'cheesefull', 'pretzelfull'].forEach(sp => loadModel(sp));

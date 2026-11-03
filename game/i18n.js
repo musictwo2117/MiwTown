@@ -10,6 +10,7 @@
     // the recipe shop and the wallet
     ['Recipe shop', 'ร้านขายสูตร'], ['Learn new recipes with the coins you keep.', 'ซื้อสูตรใหม่ด้วยเหรียญที่เก็บไว้'], [' saved', ' เก็บไว้'], ['✓ Owned', '✓ มีแล้ว'], ['Opens day ', 'เปิดวันที่ '], ['sells for ', 'ขายได้ '],
     ['Dessert ·', 'ขนม ·'], ['Drink ·', 'เครื่องดื่ม ·'], ['🔒 recipe', '🔒 สูตร'], [' recipe in the recipe shop', ' ในร้านขายสูตร'], ['Buy the ', 'ซื้อสูตร '], [' recipe in the shop after closing 🛒', ' ในร้านขายสูตรหลังปิดร้าน 🛒'],
+    ['Bigger display case', 'ตู้โชว์ที่ใหญ่ขึ้น'], ['Display case', 'ตู้โชว์'], [' plates on the counter', ' จานบนเคาน์เตอร์'], [' plates · full', ' จาน · เต็มแล้ว'], ['✓ Max', '✓ สูงสุด'], ['On the counter (', 'บนเคาน์เตอร์ ('], ['): tap to swap', '): แตะเพื่อสลับ'], ['The counter is full: take one off first', 'เคาน์เตอร์เต็มแล้ว: เอาออกก่อนหนึ่งอย่าง'],
     // the step-by-step kitchen
     ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
     ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
