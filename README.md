@@ -79,7 +79,7 @@ Each day has a goal, unlocks more tables, desserts and drinks, and gives one to 
 
 <p>
 <img src="docs/game-cafe.jpg" alt="The café on day 4: friends at tables with their orders, six desserts on the counter, a stock list on the left, and a plant, floor lamp and bean bags as decor" width="49%">
-<img src="docs/game-cashier.jpg" alt="The shop till in soft pastel colours: a pink receipt listing a pretzel cake and a pink milk tea for 20, and a yellow keypad with 50 paid and 30 keyed in as change" width="49%">
+<img src="docs/game-till.jpg" alt="The shop till in soft pastel colours: a pink receipt listing a pretzel cake and a pink milk tea for 20, and a yellow keypad with 50 paid and 30 keyed in as change" width="49%">
 </p>
 
 ![Three kitchen steps: wooden mallet crushing cookies, a cheesecake glowing inside the oven, and six donuts frying in an iron pan](docs/game-kitchen.jpg)
