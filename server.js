@@ -204,16 +204,25 @@ http.createServer((req, res) => {
     return send(res, 200, [...seen].filter(p => typeof checkFolder(p) !== 'string'));
   }
 
-  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html', '/game': 'game.html', '/style': 'styletest.html' };
+  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html', '/game': 'game.html' };
   if (PAGES[url] && req.method === 'GET') {
     const html = fs.readFileSync(path.join(__dirname, PAGES[url]), 'utf8').replace('__MIW_TOKEN__', TOKEN);
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
     return res.end(html);
   }
-  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js') && req.method === 'GET') {
+  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js' || url === '/game.js') && req.method === 'GET') {
     res.setHeader('content-type', 'text/javascript; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
+    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
+  }
+  if (url === '/game.css' && req.method === 'GET') {
+    res.setHeader('content-type', 'text/css; charset=utf-8');
+    res.setHeader('cache-control', 'no-store');
+    return fs.createReadStream(path.join(__dirname, 'game.css')).pipe(res);
+  }
+  if (/^\/vendor\/[A-Za-z.]+\.js$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {   // three.js and its loaders, kept here so the pages work offline
+    res.setHeader('content-type', 'text/javascript; charset=utf-8');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
   }
   if (/^\/models\/[a-z]+\.glb$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {

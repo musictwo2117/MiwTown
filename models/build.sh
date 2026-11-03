@@ -21,4 +21,5 @@ for name in ${@:-$CHARACTERS $BUILDINGS $FURNITURE $PROPS $SHOP $MENU $ICONS}; d
   case " $MENU " in *" $name "*) script=menu.py ;; esac
   case " $ICONS " in *" $name "*) script=icons.py ;; esac
   "$BLENDER" -b -P "$script" -- "$name.glb" 2>&1 | grep -E "Error|wrote"
+  python3 optimize.py "$name.glb" | head -1
 done
