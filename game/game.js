@@ -55,7 +55,9 @@ const store = () => { if (!slot) return; try { localStorage.setItem(SLOT_KEY(slo
 
 // ---------- renderer / camera / lights ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// a phone's screen has three or four times the pixels of its size, and the café is drawn with a few hundred draw calls: on touch screens draw at most 1.5x, which is still sharp at arm's length
+const PR_MAX = matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
+renderer.setPixelRatio(Math.min(devicePixelRatio, PR_MAX));
 $('scene').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, 1, 1, 300);
