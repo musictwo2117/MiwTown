@@ -134,19 +134,32 @@ const kst = (() => {
   const hold = new THREE.Group(); hold.position.y = 0.08; decoG.add(hold);
   const decoLamp = new THREE.PointLight('#ffe2b0', 0, 5, 2); decoLamp.position.set(-0.9, 1.3, 0.6); decoG.add(decoLamp);   // a warm light for the pancakes
 
-  // ----- crushing cookies: a board, three cookies and a mallet -----
+  // ----- crushing cookies: a wooden board, three biscuits that crack into pieces, a wooden mallet and a heap of real crumbs -----
   const crushG = new THREE.Group(); crushG.position.set(0.5, TOP, 0.2); sc.add(crushG);
-  crushG.add(mesh(box(2.5, 0.12, 1.5), '#e8b886', { y: 0.06 }));
+  crushG.add(mesh(box(2.5, 0.14, 1.5), '', { y: 0.07, mat: new THREE.MeshPhongMaterial({ map: woodTex, color: '#fff3df', shininess: 40, specular: 0x4a4034 }) }), mesh(box(2.54, 0.03, 1.54), '#a9733f', { y: 0.015, cast: false }));
+  const CRUMBC = ['#c1823c', '#b0702d', '#d29a52', '#9a5e24', '#7d4519'], crumbM = CRUMBC.map(c => new THREE.MeshPhongMaterial({ color: c, shininess: 12 }));
+  const BISC = 5, PIECE_C = ['#b9772f', '#cc8d44'];
   const cookies = [-0.7, 0, 0.7].map((x, i) => {
-    const g = new THREE.Group(); g.position.set(x, 0.155, [0.12, -0.1, 0.1][i]); crushG.add(g);
-    g.add(mesh(cyl(0.3, 0.3, 0.07, 24), '#c98b4b'));
-    [[0.1, 0.05], [-0.12, 0.08], [0.02, -0.14], [-0.08, -0.06]].forEach(([dx, dz]) => g.add(mesh(sph(0.04, 6), '#5a3a22', { x: dx, y: 0.04, z: dz, cast: false })));
+    const g = new THREE.Group(); g.position.set(x, 0.14, [0.12, -0.1, 0.1][i]); g.rotation.y = i * 0.9; crushG.add(g);
+    g.userData.pieces = Array.from({ length: BISC }, (_, k) => {
+      const a0 = k / BISC * PI * 2, da = PI * 2 / BISC, pc = new THREE.Group();
+      pc.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 14, 1, false, a0, da), PIECE_C[0], { y: 0.025 }), mesh(new THREE.CylinderGeometry(0.285, 0.3, 0.035, 14, 1, false, a0, da), PIECE_C[1], { y: 0.0675 }));
+      const am = a0 + da / 2; pc.add(mesh(sph(0.018, 6), '#4f2b12', { x: Math.sin(am) * 0.17, y: 0.085, z: Math.cos(am) * 0.17, s: [1, 0.4, 1], cast: false }));
+      pc.userData = { am, dir: new THREE.Vector3(Math.sin(am), 0, Math.cos(am)), tilt: (Math.random() - 0.5) * 0.9, spin: (Math.random() - 0.5) * 1.5 };
+      g.add(pc); return pc;
+    });
     return g;
   });
-  const pile = mesh(sph(0.55, 14), '#b7773a', { y: 0.12, cast: false }); pile.scale.set(0.01, 0.01, 0.01); crushG.add(pile);
+  const crumbs = Array.from({ length: 90 }, (_, i) => {   // the heap of crumbs that grows as the biscuits go
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.035 + Math.random() * 0.03, 0), crumbM[(Math.random() * crumbM.length) | 0]);
+    const a = Math.random() * PI * 2, r = Math.sqrt(Math.random()), far = i > 62;
+    m.position.set(Math.cos(a) * r * (far ? 1.0 : 0.62), 0.14 + (far ? 0.015 : (1 - r) * 0.1) + Math.random() * 0.02, Math.sin(a) * r * (far ? 0.55 : 0.34));
+    m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3); m.scale.set(1.2, 0.7 + Math.random() * 0.4, 1); m.castShadow = true; m.receiveShadow = true;
+    m.userData = { at: i / 90 * 0.95, k: 0 }; m.visible = false; crushG.add(m); return m;
+  });
   const mallet = new THREE.Group(); mallet.position.set(0, 0.8, 0.05); crushG.add(mallet);
-  mallet.add(mesh(box(0.5, 0.32, 0.34), '#ffd27a', { y: 0.16 }), mesh(cyl(0.055, 0.055, 0.6, 8), '#e2b088', { y: 0.62 }));
-  let crushP = 0, swing = 0, swingHit = true;
+  mallet.add(mesh(cyl(0.17, 0.17, 0.56, 22), '#c58a52', { rz: PI / 2, y: 0.17 }), mesh(cyl(0.185, 0.185, 0.05, 22), '#6e4426', { rz: PI / 2, x: 0.2, y: 0.17 }), mesh(cyl(0.185, 0.185, 0.05, 22), '#6e4426', { rz: PI / 2, x: -0.2, y: 0.17 }), mesh(cyl(0.04, 0.05, 0.75, 10), '#b47c48', { y: 0.7 }), mesh(sph(0.065, 10), '#a06a3a', { y: 1.08 }));
+  let crushP = 0, swing = 0, swingHit = true, impact = 0;
 
   // ----- the springform pan: the crumbs lie on its bottom as a texture that is painted as you press -----
   const PAN_R = 0.95, panG = new THREE.Group(); panG.position.set(0.5, TOP, 0.2); sc.add(panG);
@@ -411,7 +424,7 @@ const kst = (() => {
     if (!keep) clearParts();
     if (kind === 'add') { batter.material.color.set('#f1d996'); lumps.clear(); stirV = 0; fill = fillT = 0; batchTok++; }
     if (kind === 'stir') fillT = 1;
-    if (kind === 'crush') { crushP = 0; swing = 0; swingHit = true; cookies.forEach(g => { g.visible = true; g.scale.set(1, 1, 1); }); pile.scale.set(0.01, 0.01, 0.01); mallet.position.set(0, 0.8, 0.05); }
+    if (kind === 'crush') { crushP = 0; swing = 0; swingHit = true; impact = 0; cookies.forEach(g => { g.visible = true; g.scale.set(1, 1, 1); g.userData.pieces.forEach(pc => { pc.position.set(0, 0, 0); pc.rotation.set(0, 0, 0); pc.scale.set(1, 1, 1); }); }); crumbs.forEach(m => { m.visible = false; m.userData.k = 0; }); mallet.position.set(0, 0.8, 0.05); }
     if (kind === 'press') { crustReset(); toolX = toolZ = 0; toolDown = false; }
     if (kind === 'pour' || kind === 'glaze') { level = 0; pouring = false; tilt = 0; }
     if (kind === 'knead') { kneadK = 0; kneadP = 0; rollP = 0; rollDown = false; cutN = 0; cutDone.fill(false); cutAge.fill(1); }
@@ -920,15 +933,25 @@ const kst = (() => {
         if (streamM.visible && Math.random() < 0.5) emit(panG.localToWorld(V3(lip.x, surf, lip.z)), V3((Math.random() - 0.5) * 0.9, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 0.9), 0.45, '#f1d996', 0.03, 7);
       }
       if (mode === 'crush') {
-        swing = Math.max(0, swing - dt * 5.5);
-        const c = cookies[Math.min(2, Math.floor(crushP * 2.999))];
+        swing = Math.max(0, swing - dt * 5.5); impact = Math.max(0, impact - dt * 6);
+        const ci = Math.min(2, Math.floor(crushP * 2.999)), c = cookies[ci];
         mallet.position.set(mallet.position.x + (c.position.x - mallet.position.x) * Math.min(1, dt * 12), 0.2 + 0.6 * Math.pow(swing, 1.4), c.position.z);
-        if (!swingHit && swing < 0.1) {   // the mallet lands: crumbs fly
-          swingHit = true; tone(180, 0, 0.09, 'square', 0.07);
-          for (let i = 0; i < 9; i++) emit(crushG.localToWorld(V3(c.position.x, 0.25, c.position.z)), V3((Math.random() - 0.5) * 2.2, 1 + Math.random() * 1.4, (Math.random() - 0.5) * 2.2), 0.7, '#b7773a', 0.035, 7);
+        mallet.rotation.z = 0.3 * swing;
+        if (!swingHit && swing < 0.1) {   // the mallet lands: the biscuit cracks and crumbs fly
+          swingHit = true; impact = 1; tone(150, 0, 0.1, 'square', 0.07); tone(420, 0.01, 0.05, 'square', 0.04);
+          for (let i = 0; i < 12; i++) emit(crushG.localToWorld(V3(c.position.x, 0.25, c.position.z)), V3((Math.random() - 0.5) * 2.4, 1 + Math.random() * 1.5, (Math.random() - 0.5) * 2.4), 0.8, CRUMBC[i % 5], 0.02 + Math.random() * 0.025, 8);
+          for (let i = 0; i < 4; i++) emit(crushG.localToWorld(V3(c.position.x, 0.25, c.position.z)), V3((Math.random() - 0.5) * 0.9, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.9), 0.9, '#f3e1c4', 0.04, -0.3, 0.9);   // a little dust
         }
-        cookies.forEach((g, i) => { const l = k01(crushP * 3 - i); g.visible = l < 1; g.scale.set(1 + 0.2 * l, 1 - 0.6 * l, 1 + 0.2 * l); });
-        pile.scale.set(0.15 + 0.85 * crushP, 0.05 + 0.3 * crushP, 0.12 + 0.7 * crushP);
+        cookies.forEach((g, i) => {
+          const l = k01(crushP * 3 - i), e = ease(l); g.visible = l < 1;
+          g.scale.y = 1 - (i === ci ? 0.35 * impact : 0);
+          g.userData.pieces.forEach(pc => {
+            const u = pc.userData, out = 0.015 + 0.16 * e;                     // first it cracks along its lines, then the pieces break up and shrink to crumbs
+            pc.position.copy(u.dir).multiplyScalar(out); pc.position.y = -0.03 * e;
+            pc.rotation.set(u.tilt * e, u.spin * e, -u.tilt * 0.7 * e); pc.scale.setScalar(1 - 0.8 * e);
+          });
+        });
+        crumbs.forEach(m => { if (crushP >= m.userData.at && crushP > 0.02) { m.visible = true; m.userData.k = Math.min(1, m.userData.k + dt * 5); m.scale.setScalar(1.0 * (0.3 + 0.7 * ease(m.userData.k))); } });
       }
       if (mode === 'press') {
         tool.position.x += (toolX - tool.position.x) * Math.min(1, dt * 14); tool.position.z += (toolZ - tool.position.z) * Math.min(1, dt * 14);
