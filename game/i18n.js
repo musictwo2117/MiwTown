@@ -5,13 +5,14 @@
   // literal pieces of text, replaced wherever they appear (longest first)
   const S = [
     // the desserts and the friends
-    ['Strawberry Cheesecake', 'ชีสเค้กสตรอว์เบอร์รี่'], ['Strawberry Donut', 'โดนัทสตรอว์เบอร์รี่'], ['Kitty Cupcake', 'คัพเค้กแมวเหมียว'], ['Pretzel Cake', 'เค้กคาราเมลเพรทเซล'],
+    ['Strawberry Pancakes', 'แพนเค้กสตรอว์เบอร์รี่'], ['Strawberry Cheesecake', 'ชีสเค้กสตรอว์เบอร์รี่'], ['Strawberry Donut', 'โดนัทสตรอว์เบอร์รี่'], ['Kitty Cupcake', 'คัพเค้กแมวเหมียว'], ['Pretzel Cake', 'เค้กคาราเมลเพรทเซล'],
     ['loves the ', 'ชอบ'], ['loves cheesecake', 'ชอบชีสเค้ก'], ['tips big', 'ทิปเยอะ'], ['always orders two', 'สั่งสองอย่างเสมอ'], ['in a hurry', 'ใจร้อน'], ['happy to wait', 'รอได้สบาย ๆ'],
     // the shop and the wallet
     ['Shop', 'ร้านค้า'], ['The shop is open during the day, or after closing', 'ร้านค้าเปิดระหว่างวัน หรือหลังปิดร้าน'], ['Spend the coins you keep.', 'ใช้เหรียญที่เก็บไว้'], ['Recipes', 'สูตรขนม'], ['Counter', 'เคาน์เตอร์'], [' saved', ' เก็บไว้'], ['✓ Owned', '✓ มีแล้ว'], ['Opens day ', 'เปิดวันที่ '], ['sells for ', 'ขายได้ '],
     ['Dessert ·', 'ขนม ·'], ['Drink ·', 'เครื่องดื่ม ·'], ['🔒 recipe', '🔒 สูตร'], [' recipe in the shop', ' ในร้านค้า'], ['Buy the ', 'ซื้อสูตร '], [' recipe in the shop after closing 🛒', ' ในร้านค้าหลังปิดร้าน 🛒'],
     ['Bigger display case', 'ตู้โชว์ที่ใหญ่ขึ้น'], ['Display case', 'ตู้โชว์'], [' plates on the counter', ' จานบนเคาน์เตอร์'], [' plates · full', ' จาน · เต็มแล้ว'], ['✓ Max', '✓ สูงสุด'], ['On the counter (', 'บนเคาน์เตอร์ ('], ['): tap to swap', '): แตะเพื่อสลับ'], ['The counter is full: take one off first', 'เคาน์เตอร์เต็มแล้ว: เอาออกก่อนหนึ่งอย่าง'],
     ['Turn left', 'หมุนซ้าย'], ['Turn right', 'หมุนขวา'], ['Zoom in', 'ซูมเข้า'], ['Zoom out', 'ซูมออก'], ['Reset the view', 'รีเซ็ตมุมกล้อง'],
+    ['Pour batter into the pan!', 'เทแป้งลงกระทะ!'], ['Pour', 'เท'], ["Flip it when the bubbles pop and it's golden!", 'พลิกตอนฟองแตกและเหลืองทอง!'], ['Perfect flip!', 'พลิกสวยมาก!'], ['Nice flip', 'พลิกดี'], ['A bit off', 'พลิกพลาดนิดหน่อย'],
     // the step-by-step kitchen
     ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
     ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
