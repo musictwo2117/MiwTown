@@ -174,12 +174,25 @@ const kst = (() => {
   const tool = mesh(cyl(0.26, 0.24, 0.4, 22), '#fff6ef', { y: 0.45 }); panG.add(tool);   // the glass you press with
   // ----- pouring the batter into the pan: a tilted bowl, a stream, and a level with a target line and an overflow line -----
   const POUR_T = 0.72, lvlY = L => 0.095 + L * 0.42;
-  const fillM = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R - 0.02, PAN_R - 0.02, 1, 40), new THREE.MeshPhongMaterial({ color: '#f1d996', shininess: 70, specular: new THREE.Color(0x888888) })); fillM.visible = false; panG.add(fillM);
+  const batterMat = new THREE.MeshPhongMaterial({ color: '#f4dc9c', shininess: 55, specular: new THREE.Color(0x6e6650), side: THREE.DoubleSide });
+  const fillM = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R - 0.02, PAN_R - 0.02, 1, 40, 1, true), batterMat); fillM.visible = false; panG.add(fillM);
+  // the surface of the batter: a soft glossy skin that rises, mounds up where the stream lands and ripples outward
+  const surfGeo = new THREE.RingGeometry(0.001, PAN_R - 0.02, 40, 14).rotateX(-PI / 2), surfBase = surfGeo.attributes.position.array.slice();
+  surfGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(surfGeo.attributes.position.count * 3).fill(1), 3));
+  const surfM = new THREE.Mesh(surfGeo, new THREE.MeshPhongMaterial({ color: '#f6e0a6', vertexColors: true, shininess: 60, specular: new THREE.Color(0x77705a), side: THREE.DoubleSide })); surfM.visible = false; surfM.receiveShadow = true; panG.add(surfM);
+  let impX = 0, impZ = 0, impAct = 0, strandT = 0;
   const ringAt = (y, color) => mesh(new THREE.TorusGeometry(PAN_R + 0.006, 0.014, 6, 56), color, { rx: PI / 2, y, cast: false });
   const tRing = ringAt(lvlY(POUR_T), '#4fb860'), oRing = ringAt(lvlY(1), '#ef5f7e');
   const pourG = new THREE.Group(); pourG.position.set(-0.35, 1.2, 0); pourG.scale.setScalar(0.55);
-  pourG.add(mesh(cyl(0.9, 0.62, 0.8, 28), '#79afc8', { y: 0.4 }), mesh(cyl(0.8, 0.8, 0.05, 28), '#f1d996', { y: 0.8 }));
-  const streamM = mesh(cyl(0.05, 0.05, 1, 10), '#f1d996', { cast: false }); streamM.visible = false;
+  // a hollow jug: you can see the batter inside it, and it sinks as it pours
+  const jugM = new THREE.Mesh(new THREE.LatheGeometry([[0.001, 0], [0.55, 0], [0.6, 0.04], [0.88, 0.78], [0.9, 0.82], [0.84, 0.82], [0.82, 0.78], [0.53, 0.08], [0.001, 0.08]].map(([x, y]) => new THREE.Vector2(x, y)), 40), new THREE.MeshPhongMaterial({ color: '#79afc8', shininess: 55, specular: 0x4a5a63, side: THREE.DoubleSide })); jugM.castShadow = jugM.receiveShadow = true; pourG.add(jugM);
+  pourG.add(mesh(new THREE.TorusGeometry(0.34, 0.06, 8, 18, PI), '#79afc8', { x: -0.95, y: 0.45, rz: PI / 2 }));   // the handle
+  const jugBatter = new THREE.Mesh(new THREE.CircleGeometry(0.8, 28).rotateX(-PI / 2), batterMat); pourG.add(jugBatter);
+  // the stream: a ribbon of batter that leaves the lip, arcs down under gravity, thins out and widens where it lands
+  const SN = 14, SM = 8, sGeo = new THREE.BufferGeometry();
+  sGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((SN + 1) * SM * 3), 3));
+  { const idx = []; for (let i = 0; i < SN; i++) for (let j = 0; j < SM; j++) { const a = i * SM + j, b = i * SM + (j + 1) % SM, c = (i + 1) * SM + j, d = (i + 1) * SM + (j + 1) % SM; idx.push(a, c, b, b, c, d); } sGeo.setIndex(idx); }
+  const streamM = new THREE.Mesh(sGeo, new THREE.MeshPhongMaterial({ color: '#f7e2a8', shininess: 90, specular: new THREE.Color(0x998f70) })); streamM.visible = false; streamM.frustumCulled = false;
   const pourOnly = [tRing, oRing, pourG, streamM]; pourOnly.forEach(o => { o.visible = false; panG.add(o); });
   let level = 0, pouring = false, tilt = 0;
   // ----- baking in the pan: the filling goes from pale to golden and, if forgotten, to dark brown -----
@@ -427,6 +440,7 @@ const kst = (() => {
     if (kind === 'crush') { crushP = 0; swing = 0; swingHit = true; impact = 0; cookies.forEach(g => { g.visible = true; g.scale.set(1, 1, 1); g.userData.pieces.forEach(pc => { pc.position.set(0, 0, 0); pc.rotation.set(0, 0, 0); pc.scale.set(1, 1, 1); }); }); crumbs.forEach(m => { m.visible = false; m.userData.k = 0; }); mallet.position.set(0, 0.8, 0.05); }
     if (kind === 'press') { crustReset(); toolX = toolZ = 0; toolDown = false; }
     if (kind === 'pour' || kind === 'glaze') { level = 0; pouring = false; tilt = 0; }
+    if (kind === 'pour' || kind === 'lay') { impAct = 0; const fa = surfGeo.attributes.position.array; for (let i = 0; i < fa.length; i += 3) fa[i + 1] = -0.012 * (Math.hypot(surfBase[i], surfBase[i + 2]) / PAN_R) ** 4; surfGeo.attributes.position.needsUpdate = true; surfGeo.computeVertexNormals(); }   // a flat, still surface
     if (kind === 'knead') { kneadK = 0; kneadP = 0; rollP = 0; rollDown = false; cutN = 0; cutDone.fill(false); cutAge.fill(1); }
     if (kind === 'griddle') { gdPhase = 'idle'; gdT = 0; gdN = 0; bakeHeat = 0; sideA = 0; gdStack.forEach(m => { m.visible = false; }); }
     if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; dipTime = 0; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.position.y = 1.6; d.userData.splashed = false; d.userData.body.material.color.set('#f3d2a2'); }); }
@@ -928,10 +942,31 @@ const kst = (() => {
         tilt += ((pouring ? 1 : 0) - tilt) * Math.min(1, dt * 5);
         const h = 0.02 + level * 0.42; fillM.scale.y = h; fillM.position.y = 0.095 + h / 2; fillM.visible = level > 0.01;
         tRing.visible = oRing.visible = pourG.visible = true; pourG.rotation.z = -tilt;
-        pourG.updateMatrixWorld(true); const lip = panG.worldToLocal(pourG.localToWorld(V3(0.9, 0.8, 0))), surf = 0.095 + h;
-        streamM.visible = pouring && tilt > 0.55; streamM.scale.set(1, Math.max(0.01, lip.y - surf), 1); streamM.position.set(lip.x, (lip.y + surf) / 2, lip.z);
-        if (streamM.visible && Math.random() < 0.5) emit(panG.localToWorld(V3(lip.x, surf, lip.z)), V3((Math.random() - 0.5) * 0.9, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 0.9), 0.45, '#f1d996', 0.03, 7);
+        jugBatter.position.y = 0.2 + 0.5 * Math.max(0, 1 - level / 1.05); jugBatter.rotation.z = tilt; jugBatter.scale.setScalar(0.5 + 0.5 * Math.max(0, 1 - level / 1.05)); jugBatter.visible = level < 1.04;   // the batter inside stays level and sinks
+        pourG.updateMatrixWorld(true); const lip = panG.worldToLocal(pourG.localToWorld(V3(0.88, 0.8, 0))), surf = 0.095 + h;
+        const flowing = pouring && tilt > 0.55; streamM.visible = flowing; impAct += ((flowing ? 1 : 0) - impAct) * Math.min(1, dt * (flowing ? 6 : 2.5));
+        if (flowing) {
+          const H = Math.max(0.05, lip.y - surf), T = Math.sqrt(2 * H / 6), vx = 0.22 + 0.1 * Math.sin(t * 2.1), sp = streamM.geometry.attributes.position.array;
+          impX = lip.x + vx * T; impZ = lip.z + 0.03 * Math.sin(t * 1.7); strandT += dt;
+          for (let i = 0; i <= SN; i++) {
+            const u = i / SN, px = lip.x + (impX - lip.x) * u * (0.6 + 0.4 * u), py = lip.y - H * u * u, pz = lip.z + (impZ - lip.z) * u;
+            const tx = (impX - lip.x) * (0.6 + 0.8 * u), ty = -2 * H * u, tl = Math.hypot(tx, ty) || 1, nx = ty / tl, ny = -tx / tl;   // across the stream, in the x-y plane
+            const rad = (0.075 - 0.04 * Math.sqrt(u) + (u > 0.88 ? 0.05 * (u - 0.88) / 0.12 : 0)) * (1 + 0.12 * Math.sin(strandT * 11 - u * 16)) * (0.7 + 0.3 * Math.min(1, tilt));   // thick at the lip, thin in the fall, wide again as it lands
+            for (let j = 0; j < SM; j++) { const a = j / SM * PI * 2, ca = Math.cos(a) * rad, sa = Math.sin(a) * rad; const k = (i * SM + j) * 3; sp[k] = px + nx * ca; sp[k + 1] = py + ny * ca; sp[k + 2] = pz + sa; }
+          }
+          streamM.geometry.attributes.position.needsUpdate = true; streamM.geometry.computeVertexNormals();
+          if (Math.random() < 0.8) emit(panG.localToWorld(V3(impX, surf + 0.02, impZ)), V3((Math.random() - 0.5) * 1.1, 0.6 + Math.random() * 0.9, (Math.random() - 0.5) * 1.1), 0.5, ['#f4dc9c', '#fff0c4', '#e9cf8a'][(Math.random() * 3) | 0], 0.015 + Math.random() * 0.03, 8);
+        }
+        // the surface: a heap where the stream lands (batter folds over itself before it spreads), rings running out from it
+        const sp2 = surfGeo.attributes.position, sc2 = surfGeo.attributes.color;
+        for (let i = 0; i < sp2.count; i++) {
+          const x = surfBase[i * 3], z = surfBase[i * 3 + 2], dx = x - impX, dz = z - impZ, d2 = dx * dx + dz * dz, d = Math.sqrt(d2), r = Math.hypot(x, z);
+          const y = impAct * (0.085 * Math.exp(-d2 / 0.035) + 0.022 * Math.sin(d * 20 - t * 9) * Math.exp(-d * 2.4)) + 0.004 * Math.sin(x * 6 + t * 1.3) * Math.sin(z * 5 - t * 1.1) - 0.012 * (r / PAN_R) ** 4;   // it also climbs the wall a little at the edge
+          sp2.array[i * 3 + 1] = y; const k = 0.95 + 0.05 * Math.sin(Math.atan2(dz, dx) * 4 + d * 12 - t * 2) * impAct + 0.07 * Math.exp(-d2 / 0.035) * impAct - 0.06 * Math.sin(d * 20 - t * 9) * Math.exp(-d * 2.4) * impAct; sc2.array[i * 3] = sc2.array[i * 3 + 1] = sc2.array[i * 3 + 2] = k;
+        }
+        sp2.needsUpdate = true; sc2.needsUpdate = true; surfGeo.computeVertexNormals();
       }
+      if (mode === 'pour' || mode === 'lay') { surfM.visible = fillM.visible; surfM.position.y = fillM.position.y + fillM.scale.y / 2; if (mode === 'lay') { impAct = 0; } } else surfM.visible = false;
       if (mode === 'crush') {
         swing = Math.max(0, swing - dt * 5.5); impact = Math.max(0, impact - dt * 6);
         const ci = Math.min(2, Math.floor(crushP * 2.999)), c = cookies[ci];
