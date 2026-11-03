@@ -12,7 +12,7 @@ Each Claude Code session moves in as a character. It walks to the Library when i
 |---|---|
 | **Town** (`/town`) | A floating island with one building per state, a pool, a café, waterfalls and the 🐱 Cat Home |
 | **Cat Room** (`/room`) | The same agents indoors: living room, kitchen, bathroom, bedroom and a plant balcony |
-| **Cheesecake Rush** (`/game`) | A café game: bake, serve and give change (see below) |
+| **Cheesecake Rush** (`/game`) | A café game: bake, serve, give change and decorate the café (see below) |
 
 Two halves share the same characters: the **agent town** (Town and Cat Room, below) shows your Claude Code agents live, and **Cheesecake Rush** is a game you can [play on its own](#play-it).
 
@@ -53,7 +53,7 @@ Each state an agent can be in has its own spot:
 - **Look around.** 🎯 Follow a friend, 📸 save a photo, and hide 🏷️ names, 💬 bubbles or 🏠 place labels. Tap any building or room to see who's there.
 - **Real Bangkok time and weather.** Day and night follow Thai time, and the sky follows the real weather from [Open-Meteo](https://open-meteo.com). Try `?hour=21` or `?weather=rain` (`clear`, `cloudy`, `rain`, `storm`).
 
-## Cheesecake Rush🍓
+## Cheesecake Rush 🍓
 
 Friends sit down and order desserts and drinks; you play the café (`/game`, or 🍰 in the town's toolbar).
 
@@ -71,18 +71,20 @@ Then open http://127.0.0.1:19100/game. Run it from the repo folder (`serve.js` j
 
 ### How it plays
 
-1. **Bake.** Cook each dessert step by step in a 3D kitchen, Cooking Mama style: crush, press, mix, pour and bake a cheesecake, or knead, roll, cut, fry and glaze donuts. Time it badly and the batch is ruined; bake well and it sells for more.
+1. **Bake.** Every dessert is cooked step by step in a 3D kitchen, Cooking Mama style: crush, press, pour and bake a cheesecake, knead, roll, fry and glaze donuts, pipe macarons, cook pancakes on a griddle, frost cupcakes. Time it badly and the batch is ruined; bake well and it sells for more.
 2. **Serve.** Tap desserts onto Miw's tray (up to four), or tap a table and Miw fetches the whole order. Quick service earns bigger tips.
-3. **Cash up.** Friends pay with a note, exact money or QR. The right change on the first try earns the tip and keeps your combo going.
+3. **Cash up.** Friends pay with a note, exact money or QR. Read the bill on the shop till and key in the right change on the first try to earn the tip and keep your combo going.
 
-Each day has a goal, unlocks more tables, desserts and drinks, and gives one to three stars. There are three save slots in the browser.
+Each day has a goal, unlocks more tables, desserts and drinks, and gives one to three stars. You keep the coins you earn and spend them in the **Shop**, open between days or from the corner button: new recipes (kitty cupcake, pretzel cake, strawberry pancakes, strawberry macarons) and drinks, a bigger display case for the counter, and decor for six spots in the café. A few pieces come with a perk, like a floor lamp for bigger tips or bean bags for more patient friends. Turn, tilt and zoom the camera round the café, and switch the music on or off. There are three save slots in the browser.
 
 <p>
-<img src="docs/game-cafe.jpg" alt="The café: a floating island with a pink-striped counter, the baker bunny, friends at tables, a juice bar, a pond and a strawberry plot" width="49%">
-<img src="docs/game-cashier.jpg" alt="The cashier: a pink calculator showing a bill of 17, paid 50, with 33 keyed in as change" width="49%">
+<img src="docs/game-cafe.jpg" alt="The café on day 4: friends at tables with their orders, six desserts on the counter, a stock list on the left, and a plant, floor lamp and bean bags as decor" width="49%">
+<img src="docs/game-cashier.jpg" alt="The shop till: a pink receipt listing a strawberry donut, strawberry macarons and a lemon soda for 26, and a yellow keypad with 50 paid and 24 keyed in as change" width="49%">
 </p>
 
-![Two kitchen steps: a cheesecake glowing inside the oven with a timing bar, and six donuts frying in an iron pan](docs/game-kitchen.jpg)
+![Three kitchen steps: wooden mallet crushing cookies, a cheesecake glowing inside the oven, and six donuts frying in an iron pan](docs/game-kitchen.jpg)
+
+![The Shop: the Recipes tab with kitty cupcake and marshmallow cocoa owned and other recipes for sale, and the Decor tab with a potted plant, floor lamp and café sign placed](docs/game-shop.jpg)
 
 ## Sculpted in Blender
 
@@ -94,8 +96,9 @@ Every character, building, piece of furniture, prop, dessert and icon is modelle
 <img src="docs/buildings.jpg" alt="The town's nine buildings" width="49%">
 <img src="docs/furniture.jpg" alt="The Cat Room's furniture" width="49%">
 <img src="docs/props.jpg" alt="Trees, a flower and a lamp post" width="49%">
-<img src="docs/menu.jpg" alt="The game's desserts: a cheesecake slice, a pretzel cake slice, a kitty cupcake and a donut" width="49%">
 </p>
+
+![The game's six desserts: a cheesecake slice, a pretzel cake slice, a kitty cupcake, a donut, a stack of strawberry pancakes and strawberry macarons](docs/menu.jpg)
 
 To change a model, edit its script and rebuild (tested with Blender 5.1; set `BLENDER` if it isn't in `/Applications`):
 
