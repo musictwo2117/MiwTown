@@ -53,7 +53,7 @@ Each state an agent can be in has its own spot:
 - **Look around.** 🎯 Follow a friend, 📸 save a photo, and hide 🏷️ names, 💬 bubbles or 🏠 place labels. Tap any building or room to see who's there.
 - **Real Bangkok time and weather.** Day and night follow Thai time, and the sky follows the real weather from [Open-Meteo](https://open-meteo.com). Try `?hour=21` or `?weather=rain` (`clear`, `cloudy`, `rain`, `storm`).
 
-## Cheesecake Rush
+## Cheesecake Rush🍓
 
 Friends sit down and order desserts and drinks; you play the café (`/game`, or 🍰 in the town's toolbar).
 
