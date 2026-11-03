@@ -205,6 +205,7 @@
   // a slow sway of the camera behind the menu
   window.homeTick = now => { if (open && camBase) { camera.position.x = camBase.x + Math.sin(now * 0.25) * 3; camera.lookAt(CAM.at); } };
   addEventListener('resize', () => { if (open) camBase = camera.position.clone(); });
+  window.homeCamMoved = () => { if (open) camBase = camera.position.clone(); };
 
   applySettings();
   window.showHome('main');
