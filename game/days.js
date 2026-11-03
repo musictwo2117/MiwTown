@@ -99,10 +99,6 @@ Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).forEach(id => loadModel(
   customers.forEach(c => c.state === 'wait' && drawBubble(c));
 }));
 
-// ---------- the town link ----------
-// the game stands on its own. The buttons back to the AI-agent town only show if the town's server answers (it doesn't on a plain web host)
-document.body.classList.add('solo');
-fetch('../agent/state', { cache: 'no-store' }).then(r => { if (r.ok) document.body.classList.remove('solo'); }).catch(() => {});
 
 // ---------- loop ----------
 // the HUD only touches the page when a value changed: writing the same text every frame still makes the browser redo its layout
