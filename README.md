@@ -6,6 +6,18 @@ Each Claude Code session moves in as a character. It walks to the Library when i
 
 ![Miw's Town: a floating pastel island with a rainbow road, a giant pretzel fountain, themed buildings, waterfalls and a pool islet](docs/town.jpg)
 
+## Play the café game (เล่นเกมคาเฟ่)
+
+Just want to play Cheesecake Rush? You don't need Claude, an account or any install beyond Node.js or Python. Clone the repo and serve the folder (opening `game.html` by double-click won't work: browsers block the 3D models when a page is opened as a file).
+
+```bash
+git clone https://github.com/musictwo2117/MiwTown.git
+cd MiwTown
+node server.js
+```
+
+Then open http://localhost:19100/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
+
 ## Quick start
 
 You need [Node.js](https://nodejs.org) 18+ (no `npm install`, there are no dependencies), [Claude Code](https://claude.com/claude-code) logged in on the same machine, and a browser with WebGL.
