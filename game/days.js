@@ -110,6 +110,15 @@ function hudClass(id, cls, on) { const k = 'c' + id + cls; if (hudCache[k] !== o
 // keep the café smooth: when the frame rate sags, shed the costly extras one step at a time (blurred strips and vignette, then pixel count)
 const PR_CAP = [2, 2, 1.5, 1.25, 1], perf = { ema: 16.7, tier: 0, since: 0, kitchenSince: 0, frames: 0, t: 0, calls: 0 };
 const basePixelRatio = () => Math.min(settings.fancy ? Math.min(devicePixelRatio, PR_MAX) : 1, PR_CAP[perf.tier]);
+// the quality this device settled on is kept for a few hours, so a reload starts there instead of lagging for ten seconds again; touch screens start at the middle step
+const TIER_KEY = 'miw-cheesecake-rush-tier', TIER_HOURS = 6;
+function rememberTier(ema) { if (ema > 30 && ema < 36) return;   // locked at 30 fps (iOS Low Power Mode): easing off won't help and shouldn't stick
+  try { localStorage.setItem(TIER_KEY, JSON.stringify({ tier: perf.tier, at: Date.now() })); } catch {} }
+(function startTier() {
+  let t = PR_MAX < 2 ? 2 : 0;
+  try { const s = JSON.parse(localStorage.getItem(TIER_KEY) || 'null'); if (s && Date.now() - s.at < TIER_HOURS * 36e5 && s.tier >= 0 && s.tier < PR_CAP.length) t = s.tier; } catch {}
+  perf.tier = t;
+})();
 function applyQuality() {
   document.body.classList.toggle('lite', perf.tier >= 1);
   if (typeof sparks !== 'undefined') sparks.p.visible = settings.fancy && perf.tier < 3;
@@ -124,8 +133,9 @@ function keepSmooth(dt, now) {
     perf.kitchenSince = now; kst.r.setPixelRatio(Math.max(1, kst.r.getPixelRatio() - 0.25)); perf.ema = 16.7;
   }
   if (now - perf.since < 3 || perf.ema < 22 || perf.tier >= PR_CAP.length - 1 || game.paused || menuOpen || !$('overlay').hidden) return;
-  perf.since = now; perf.tier++; perf.ema = 16.7; applyQuality();
+  const was = perf.ema; perf.since = now; perf.tier++; perf.ema = 16.7; applyQuality(); rememberTier(was);
 }
+applyQuality();   // start at the remembered (or the phone's) step
 if (/[?&]fps\b/.test(location.search)) { perf.fps = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'fps' })); }
 const clock = new THREE.Clock();
 function frame() {
