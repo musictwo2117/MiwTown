@@ -121,3 +121,5 @@ sh shared/models/build.sh cat cafe   # just these
 | `tools/video/` | Code-made promo clips and their capture and encoding tools |
 
 Built with [three.js](https://threejs.org) r128.
+
+The game's background music is ["Slow Stride"](https://opengameart.org/content/slow-stride) by isaiah658, released as CC0 (public domain) on OpenGameArt.org. It lives in `game/music/` as `.ogg` and `.mp3`; the sound effects are made live with the Web Audio API.

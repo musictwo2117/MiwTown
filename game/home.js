@@ -78,7 +78,7 @@
     renderer.setPixelRatio(basePixelRatio());
     ['vig', 'tsT', 'tsB'].forEach(id => { $(id).style.display = settings.fancy ? '' : 'none'; });
     if (typeof sparks !== 'undefined') sparks.p.visible = settings.fancy;
-    $('mute').textContent = settings.muted ? '🔇' : '🔊';
+    $('mute').textContent = settings.muted ? '🔇' : '🔊'; setMusicLevel();
     if (!settings.lang) settings.lang = I18N.guess();
     I18N.set(settings.lang);
     resize();
@@ -144,7 +144,7 @@
         <div><b>3D MODELS</b>The friends, the desserts and the little props were sculpted in Blender, from Python scripts.</div>
         <div><b>ENGINE</b>three.js, running right in your browser.</div>
         <div><b>FONTS</b>Fredoka and Nunito, from Google Fonts.</div>
-        <div><b>SOUND</b>The little blips are made live with the Web Audio API.</div>
+        <div><b>SOUND</b>The little blips are made live with the Web Audio API. The calm music is "Slow Stride" by isaiah658 (CC0, from OpenGameArt.org).</div>
         <div><b>THANKS</b>For stopping by the shop. Come back soon! 🍰</div></div>
         <button class="back3" data-go="${from}">← Back</button></div>`;
     },
@@ -162,7 +162,7 @@
       storeSettings(); applySettings(); sfx.tap(); render('settings');
     });
     const vol = box.querySelector('#volume');
-    if (vol) { vol.oninput = () => { settings.vol = +vol.value; storeSettings(); }; vol.onchange = () => sfx.pick(); }
+    if (vol) { vol.oninput = () => { settings.vol = +vol.value; storeSettings(); setMusicLevel(0.1); }; vol.onchange = () => sfx.pick(); }
     box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
       const a = b.dataset.act;
       if (a === 'resume') closeMenu();

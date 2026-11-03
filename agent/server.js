@@ -8,7 +8,7 @@ const { spawn } = require('child_process');
 
 const PORT = Number(process.env.AGENT_OFFICE_PORT || 19100);
 const ROOT = path.join(__dirname, '..');   // the repo: agent/ (this), game/ and shared/
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg' };
 const STALE_MS = 5 * 60 * 1000;   // busy for this long with no update → back to idle
 const GONE_MS = 30 * 60 * 1000;   // silent for this long → leaves the room
 const JOB_TIMEOUT_MS = 30 * 60 * 1000;

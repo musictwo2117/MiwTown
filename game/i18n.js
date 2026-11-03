@@ -58,7 +58,7 @@
     ['Cheesecake Rush, a cozy game from Miw\'s Town. Made by Miw, built together with Claude Code.', 'Cheesecake Rush เกมสบาย ๆ จากเมืองของมิว ทำโดยมิว สร้างร่วมกับ Claude Code'],
     ['The friends, the desserts and the little props were sculpted in Blender, from Python scripts.', 'เพื่อน ๆ ขนม และของตกแต่งชิ้นเล็ก ๆ ปั้นใน Blender ด้วยสคริปต์ Python'],
     ['three.js, running right in your browser.', 'three.js ทำงานตรง ๆ ในเบราว์เซอร์ของคุณ'], ['Fredoka and Nunito, from Google Fonts.', 'Fredoka, Nunito และ Mali จาก Google Fonts'],
-    ['The little blips are made live with the Web Audio API.', 'เสียงเล็ก ๆ ทุกเสียงสร้างสดด้วย Web Audio API'], ['For stopping by the shop. Come back soon! 🍰', 'ที่แวะมาที่ร้านนะ มาอีกนะ! 🍰'],
+    ['The little blips are made live with the Web Audio API.', 'เสียงเล็ก ๆ ทุกเสียงสร้างสดด้วย Web Audio API'], ['The calm music is "Slow Stride" by isaiah658 (CC0, from OpenGameArt.org).', 'เพลงสบาย ๆ คือ "Slow Stride" โดย isaiah658 (CC0 จาก OpenGameArt.org)'], ['For stopping by the shop. Come back soon! 🍰', 'ที่แวะมาที่ร้านนะ มาอีกนะ! 🍰'],
     // drinks, strawberries from the garden, the calculator at the cashier
     ['Pink Milk Tea', 'ชานมชมพู'], ['Marshmallow Cocoa', 'โกโก้มาร์ชเมลโลว์'], ['Lemon Soda', 'เลมอนโซดา'],
     ['No ripe strawberries yet… they grow back soon 🌱', 'ยังไม่มีสตรอว์เบอร์รี่สุก… เดี๋ยวก็งอกใหม่ 🌱'],
