@@ -98,6 +98,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .rec i{display:grid;place-items:center;height:48px;font-style:normal;font-size:30px}
 .rec i img{height:48px;width:48px;object-fit:contain}
 .rec.top{font-size:30px;padding:10px 4px}
+.rec.need{opacity:.55;border-style:dashed}
+.rec small{display:block;font:600 10px 'Nunito';color:#d4486f;margin-top:2px}
+.pulse{animation:glow 1s infinite}
 .rec:disabled{opacity:.3;cursor:default}
 .rec:active:not(:disabled){transform:scale(.96)}
 .kpb{height:12px;border-radius:99px;background:#fbe3ea;overflow:hidden;margin:6px 0 10px}
@@ -164,7 +167,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #pay .keys button{height:38px;border:0;border-radius:11px;background:#fff;font:600 19px 'Fredoka',sans-serif;color:#4b3442;box-shadow:0 3px 0 #e9b6c8;cursor:pointer;padding:0}
 #pay .keys button.op{background:#ffd3e0;color:#c2406f}
 #pay .keys button:active{transform:translateY(2px);box-shadow:0 1px 0 #e9b6c8}
-#toast{position:fixed;left:50%;top:86px;transform:translateX(-50%);padding:9px 16px;font:600 14px 'Fredoka';opacity:0;transition:opacity .3s;z-index:6;pointer-events:none;white-space:nowrap}
+#toast{position:fixed;left:50%;top:86px;transform:translateX(-50%);padding:9px 16px;font:600 14px 'Fredoka';opacity:0;transition:opacity .3s;z-index:20;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1}
 
 /* title and end-of-day cards */

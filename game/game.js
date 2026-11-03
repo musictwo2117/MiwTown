@@ -465,6 +465,7 @@ function drawStockTab() {
   el.querySelectorAll('.srow').forEach(b => b.onclick = () => tapStock(b.dataset.id));
 }
 function tapStock(id) {
+  if (prep.on) return bakeFromCafe(id);   // before opening, tapping a dessert in the tab goes to bake it
   if (!game.running || game.paused || menuOpen) return;
   if (!unlocked(id, game.day)) return toast(game.day >= DESSERTS[id].day ? `Buy the ${DESSERTS[id].name} recipe in the shop after closing 🛒` : `${DESSERTS[id].name} opens on day ${DESSERTS[id].day}`);
   if (!stockOf(id)) return soldOutTap(id);
@@ -707,6 +708,12 @@ document.querySelectorAll('.slot').forEach(el => el.onclick = () => {
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), kitchenFloor = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5), counterTop = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.25);
 function tapScene(e) {
   wakeAudio();
+  if (prep.on) {   // in the café before opening: a tap on a dessert goes to bake it, anything else says what to do
+    ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+    const h = ray.intersectObjects(hits.filter(x => x.visible))[0], d = h && h.object.userData;
+    if (d && d.kind === 'station' && !DESSERTS[d.st.id].drink) return bakeFromCafe(d.st.id);
+    return toast('Not open yet: tap Kitchen to bake more, or Open the shop');
+  }
   if (!game.running || game.paused) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
