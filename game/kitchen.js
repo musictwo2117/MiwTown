@@ -735,6 +735,7 @@ const kst = (() => {
       const tok = batchTok; setTimeout(() => { if (tok === batchTok) fillT = Math.min(1, fillT + 0.28); }, 1200);   // the bowl fills as each one lands
     },
     busy() { return anims.length > 0; },
+    dressChef() { if (chef && typeof applyOutfit === 'function') applyOutfit(chef); },   // Miw changed her clothes
     afterAnims(cb) { idleCb = cb; },
     // the angle of the pointer round the middle of the bowl on screen, or null if it's right in the middle
     angleAt(e) {
@@ -911,7 +912,7 @@ const kst = (() => {
       cam.position.lerp(tmpA.set(...g[0]), Math.min(1, dt * 3)); look.lerp(tmpB.set(...g[1]), Math.min(1, dt * 3)); cam.lookAt(look);
       if (!chef) {
         const m = makeModel('miw', '#ffd9c4');
-        if (m) { chef = m; m.g.scale.setScalar(1.2); m.g.position.set(-1.15, TOP, 0.5); m.g.rotation.y = 0.6; m.g.visible = false; sc.add(m.g); }
+        if (m) { chef = m; if (typeof applyOutfit === 'function') applyOutfit(m); m.g.scale.setScalar(1.2); m.g.position.set(-1.15, TOP, 0.5); m.g.rotation.y = 0.6; m.g.visible = false; sc.add(m.g); }
       }
       if (chef) {
         hop = Math.max(0, hop - dt);

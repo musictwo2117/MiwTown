@@ -287,3 +287,8 @@ button{font:inherit;color:inherit;cursor:pointer}
   .shoptabs{margin-bottom:6px}.shoptabs button{padding:4px 14px}
   .shopgrid{min-height:0;max-height:calc(100vh - 190px)}
 }
+
+.outfitview{grid-column:1/-1;text-align:center;background:#fff6f9;border-radius:16px;padding:6px}
+.outfitview img{height:220px;max-width:100%;object-fit:contain}
+.outfitview span{font-size:80px}
+.swatch{display:block;width:40px;height:40px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(160,80,115,.25)}
