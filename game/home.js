@@ -75,7 +75,7 @@
   function applySettings() {
     const [el, d] = CAM_LOOKS[settings.cam] || CAM_LOOKS.low;
     CAM.el = el * Math.PI / 180; CAM.d = d;
-    renderer.setPixelRatio(settings.fancy ? Math.min(devicePixelRatio, 2) : 1);
+    renderer.setPixelRatio(basePixelRatio());
     ['vig', 'tsT', 'tsB'].forEach(id => { $(id).style.display = settings.fancy ? '' : 'none'; });
     if (typeof sparks !== 'undefined') sparks.p.visible = settings.fancy;
     $('mute').textContent = settings.muted ? '🔇' : '🔊';
@@ -183,7 +183,7 @@
   }
   let overlayWas = false;
   function openMenu() {
-    if (open || !(game.running || kitchen.on)) return;   // only while a day or the kitchen is going
+    if (open || !(game.running || kitchen.on || prep.on)) return;   // only while a day or the kitchen is going
     overlayWas = !$('overlay').hidden; menuOpen = true; window.showHome('pause');
   }
   function closeMenu() { menuOpen = false; hideHome(); $('overlay').hidden = !overlayWas; }
@@ -195,7 +195,7 @@
     TABLES.forEach(t => { t.food.forEach(m => scene.remove(m)); t.food = []; t.customer = null; });
     queue.forEach(a => a.mark.remove());
     customers = []; queue = [];
-    game.running = false; kitchen.on = false; menuOpen = false;
+    game.running = false; kitchen.on = false; prep.on = false; $('prepBar').hidden = true; menuOpen = false;
     renderHands(); dressStations(); updatePlates(); store();
     window.showHome('main');
   }

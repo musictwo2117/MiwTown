@@ -1049,6 +1049,19 @@ function closeRestock() {
   // draw every friend's order bubble afresh, in case anything was left half-way while the shop was paused
   customers.forEach(c => { if (c.state === 'wait') drawBubble(c); else if (c.state === 'walkpay' || c.state === 'pay' || c.state === 'paying') drawPayBubble(c); else if (c.state === 'think') { c.bubble.style.display = ''; c.bubble.textContent = '💭'; } });
 }
+// between the kitchen and the day: back in the café with the shelves in view, ready to open when you are
+const prep = { on: false };
+function leaveKitchen() {
+  if (kitchen.run) { toast('Finish this batch first 🍰'); return sfx.nope(); }   // a bake under way keeps time, so it can't wait in the café
+  kitchen.on = false; prep.on = true; $('overlay').hidden = true; $('prepBar').hidden = false;
+  updatePlates(); renderHands(); sfx.pick();
+}
+function backToKitchen() { prep.on = false; $('prepBar').hidden = true; kitchen.on = true; $('overlay').hidden = false; sfx.tap(); }
+function openTheShop() {
+  // nothing on the shelves: make sure that's what they meant
+  if (!Object.values(kitchen.stock).some(n => n > 0) && !kitchen.warned) { kitchen.warned = true; toast('Nothing baked yet. Tap Open again to open anyway'); return sfx.nope(); }
+  prep.on = false; $('prepBar').hidden = true; startDay(game.day);
+}
 function openKitchen(d, opts = {}) {
   game.day = d;
   if (opts.resume) game.paused = true; else game.running = false;
@@ -1063,13 +1076,11 @@ function openKitchen(d, opts = {}) {
     <p>${opts.resume ? 'The shop is paused. Bake a quick extra batch, then get back to your friends.' : `Bake desserts before you open. Each batch makes ${yieldRange()}; the better you bake, the more each one sells for. What's left over keeps.`}</p>
     <div class="ktime"><div id="kbar"><i></i></div><span id="ksec"></span></div>
     <div id="kcanvas"></div><div id="kstage"></div>
-    <div class="kfoot"><div class="kstock" id="kstock"></div><button class="alt" id="pickBtn"></button><button class="go" id="goBtn">${opts.resume ? 'Back to the shop →' : 'Open the shop →'}</button></div>`;
+    <div class="kfoot"><div class="kstock" id="kstock"></div><button class="alt" id="pickBtn"></button><button class="go" id="goBtn">${opts.resume ? 'Back to the shop →' : 'To the café →'}</button></div>`;
   $('overlay').hidden = false;
   $('goBtn').onclick = () => {
     if (opts.resume) return closeRestock();
-    // nothing on the shelves: make sure that's what they meant
-    if (!Object.values(kitchen.stock).some(n => n > 0) && !kitchen.warned) { kitchen.warned = true; $('goBtn').textContent = 'Nothing baked yet. Open anyway?'; sfx.nope(); return; }
-    kitchen.on = false; startDay(d);
+    leaveKitchen();
   };
   $('kcanvas').appendChild(kst.r.domElement); kst.reset();
   $('pickBtn').textContent = pickLabel(); $('pickBtn').onclick = () => { harvest(6, true); renderStock(); };

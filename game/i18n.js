@@ -35,7 +35,7 @@
     ['Your change', 'เงินทอน'], ['↺ clear', '↺ ล้าง'], ['Give change ✓', 'ทอนเงิน ✓'], ['💰 cashier', '💰 แคชเชียร์'], [' (tap to put back)', ' (แตะเพื่อวางคืน)'],
     // the kitchen
     ['Kitchen · ', 'ห้องครัว · '], [' ran out!', ' หมดแล้ว!'], ['The shop is paused. Bake a quick extra batch, then get back to your friends.', 'ร้านหยุดพักอยู่ อบเพิ่มอีกสักชุดแล้วกลับไปหาเพื่อน ๆ'],
-    ['Back to the shop →', 'กลับไปที่ร้าน →'], ['Open the shop →', 'เปิดร้าน →'], ['Pick a dessert to bake', 'เลือกขนมที่จะอบ'], ['Drag the ingredients into the bowl!', 'ลากวัตถุดิบลงชาม!'],
+    ['Back to the shop →', 'กลับไปที่ร้าน →'], ['To the café →', 'ไปที่คาเฟ่ →'], ['🍳 Kitchen', '🍳 ครัว'], ['Open the shop ▶', 'เปิดร้าน ▶'], ['Finish this batch first 🍰', 'ทำชุดนี้ให้เสร็จก่อนนะ 🍰'], ['Nothing baked yet. Tap Open again to open anyway', 'ยังไม่ได้อบอะไรเลย แตะเปิดร้านอีกครั้งเพื่อเปิดต่อ'], ['Open the shop →', 'เปิดร้าน →'], ['Pick a dessert to bake', 'เลือกขนมที่จะอบ'], ['Drag the ingredients into the bowl!', 'ลากวัตถุดิบลงชาม!'],
     ['Stir in circles around the bowl!', 'วนมือตีแป้งรอบชาม!'], ['or tap here to stir', 'หรือแตะตรงนี้เพื่อตี'], ['Take it out when the marker is in the green!', 'เอาออกตอนตัวชี้อยู่ในโซนเขียว!'],
     ['Take out!', 'เอาออก!'], ['Tap the cake to place toppings!', 'แตะที่เค้กเพื่อวางท็อปปิ้ง!'], ['Pick the next one!', 'เลือกอย่างถัดไปเลย!'], ['Not bad!', 'ไม่เลวเลย!'], ['Yummy!', 'อร่อย!'], ['Perfect!', 'สมบูรณ์แบบ!'],
     ['Shop closed! 🎉', 'ปิดร้านแล้ว! 🎉'], ['Not quite… 🥺', 'ยังไม่ถึงเป้า… 🥺'],
