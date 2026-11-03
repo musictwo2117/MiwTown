@@ -2,6 +2,10 @@
 html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(#b9e0fb,#e3f1fb 55%,#fff0dc);font-family:'Nunito',system-ui,sans-serif;color:var(--ink);-webkit-user-select:none;user-select:none;touch-action:manipulation}
 #scene{position:fixed;inset:0}
 #scene canvas{display:block;cursor:pointer}
+#camctl{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:5}
+#camctl button{border:0;background:var(--card);border-radius:12px;width:38px;height:38px;font:600 18px 'Fredoka';color:var(--ink);box-shadow:0 6px 18px rgba(160,80,115,.16);display:grid;place-items:center}
+#camctl button:active{transform:scale(.94)}
+body.homing #camctl{display:none}
 #vig{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 46%,transparent 42%,rgba(16,74,108,.62) 100%);mix-blend-mode:multiply}
 .ts{position:fixed;left:0;right:0;height:20%;pointer-events:none;z-index:1;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 #tsT{top:0;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}

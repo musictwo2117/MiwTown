@@ -58,15 +58,21 @@ $('scene').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, 1, 1, 300);
 // a low, close-ish angle so the friends' faces show; the width always fits the whole café
-const CAM = { fov: 30, el: 34 * PI / 180, d: 37, at: new THREE.Vector3(0, 0.5, 0.6) };
+// yaw, tilt and zoom are what the player does with the camera (drag, wheel, pinch or the buttons): turn round the café, tip up or down, move in or out
+const CAM = { fov: 30, el: 34 * PI / 180, d: 37, at: new THREE.Vector3(0, 0.5, 0.6), yaw: 0, tilt: 0, zoom: 1, fit: 37 };
+const CAM_LIMITS = { tilt: [-0.25, 0.75], zoom: [0.45, 1.3] };
+function placeCamera() {
+  const d = CAM.fit * CAM.zoom, el = Math.max(0.2, Math.min(1.35, CAM.el + CAM.tilt));
+  camera.position.set(CAM.at.x + d * Math.cos(el) * Math.sin(CAM.yaw), CAM.at.y + d * Math.sin(el), CAM.at.z + d * Math.cos(el) * Math.cos(CAM.yaw));
+  camera.lookAt(CAM.at);
+  scene.fog = new THREE.Fog(0xcfe6f7, d * 0.85 + 14 * (1 - CAM.zoom), d * 1.9);   // a little haze into the distance
+}
 function resize() {
   const w = innerWidth, h = innerHeight, a = w / h;
   let d = CAM.d; const visH = 2 * d * Math.tan(CAM.fov * PI / 360);
-  d *= Math.max(1, 19 / (visH * a));
+  d *= Math.max(1, 19 / (visH * a)); CAM.fit = d;
   camera.fov = CAM.fov; camera.aspect = a;
-  camera.position.set(CAM.at.x, CAM.at.y + d * Math.sin(CAM.el), CAM.at.z + d * Math.cos(CAM.el));
-  camera.lookAt(CAM.at); camera.updateProjectionMatrix();
-  scene.fog = new THREE.Fog(0xcfe6f7, d * 0.85, d * 1.9);   // a little haze into the distance
+  placeCamera(); camera.updateProjectionMatrix();
   renderer.setSize(w, h);
 }
 addEventListener('resize', resize); resize();
@@ -673,7 +679,7 @@ document.querySelectorAll('.slot').forEach(el => el.onclick = () => {
 
 // tapping the scene queues up what Miw does next: pick a dessert, serve a table, or just walk somewhere
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), kitchenFloor = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5), counterTop = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.25);
-renderer.domElement.addEventListener('pointerdown', e => {
+function tapScene(e) {
   wakeAudio();
   if (!game.running || game.paused) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
@@ -706,6 +712,45 @@ renderer.domElement.addEventListener('pointerdown', e => {
   if (pk && pk.z < -5.1 && pk.z > -5.9 && Math.abs(pk.x) < 6.2) return enqueue({ kind: 'walk', at: new THREE.Vector3(pk.x, 0.5, pk.z) });   // the kitchen floor
   const p = ray.ray.intersectPlane(ground, new THREE.Vector3());
   if (p && Math.abs(p.x) < 7.4 && p.z > COUNTER_Z + 0.9 && p.z < 4.3) enqueue({ kind: 'walk', at: p });
+}
+// looking around: drag to turn the café (sideways) or tip the view (up and down), wheel or pinch to zoom; a plain tap still sends Miw
+const touches = new Map(); let press = null, pinchFrom = 0;
+const clampTo = (v, [lo, hi]) => Math.max(lo, Math.min(hi, v));
+function moveCamera(dyaw, dtilt, zoomBy) {
+  CAM.yaw += dyaw; CAM.tilt = clampTo(CAM.tilt + dtilt, CAM_LIMITS.tilt); CAM.zoom = clampTo(CAM.zoom * zoomBy, CAM_LIMITS.zoom);
+  placeCamera(); if (typeof homeCamMoved === 'function') homeCamMoved();
+}
+const dom = renderer.domElement, pinchSpan = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+dom.style.touchAction = 'none';
+dom.addEventListener('pointerdown', e => {
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { dom.setPointerCapture(e.pointerId); } catch {}
+  if (touches.size === 1) press = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+  else { press = null; pinchFrom = pinchSpan(); }
+});
+dom.addEventListener('pointermove', e => {
+  const t = touches.get(e.pointerId); if (!t) return;
+  const dx = e.clientX - t.x, dy = e.clientY - t.y; t.x = e.clientX; t.y = e.clientY;
+  if (touches.size >= 2) { const s = pinchSpan(); if (pinchFrom) moveCamera(0, 0, pinchFrom / s); pinchFrom = s; return; }
+  if (!press || press.id !== e.pointerId) return;
+  if (!press.moved && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) press.moved = true;
+  if (press.moved) moveCamera(-dx * 0.006, dy * 0.004, 1);
+});
+const endPress = e => {
+  touches.delete(e.pointerId);
+  if (press && press.id === e.pointerId) { const tap = !press.moved && e.type === 'pointerup'; press = null; if (tap) tapScene(e); }
+  if (touches.size < 2) pinchFrom = 0;
+};
+dom.addEventListener('pointerup', endPress); dom.addEventListener('pointercancel', endPress);
+dom.addEventListener('wheel', e => { e.preventDefault(); moveCamera(0, 0, Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+const resetCamera = () => { CAM.yaw = 0; CAM.tilt = 0; CAM.zoom = 1; placeCamera(); if (typeof homeCamMoved === 'function') homeCamMoved(); };
+document.querySelectorAll('#camctl button').forEach(b => b.onclick = () => {
+  const k = b.dataset.cam;
+  if (k === 'left') moveCamera(-0.3, 0, 1); else if (k === 'right') moveCamera(0.3, 0, 1); else if (k === 'in') moveCamera(0, 0, 0.8); else if (k === 'out') moveCamera(0, 0, 1.25); else resetCamera();
+});
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input,textarea,select') || e.metaKey || e.ctrlKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'q' || k === 'arrowleft') moveCamera(-0.15, 0, 1); else if (k === 'e' || k === 'arrowright') moveCamera(0.15, 0, 1); else if (k === '=' || k === '+') moveCamera(0, 0, 0.9); else if (k === '-') moveCamera(0, 0, 1.1); else if (k === '0') resetCamera();
 });
 // one tap on a table: Miw fetches whatever that friend ordered that isn't on the tray yet, then serves them
 function tapTable(t) {
