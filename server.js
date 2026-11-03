@@ -211,15 +211,15 @@ http.createServer((req, res) => {
     res.setHeader('cache-control', 'no-store');
     return res.end(html);
   }
-  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js' || url === '/game.js') && req.method === 'GET') {
+  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js' || url === '/game.js' || url === '/kitchen.js' || url === '/days.js' || url === '/town.js' || url === '/room.js') && req.method === 'GET') {
     res.setHeader('content-type', 'text/javascript; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
   }
-  if (url === '/game.css' && req.method === 'GET') {
+  if (/^\/(game|town|room)\.css$/.test(url) && req.method === 'GET') {
     res.setHeader('content-type', 'text/css; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
-    return fs.createReadStream(path.join(__dirname, 'game.css')).pipe(res);
+    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
   }
   if (/^\/vendor\/[A-Za-z.]+\.js$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {   // three.js and its loaders, kept here so the pages work offline
     res.setHeader('content-type', 'text/javascript; charset=utf-8');
