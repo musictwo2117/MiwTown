@@ -945,12 +945,11 @@ function openPay() {
   pay.c = c; pay.entry = ''; pay.give = 0; pay.tries = 0; c.state = 'paying';
   const needs = c.kind === 'cash' && c.cash > c.bill;
   $('lBill').textContent = c.bill;
-  $('lWho').textContent = `${EMOJI[c.species]} ${c.kind === 'qr' ? 'QR' : 'PAID'}`; $('lPaid').textContent = c.kind === 'qr' ? '📱' : c.cash;
-  $('payReceipt').textContent = c.items.map(i => `${DESSERTS[i.id].emoji}${i.price}`).join(' + ');
-  $('payKeys').hidden = $('lInRow').hidden = !needs;
-  $('payMsg').textContent = needs ? 'Key in the change' : c.kind === 'qr' ? 'Scan their code!' : 'Exact money, nothing to give back';
-  $('payOk').textContent = needs ? 'Enter ✓' : c.kind === 'qr' ? 'Scan ✓' : 'Take ✓';
-  document.querySelector('#pay .lcd').classList.remove('ok');
+  $('lWho').textContent = c.kind === 'qr' ? 'Paid by QR' : 'Customer paid'; $('lPaid').textContent = c.kind === 'qr' ? '📱' : c.cash;
+  $('payItems').innerHTML = c.items.map(i => `<div class="pitem"><i>${icon(i.id)}</i><span>${DESSERTS[i.id].name}</span><b class="lcdb">${i.price}</b></div>`).join('<div class="pplus">+</div>');
+  $('payKeys').hidden = $('lInRow').hidden = !needs; $('payHead').textContent = needs ? 'Give the change' : c.kind === 'qr' ? 'QR payment' : 'Exact money';
+  $('payMsg').textContent = needs ? `Paid ${c.cash} − bill ${c.bill}: key in the change` : c.kind === 'qr' ? 'Scan their code!' : 'Exact money, nothing to give back';
+  $('payOk').textContent = needs ? 'OK' : c.kind === 'qr' ? 'Scan ✓' : 'Take ✓';
   showEntry(); $('pay').hidden = false;
 }
 function showEntry() { pay.give = +pay.entry || 0; $('lIn').textContent = pay.entry || '0'; }

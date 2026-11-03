@@ -30,20 +30,23 @@
 <div id="camctl"><button data-cam="left" title="Turn left">↺</button><button data-cam="right" title="Turn right">↻</button><button data-cam="in" title="Zoom in">＋</button><button data-cam="out" title="Zoom out">－</button><button data-cam="reset" title="Reset the view">⌂</button></div>
 <div id="hands" class="card"><small>HANDS</small><button class="slot" data-i="0"></button><button class="slot" data-i="1"></button><button class="slot" data-i="2"></button><button class="slot" data-i="3"></button></div>
 <div id="pay" class="card" hidden>
-  <div class="lcd">
-    <div class="lrow"><span>🧾 BILL</span><b id="lBill">0</b></div>
-    <div class="lrow"><span id="lWho">PAID</span><b id="lPaid">0</b></div>
-    <div class="lrow big" id="lInRow"><span>CHANGE</span><b id="lIn">0</b></div>
-    <div class="lrec" id="payReceipt"></div>
+  <div class="pbill">
+    <div class="pitems" id="payItems"></div>
+    <div class="ptotal"><span>Total price</span><b class="lcdb" id="lBill">0</b></div>
+  </div>
+  <div class="ppad">
+    <div class="phead" id="payHead">Give the change</div>
+    <div class="pmoney"><span id="lWho">Paid</span><b class="lcdb" id="lPaid">0</b></div>
+    <div class="pmoney big" id="lInRow"><span>Change</span><b class="lcdb" id="lIn">0</b></div>
     <div class="lmsg" id="payMsg"></div>
+    <div class="keys" id="payKeys">
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="C" class="op">Clear</button><button data-k="0">0</button><button data-k="B" class="op">⌫</button>
+    </div>
+    <div class="acts"><button class="alt" id="payX">later</button><button class="go" id="payOk">OK</button></div>
   </div>
-  <div class="keys" id="payKeys">
-    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
-    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
-    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
-    <button data-k="C" class="op">C</button><button data-k="0">0</button><button data-k="B" class="op">⌫</button>
-  </div>
-  <div class="acts"><button class="alt" id="payX">later</button><button class="go" id="payOk">Enter ✓</button></div>
 </div>
 <div id="toast" class="card"></div>
 <div id="overlay"><div id="panel" class="card"></div></div>
