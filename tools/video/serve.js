@@ -1,13 +1,13 @@
-// Video studio for Miw's Town. No dependencies: `node video/serve.js`, then open http://localhost:19200
-// Serves the clip pages in video/ plus the shared models, and saves frames a page POSTs in ?capture mode
-// to video/out/<clip>/frames/0000.png (and its soundtrack, in ?audio mode, to video/out/<clip>/<clip>.wav),
-// ready for `sh video/encode.sh <clip>`.
+// Video studio for Miw's Town. No dependencies: `node tools/video/serve.js`, then open http://localhost:19200
+// Serves the clip pages in tools/video/ plus the shared models, and saves frames a page POSTs in ?capture mode
+// to tools/video/out/<clip>/frames/0000.png (and its soundtrack, in ?audio mode, to tools/video/out/<clip>/<clip>.wav),
+// ready for `sh tools/video/encode.sh <clip>`.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = Number(process.env.MIW_VIDEO_PORT || 19200);
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..', '..');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.glb': 'model/gltf-binary', '.json': 'application/json' };
 
 http.createServer((req, res) => {
@@ -32,7 +32,7 @@ http.createServer((req, res) => {
     return;
   }
   // the sounds the real game made while it was filmed (capture-game.js), for rushv.html to build the soundtrack from
-  // /<clip> is video/<clip>.html; models and models.js come from the town so clips use the same characters
+  // /<clip> is tools/video/<clip>.html; models and models.js come from the town so clips use the same characters
   let file;
   if (url === '/cues/rushv') file = path.join(__dirname, 'out', 'rushv', 'cues.json');
   else if (url === '/') file = path.join(__dirname, 'intro.html');

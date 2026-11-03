@@ -1,4 +1,4 @@
-// Films the real Cheesecake Rush for the vertical promo: node video/capture-game.js [--from s --to s] [--max s] [--dry] [--q 92]
+// Films the real Cheesecake Rush for the vertical promo: node tools/video/capture-game.js [--from s --to s] [--max s] [--dry] [--q 92]
 // It opens game.html in headless Chrome at 1080×1920 and runs the game's frame loop by hand (one frame per film frame, on a
 // virtual clock, so every run is the same). The film itself is a script that runs inside the page (rushv-play.js: it plays
 // the game, and says how fast time runs, where the camera is and which caption shows). This file only steps frames and saves
