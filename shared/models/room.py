@@ -1,5 +1,5 @@
 # Miw's Town: the Cat Room's furniture, rebuilt in Blender with rounded edges and baked soft shadows.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/room.py -- models/sofa.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/room.py -- shared/models/sofa.glb [preview.png]
 # The output file's name picks the piece. Each one is built in the same coordinates as its code-built twin in
 # room.html (inside the scene, or the LEFT / EAST wing it belongs to), so the page drops it in at the origin
 # of that parent. Lights, blinking LEDs, steam, bubbles and other moving things stay in room.html.

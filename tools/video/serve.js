@@ -38,7 +38,7 @@ http.createServer((req, res) => {
   else if (url === '/') file = path.join(__dirname, 'intro.html');
   else if (/^\/[a-z0-9-]+$/.test(url) && fs.existsSync(path.join(__dirname, url.slice(1) + '.html'))) file = path.join(__dirname, url.slice(1) + '.html');
   else if (url === '/sound.js') file = path.join(__dirname, 'sound.js');
-  else if (url === '/models.js' || /^\/models\/[a-z]+\.glb$/.test(url)) file = path.join(ROOT, url.slice(1));
+  else if (url === '/models.js' || /^\/models\/[a-z]+\.glb$/.test(url)) file = path.join(ROOT, 'shared', url.slice(1));
   if (!file || !fs.existsSync(file)) { res.statusCode = 404; return res.end('not found'); }
   res.setHeader('content-type', TYPES[path.extname(file)] || 'application/octet-stream');
   fs.createReadStream(file).pipe(res);

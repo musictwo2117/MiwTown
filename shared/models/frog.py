@@ -1,5 +1,5 @@
 # Miw's Town: the frog — bead eyes on two round bumps, a wide smile, tiny nostrils and toe beans.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/frog.py -- models/frog.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/frog.py -- shared/models/frog.glb [preview.png]
 import os, sys; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make the .glb files smaller without changing how they look:  python3 models/optimize.py [file.glb ...]
+"""Make the .glb files smaller without changing how they look:  python3 shared/models/optimize.py [file.glb ...]
 
 Blender writes vertex colours as 32-bit floats and exports every colour layer, but the game only reads the first one
 (three.js takes COLOR_0), so this

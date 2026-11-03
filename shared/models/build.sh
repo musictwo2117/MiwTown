@@ -1,5 +1,5 @@
 #!/bin/sh
-# Rebuild every .glb from its Blender script:  sh models/build.sh [cat cottage ...]
+# Rebuild every .glb from its Blender script:  sh shared/models/build.sh [cat cottage ...]
 # Characters each have their own script; the town's buildings come from town.py, the Cat Room's furniture from
 # room.py, the small props used all over (trees, flowers, lamp posts) from props.py, the video's cheesecake
 # shop from shop.py, the desserts on Cheesecake Rush's menu from menu.py, and its little icons from icons.py.

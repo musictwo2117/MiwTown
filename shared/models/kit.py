@@ -1,5 +1,5 @@
 # Miw's Town: shared Blender helpers for the character scripts (cat.py, bunny.py, ...).
-# Each script runs as  Blender -b -P models/<name>.py -- models/<name>.glb [preview.png]
+# Each script runs as  Blender -b -P shared/models/<name>.py -- shared/models/<name>.glb [preview.png]
 # Blender is Z-up and characters face -Y; the glTF exporter turns that into Y-up facing +Z, like the town.
 # Nodes body, head, tail, foot_L and foot_R sit at the pivots makeCharacter() uses, so every animation still works.
 # models.js colors meshes from their material: "skin" takes the agent's color, "stripe" a deeper shade of it,

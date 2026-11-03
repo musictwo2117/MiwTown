@@ -1,5 +1,5 @@
 # Miw's Town: the buildings, rebuilt in Blender with rounded edges and baked soft shadows.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/town.py -- models/cottage.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/town.py -- shared/models/cottage.glb [preview.png]
 # The output file's name picks the building. Each one keeps the layout of its code-built twin in town.html
 # (same footprint, door facing +z towards the road), and its moving parts are empty nodes with names the town
 # animates: see SCULPTED in town.html.

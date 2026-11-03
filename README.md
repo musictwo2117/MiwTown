@@ -22,8 +22,8 @@ Two halves share the same characters: the **agent town** (Town and Cat Room, bel
 
 You need [Node.js](https://nodejs.org) 18+ (no `npm install`, there are no dependencies), [Claude Code](https://claude.com/claude-code) logged in on the same machine, and a browser with WebGL.
 
-1. Run `node server.js` and open http://localhost:19100.
-2. Add the hooks from `claude-settings-snippet.json` to `~/.claude/settings.json`, with `/path/to/MiwTown` replaced by this folder (use the full path to `node` if hooks can't find it).
+1. Run `node agent/server.js` and open http://localhost:19100.
+2. Add the hooks from `agent/claude-settings-snippet.json` to `~/.claude/settings.json`, with `/path/to/MiwTown` replaced by this folder (use the full path to `node` if hooks can't find it).
 3. Start a Claude Code session anywhere. A new friend moves into town. 🎉
 
 The hook gives up after 800 ms, so Claude Code is never slowed down when the town isn't running. Without the server, the page plays a demo with made-up agents.
@@ -59,15 +59,15 @@ Friends sit down and order desserts and drinks; you play the café (`/game`, or 
 
 ### Play it
 
-You don't need Claude or an account, and nothing to install beyond Node.js or Python. Clone the repo and serve the folder (opening `game.html` by double-click won't work: browsers block the 3D models when a page is opened as a file).
+You don't need Claude or an account, and nothing to install beyond Node.js or Python. Clone the repo and serve the folder (opening `game/game.html` by double-click won't work: browsers block the 3D models when a page is opened as a file).
 
 ```bash
 git clone https://github.com/musictwo2117/MiwTown.git
 cd MiwTown
-node server.js
+node agent/server.js
 ```
 
-Then open http://localhost:19100/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
+Then open http://localhost:19100/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
 
 ### How it plays
 
@@ -86,7 +86,7 @@ Each day has a goal, unlocks more tables, desserts and drinks, and gives one to 
 
 ## Sculpted in Blender
 
-Every character, building, piece of furniture, prop, dessert and icon is modelled from a Python script in `models/` and exported as a `.glb`. They're little vinyl toys: big round heads, bead eyes, rosy cheeks, bevelled edges and a soft shadow baked into each vertex. The six animal friends each hold a slice of strawberry cheesecake, and Miw herself has long dark hair with blunt bangs, round gold glasses, a big yellow sweater, brown shorts, sneakers and a little backpack. Characters have walk, idle, ear-twitch and blink animations. The pages draw simple built-in shapes first and swap each model in as it loads.
+Every character, building, piece of furniture, prop, dessert and icon is modelled from a Python script in `shared/models/` and exported as a `.glb`. They're little vinyl toys: big round heads, bead eyes, rosy cheeks, bevelled edges and a soft shadow baked into each vertex. The six animal friends each hold a slice of strawberry cheesecake, and Miw herself has long dark hair with blunt bangs, round gold glasses, a big yellow sweater, brown shorts, sneakers and a little backpack. Characters have walk, idle, ear-twitch and blink animations. The pages draw simple built-in shapes first and swap each model in as it loads.
 
 ![The seven characters: a cat, a bunny, a bear, a frog, a chick and a penguin, each holding a slice of strawberry cheesecake, and Miw with long dark hair, round gold glasses and a yellow sweater](docs/characters.jpg)
 
@@ -100,8 +100,8 @@ Every character, building, piece of furniture, prop, dessert and icon is modelle
 To change a model, edit its script and rebuild (tested with Blender 5.1; set `BLENDER` if it isn't in `/Applications`):
 
 ```bash
-sh models/build.sh            # everything
-sh models/build.sh cat cafe   # just these
+sh shared/models/build.sh            # everything
+sh shared/models/build.sh cat cafe   # just these
 ```
 
 ## Reference
@@ -114,12 +114,10 @@ sh models/build.sh cat cafe   # just these
 
 | File | What's in it |
 |---|---|
-| `server.js`, `hook.js` | The Node server (state, tasks, weather, pages) and the Claude Code hook |
-| `town.html`, `room.html` (each with its `.css` and `.js`) | The town and the cat room |
-| `panel.js`, `scenery.js`, `models.js` | Shared UI, shared 3D scenery, and the model loader and animations |
-| `game.html`, `game.css`, `game.js`, `kitchen.js`, `days.js`, `home.js`, `icons.js`, `i18n.js` | Cheesecake Rush (page, styles, script), its home and pause screens, its Blender icons and its Thai translation |
-| `vendor/` | three.js r128 and its loaders, kept here so the pages work offline |
-| `models/` | Blender scripts, the `.glb` files they make, `build.sh`, and `optimize.py` (shrinks each `.glb` after export) |
+| `agent/` | Miw's Town: `server.js` (state, tasks, weather, pages), `hook.js` (the Claude Code hook), `town.*` and `room.*` (page, styles, script) and `panel.js` (the shared panel) |
+| `game/` | Cheesecake Rush: `game.html`, `game.css`, `game.js`, `kitchen.js`, `days.js`, `home.js`, `icons.js` and `i18n.js` (its Thai translation) |
+| `shared/` | What both use: `scenery.js` and `models.js` (3D scenery, model loader and animations), `vendor/` (three.js r128, kept here so the pages work offline) and `models/` (Blender scripts, the `.glb` files they make, `build.sh`, and `optimize.py`) |
+| `docs/` | The pictures in this README |
 | `tools/video/` | Code-made promo clips and their capture and encoding tools |
 
 Built with [three.js](https://threejs.org) r128.

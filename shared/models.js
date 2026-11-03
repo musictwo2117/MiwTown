@@ -38,10 +38,10 @@
   window.loadModel = (name, onReady) => {
     if (!THREE.GLTFLoader) return;
     pending++;
-    new THREE.GLTFLoader().load(`models/${name}.glb`, gltf => {
+    new THREE.GLTFLoader().load(`../shared/models/${name}.glb`, gltf => {
       templates[name] = gltf;
       try { onReady && onReady(name); } finally { settle(); }
-    }, undefined, err => { console.warn(`models/${name}.glb didn't load, keeping the built-in look`, err); settle(); });
+    }, undefined, err => { console.warn(`shared/models/${name}.glb didn't load, keeping the built-in look`, err); settle(); });
   };
 
   window.makeModel = (name, color) => {

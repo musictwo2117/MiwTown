@@ -1,4 +1,4 @@
-// Tiny state server for Miw's Town. No dependencies: `node server.js`
+// Tiny state server for Miw's Town. No dependencies: `node agent/server.js`
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 const PORT = Number(process.env.AGENT_OFFICE_PORT || 19100);
+const ROOT = path.join(__dirname, '..');   // the repo: agent/ (this), game/ and shared/
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary' };
 const STALE_MS = 5 * 60 * 1000;   // busy for this long with no update → back to idle
 const GONE_MS = 30 * 60 * 1000;   // silent for this long → leaves the room
 const JOB_TIMEOUT_MS = 30 * 60 * 1000;
@@ -123,7 +125,8 @@ const publicJob = j => ({ id: j.id, prompt: j.prompt, cwd: j.cwd, label: j.label
 http.createServer((req, res) => {
   // refuse requests addressed to any other host name (blocks DNS-rebinding tricks)
   if (!ALLOWED_HOSTS.has(req.headers.host)) { res.statusCode = 403; return res.end(); }
-  const url = req.url.split('?')[0];
+  let url = req.url.split('?')[0];
+  if (/^\/agent\/(state|weather|jobs|task|folders)(\/|$)/.test(url)) url = url.slice('/agent'.length);   // pages in agent/ call these by relative address
 
   if (url === '/state' && req.method === 'GET') {
     sweep();
@@ -204,30 +207,23 @@ http.createServer((req, res) => {
     return send(res, 200, [...seen].filter(p => typeof checkFolder(p) !== 'string'));
   }
 
-  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html', '/game': 'game.html' };
-  if (PAGES[url] && req.method === 'GET') {
-    const html = fs.readFileSync(path.join(__dirname, PAGES[url]), 'utf8').replace('__MIW_TOKEN__', TOKEN);
-    res.setHeader('content-type', 'text/html; charset=utf-8');
-    res.setHeader('cache-control', 'no-store');
-    return res.end(html);
-  }
-  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js' || url === '/game.js' || url === '/kitchen.js' || url === '/days.js' || url === '/town.js' || url === '/room.js') && req.method === 'GET') {
-    res.setHeader('content-type', 'text/javascript; charset=utf-8');
-    res.setHeader('cache-control', 'no-store');
-    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
-  }
-  if (/^\/(game|town|room)\.css$/.test(url) && req.method === 'GET') {
-    res.setHeader('content-type', 'text/css; charset=utf-8');
-    res.setHeader('cache-control', 'no-store');
-    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
-  }
-  if (/^\/vendor\/[A-Za-z.]+\.js$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {   // three.js and its loaders, kept here so the pages work offline
-    res.setHeader('content-type', 'text/javascript; charset=utf-8');
-    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
-  }
-  if (/^\/models\/[a-z]+\.glb$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {
-    res.setHeader('content-type', 'model/gltf-binary');
-    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
+  // the old addresses still work and lead to the pages' new homes
+  const GO = { '/': '/agent/town.html', '/town': '/agent/town.html', '/room': '/agent/room.html', '/game': '/game/game.html' };
+  if (GO[url] && req.method === 'GET') { res.statusCode = 302; res.setHeader('location', GO[url]); return res.end(); }
+  // pages, scripts, styles and models from agent/, game/ and shared/ (never the server itself or the hook)
+  if (req.method === 'GET' && /^\/(agent|game|shared)\//.test(url)) {
+    let file; try { file = path.resolve(ROOT, decodeURIComponent(url).slice(1)); } catch { res.statusCode = 400; return res.end(); }
+    const ext = path.extname(file), type = TYPES[ext];
+    const inside = ['agent', 'game', 'shared'].some(d => file.startsWith(path.join(ROOT, d) + path.sep));
+    if (type && inside && !['server.js', 'hook.js'].includes(path.basename(file)) && fs.existsSync(file)) {
+      res.setHeader('content-type', type);
+      if (ext === '.html') {
+        res.setHeader('cache-control', 'no-store');
+        return res.end(fs.readFileSync(file, 'utf8').replace('__MIW_TOKEN__', TOKEN));
+      }
+      if (ext === '.js' || ext === '.css') { if (!file.includes(path.sep + 'vendor' + path.sep)) res.setHeader('cache-control', 'no-store'); }
+      return fs.createReadStream(file).pipe(res);
+    }
   }
 
   res.statusCode = 404; res.end();

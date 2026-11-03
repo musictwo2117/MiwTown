@@ -1,5 +1,5 @@
 # Miw's Town: the bunny — snow white, long ears (one a little floppier) and a cotton-ball tail.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/bunny.py -- models/bunny.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/bunny.py -- shared/models/bunny.glb [preview.png]
 import os, sys; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 
