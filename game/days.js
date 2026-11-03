@@ -19,19 +19,42 @@ function endDay() {
   hands.forEach(id => { if (!DESSERTS[id].drink) kitchen.stock[id]++; }); hands = []; renderHands();
   const goal = goalFor(game.day), won = game.coins >= goal;
   const stars = !won ? 0 : game.coins >= goal * 1.7 ? 3 : game.coins >= goal * 1.35 ? 2 : 1;
-  save.total = (save.total || 0) + game.coins;
+  save.total = (save.total || 0) + game.coins; save.wallet = (save.wallet || 0) + game.coins;
   if (won) { save.day = Math.max(save.day, game.day + 1); save.best = Math.max(save.best, game.day); sfx.fanfare(); } else sfx.sad();
   store();
+  daySummary(goal, won, stars);
+}
+function daySummary(goal, won, stars) {
+  const next = won ? game.day + 1 : game.day, news = Object.keys(DESSERTS).some(id => DESSERTS[id].cost && !owns(id) && DESSERTS[id].day <= next && save.wallet >= DESSERTS[id].cost);
   $('panel').innerHTML = `
     <h2>${won ? 'Shop closed! 🎉' : 'Not quite… 🥺'}</h2>
     <p>Day ${game.day} · goal ${goal} 🪙</p>
     <div class="stars">${[1, 2, 3].map(i => `<span class="${i <= stars ? 'on' : ''}" style="animation-delay:${i * 0.18}s">⭐</span>`).join('')}</div>
     <div class="stats"><div><b>${game.coins}</b><span>coins</span></div><div><b>${game.served}</b><span>happy friends</span></div><div><b>${game.missed}</b><span>left hungry</span></div></div>
+    <div class="wallet">🪙 ${save.wallet} saved</div>
     <button class="go" id="goBtn">${won ? `Open day ${game.day + 1} →` : `Try day ${game.day} again`}</button>
+    <button class="alt" id="shopBtn">🛒 Recipe shop${news ? ' ✨' : ''}</button>
     ${won ? `<button class="alt" id="againBtn">Replay day ${game.day}</button>` : ''}`;
   $('overlay').hidden = false;
+  $('shopBtn').onclick = () => openShop(next, () => daySummary(goal, won, stars));
   $('goBtn').onclick = () => openKitchen(won ? game.day + 1 : game.day);
   if (won) $('againBtn').onclick = () => openKitchen(game.day);
+}
+// the recipe shop: spend the coins you have kept on dishes and drinks that are open by now
+function openShop(day, back) {
+  const ids = Object.keys(DESSERTS).filter(id => DESSERTS[id].cost);
+  $('panel').innerHTML = `
+    <h2>🛒 Recipe shop</h2>
+    <p>Learn new recipes with the coins you keep.</p>
+    <div class="wallet">🪙 ${save.wallet}</div>
+    <div class="shop">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
+      return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>
+    <button class="go" id="backBtn">Back</button>`;
+  $('panel').querySelectorAll('.shop button').forEach(b => b.onclick = () => {
+    const id = b.dataset.id, d = DESSERTS[id]; if (owns(id) || save.wallet < d.cost) return;
+    save.wallet -= d.cost; (save.recipes = save.recipes || []).push(id); store(); sfx.fanfare(); openShop(day, back);
+  });
+  $('backBtn').onclick = back;
 }
 // load every model, then refresh the pictures that use them
 ['cat', 'bunny', 'bear', 'frog', 'chick', 'penguin', 'miw', 'cheesefull', 'pretzelfull'].forEach(sp => loadModel(sp));

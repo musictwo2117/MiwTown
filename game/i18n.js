@@ -7,6 +7,9 @@
     // the desserts and the friends
     ['Strawberry Cheesecake', 'ชีสเค้กสตรอว์เบอร์รี่'], ['Strawberry Donut', 'โดนัทสตรอว์เบอร์รี่'], ['Kitty Cupcake', 'คัพเค้กแมวเหมียว'], ['Pretzel Cake', 'เค้กคาราเมลเพรทเซล'],
     ['loves the ', 'ชอบ'], ['loves cheesecake', 'ชอบชีสเค้ก'], ['tips big', 'ทิปเยอะ'], ['always orders two', 'สั่งสองอย่างเสมอ'], ['in a hurry', 'ใจร้อน'], ['happy to wait', 'รอได้สบาย ๆ'],
+    // the recipe shop and the wallet
+    ['Recipe shop', 'ร้านขายสูตร'], ['Learn new recipes with the coins you keep.', 'ซื้อสูตรใหม่ด้วยเหรียญที่เก็บไว้'], [' saved', ' เก็บไว้'], ['✓ Owned', '✓ มีแล้ว'], ['Opens day ', 'เปิดวันที่ '], ['sells for ', 'ขายได้ '],
+    ['Dessert ·', 'ขนม ·'], ['Drink ·', 'เครื่องดื่ม ·'], ['🔒 recipe', '🔒 สูตร'], [' recipe in the recipe shop', ' ในร้านขายสูตร'], ['Buy the ', 'ซื้อสูตร '], [' recipe in the shop after closing 🛒', ' ในร้านขายสูตรหลังปิดร้าน 🛒'],
     // the step-by-step kitchen
     ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
     ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
