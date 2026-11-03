@@ -3,10 +3,10 @@
 // how well it was baked sets the price, and what's left over carries into the next day
 const BATCH = 4, PREP_SECONDS = 120, RESTOCK_SECONDS = 80, STAR_MUL = [0.9, 1, 1.2];
 // each recipe has its own steps; the ones not listed yet use the classic four. The new ones make six pieces.
-const FLOW = { cheesecake: ['crush', 'press', 'add', 'stir', 'pour', 'bake', 'deco'], donut: ['add', 'stir', 'knead', 'roll', 'cut', 'fry', 'glaze', 'sprinkle'],
+const FLOW = { pancake: ['add', 'stir', 'griddle', 'deco'], cheesecake: ['crush', 'press', 'add', 'stir', 'pour', 'bake', 'deco'], donut: ['add', 'stir', 'knead', 'roll', 'cut', 'fry', 'glaze', 'sprinkle'],
   kittycupcake: ['add', 'stir', 'scoop', 'bake', 'frost', 'topping'], pretzelcake: ['add', 'stir', 'pour', 'lay', 'bake', 'drizzle'] };
 const TIMED_BAKE = { cheesecake: true, kittycupcake: true, pretzelcake: true };   // these bake in a pan against a heat meter (burnt = ruined) instead of stopping a swinging marker
-const YIELD = { cheesecake: 6, donut: 6, kittycupcake: 6, pretzelcake: 6 };
+const YIELD = { pancake: 6, cheesecake: 6, donut: 6, kittycupcake: 6, pretzelcake: 6 };
 const flowOf = id => FLOW[id] || ['add', 'stir', 'bake', 'deco'];
 const yieldOf = id => YIELD[id] || BATCH;
 const yieldRange = () => { const ys = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink).map(yieldOf); const lo = Math.min(...ys), hi = Math.max(...ys); return lo === hi ? lo : `${lo}–${hi}`; };
@@ -132,6 +132,7 @@ const kst = (() => {
   const decoG = new THREE.Group(); decoG.position.set(0.5, TOP, 0.2); sc.add(decoG);
   decoG.add(mesh(cyl(1.0, 0.85, 0.08, 32), '#ffffff', { y: 0.04 }));
   const hold = new THREE.Group(); hold.position.y = 0.08; decoG.add(hold);
+  const decoLamp = new THREE.PointLight('#ffe2b0', 0, 5, 2); decoLamp.position.set(-0.9, 1.3, 0.6); decoG.add(decoLamp);   // a warm light for the pancakes
 
   // ----- crushing cookies: a board, three cookies and a mallet -----
   const crushG = new THREE.Group(); crushG.position.set(0.5, TOP, 0.2); sc.add(crushG);
@@ -177,6 +178,19 @@ const kst = (() => {
   function plainCake() {   // the baked cheesecake before it is decorated
     const g = new THREE.Group(), c = heatColor(lastHeat), hx = col => '#' + col.getHexString();
     g.add(mesh(cyl(0.42, 0.42, 0.07, 36), '#c98b4b', { y: 0.035 }), mesh(cyl(0.41, 0.41, 0.2, 36), hx(c), { y: 0.17 }), mesh(cyl(0.405, 0.405, 0.02, 36), hx(c.clone().multiplyScalar(0.92)), { y: 0.28 }));
+    return g;
+  }
+  function pancakeStack() {   // three cooked pancakes: golden-brown, a little uneven, with a mottled top, ready for toppings
+    const g = new THREE.Group(), side = new THREE.MeshPhongMaterial({ color: '#a8692a', shininess: 35, specular: 0x4a3a2a });   // dark enough that the bright kitchen light leaves it golden-brown, not cream
+    if (!pancakeStack.tex) { pancakeStack.cv = document.createElement('canvas'); pancakeStack.cv.width = pancakeStack.cv.height = 256; pancakeStack.tex = new THREE.CanvasTexture(pancakeStack.cv); }
+    paintCake(pancakeStack.cv, pancakeStack.tex, 0.7, true);
+    const shade = new THREE.Mesh(new THREE.CircleGeometry(0.78, 36).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35, depthWrite: false })); shade.position.y = 0.003; shade.userData.fx = true; g.add(shade);   // a soft shadow on the plate
+    [0, 1, 2].forEach(i => {
+      const lay = new THREE.Group(); lay.position.set((i - 1) * 0.015, 0.058 + i * 0.108, (1 - i) * 0.012); lay.rotation.y = i * 0.9; lay.scale.set(1 - i * 0.025, 1, 1 - i * 0.025);
+      lay.add(new THREE.Mesh(gdBody.geometry, side));
+      if (i === 2) { const top = new THREE.Mesh(new THREE.CircleGeometry(0.52, 40).rotateX(-PI / 2), new THREE.MeshPhongMaterial({ map: pancakeStack.tex, shininess: 20 })); top.position.y = 0.0635; lay.add(top); }
+      g.add(lay);
+    });
     return g;
   }
   function panGroup() {   // a springform pan with its filling, for the oven
@@ -253,7 +267,52 @@ const kst = (() => {
   const tray = new THREE.Group(); glzG.add(tray); tray.add(mesh(box(2.1, 0.05, 1.0), '#fffaf3', { y: -0.025 }));
   const trayDonuts = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x * 0.92, 0.09, z * 0.9); tray.add(d); return d; });
   let trayY = 1.15, trayRot = PI, sprinkles = [];
-  const DN_MODES = ['knead', 'roll', 'cut', 'fry', 'glaze', 'sprinkle'];
+  const DN_MODES = ['knead', 'roll', 'cut', 'fry', 'glaze', 'sprinkle', 'griddle'];
+  // ----- pancakes: a deep iron skillet on a gas hob. Each pancake is poured, browns on one side as it cooks, is flipped and plated -----
+  const gdG = new THREE.Group(); gdG.position.x = -0.15; dnG.add(gdG);
+  const GD_X = -0.55, GD_PAN = 0.3, GD_Y = GD_PAN + 0.075 + 0.055;   // the skillet's x, how high it sits above the hob, and where a pancake rests in it
+  gdG.add(mesh(box(2.3, 0.12, 2.1), '#2b2b30', { x: GD_X, y: 0.06 }), mesh(new THREE.TorusGeometry(0.7, 0.05, 8, 36), '#58585f', { rx: PI / 2, x: GD_X, y: 0.14 }), mesh(new THREE.TorusGeometry(0.98, 0.035, 8, 40), '#44444b', { rx: PI / 2, x: GD_X, y: GD_PAN - 0.04 }));
+  const gdFlames = Array.from({ length: 14 }, (_, i) => { const a = i / 14 * PI * 2, f = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.22, 7), new THREE.MeshBasicMaterial({ color: i % 2 ? '#ff8a2a' : '#7fb2ff', transparent: true, opacity: 0.9 })); f.position.set(GD_X + Math.cos(a) * 0.62, 0.25, Math.sin(a) * 0.62); gdG.add(f); return f; });
+  const gdSkillet = new THREE.Group(); gdSkillet.position.set(GD_X, GD_PAN, 0); gdG.add(gdSkillet);
+  const gdPan = new THREE.Mesh(new THREE.LatheGeometry([[0.001, 0], [0.7, 0], [0.78, 0.035], [1.1, 0.34], [1.12, 0.39], [1.05, 0.4], [1.02, 0.34], [0.73, 0.085], [0.001, 0.085]].map(([x, y]) => new THREE.Vector2(x, y)), 56), new THREE.MeshPhongMaterial({ color: '#3a3741', shininess: 90, specular: 0x9a98a4, side: THREE.DoubleSide }));
+  gdPan.castShadow = gdPan.receiveShadow = true; gdSkillet.add(gdPan);
+  gdSkillet.add(mesh(new THREE.TorusGeometry(1.085, 0.03, 8, 56), '#8d8a98', { rx: PI / 2, y: 0.395, cast: false }));            // the bright rim
+  gdSkillet.add(mesh(new THREE.CircleGeometry(0.69, 40).rotateX(-PI / 2), '#1d1b22', { y: 0.088, cast: false }));                 // the dark non-stick floor
+  gdSkillet.add(mesh(cyl(0.07, 0.09, 0.16, 12), '#2a2830', { x: 1.2, y: 0.3, rz: PI / 2 }), mesh(cyl(0.06, 0.06, 0.8, 12), '#2a2830', { x: 1.7, y: 0.4, rz: PI / 2 }), mesh(cyl(0.085, 0.075, 0.55, 12), '#8a5a36', { x: 2.3, y: 0.4, rz: PI / 2 }));   // neck, bar and a wooden grip
+  [-0.2, 0.2].forEach(z => gdSkillet.add(mesh(sph(0.03, 8), '#6d6a78', { x: 1.09, y: 0.36, z: z * 0.5, cast: false })));
+  gdG.add(mesh(cyl(0.62, 0.55, 0.05, 36), '#fffaf3', { x: 1.15, y: 0.025 }));   // the plate
+  const gdLight = new THREE.PointLight('#ff9a40', 0, 3.2, 2); gdLight.position.set(GD_X, 0.75, 0); gdG.add(gdLight);
+  // a pancake: a puffed body, a top that browns as it cooks (a canvas painted afresh as the heat climbs) and an underside for the flip
+  const gdCake = new THREE.Group(); gdCake.position.set(GD_X, GD_Y, 0); gdG.add(gdCake);
+  const gdSide = new THREE.MeshPhongMaterial({ color: '#f1d996', shininess: 25 });
+  const gdBody = new THREE.Mesh(new THREE.LatheGeometry([[0.001, -0.055], [0.5, -0.055], [0.585, -0.03], [0.6, 0.0], [0.585, 0.035], [0.5, 0.058], [0.001, 0.062]].map(([x, y]) => new THREE.Vector2(x, y)), 40), gdSide); gdCake.add(gdBody);
+  const gdCanvas = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; return c; })(), gdUnder = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; return c; })();
+  const gdTexTop = new THREE.CanvasTexture(gdCanvas), gdTexUnder = new THREE.CanvasTexture(gdUnder);
+  const gdTop = new THREE.Mesh(new THREE.CircleGeometry(0.52, 40).rotateX(-PI / 2), new THREE.MeshPhongMaterial({ map: gdTexTop, shininess: 20 })); gdTop.position.y = 0.0635; gdCake.add(gdTop);
+  const gdBot = new THREE.Mesh(new THREE.CircleGeometry(0.52, 40).rotateX(PI / 2), new THREE.MeshPhongMaterial({ map: gdTexUnder, shininess: 20 })); gdBot.position.y = -0.0565; gdCake.add(gdBot); gdBot.visible = false;
+  const gdRnd = (() => { let q = 7; return () => (q = (q * 16807) % 2147483647) / 2147483647; })();
+  const gdSpots = Array.from({ length: 70 }, () => { const a = gdRnd() * PI * 2, d = Math.sqrt(gdRnd()) * 0.92; return { x: 128 + Math.cos(a) * d * 120, y: 128 + Math.sin(a) * d * 120, r: 5 + gdRnd() * 17, a: 0.25 + gdRnd() * 0.6, t: gdRnd() }; });
+  const gdHoles = Array.from({ length: 14 }, (_, i) => { const a = gdRnd() * PI * 2, d = Math.sqrt(gdRnd()) * 0.8; return { x: 128 + Math.cos(a) * d * 120, y: 128 + Math.sin(a) * d * 120, r: 3 + gdRnd() * 5, at: 0.1 + i * 0.035 }; });
+  const gdHex = c => '#' + c.getHexString();
+  function paintCake(cv, tex, h, holes) {   // h: how long this side has cooked (0 = pale batter, about 0.66 golden, 1 burnt)
+    const x = cv.getContext('2d'), base = heatColor(Math.max(0, Math.min(1, h * 1.12))), dark = heatColor(Math.min(1, h * 1.12 + 0.18)), deep = heatColor(Math.min(1, h * 1.12 + 0.34));
+    x.fillStyle = gdHex(base); x.fillRect(0, 0, 256, 256);
+    gdSpots.forEach(s => { if (s.t > 0.2 + h * 0.9) return; x.globalAlpha = s.a * Math.min(1, 0.2 + h * 1.1); x.fillStyle = gdHex(s.t < 0.4 ? deep : dark); x.beginPath(); x.arc(s.x, s.y, s.r, 0, PI * 2); x.fill(); });
+    x.globalAlpha = 1;
+    const g = x.createRadialGradient(128, 128, 70, 128, 128, 128); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(' + [((deep.r * 255) | 0), ((deep.g * 255) | 0), ((deep.b * 255) | 0)].join(',') + ',' + Math.min(0.85, 0.15 + h * 0.8) + ')');
+    x.fillStyle = g; x.fillRect(0, 0, 256, 256);   // the edge crisps first
+    if (holes) gdHoles.forEach(o => { if (h < o.at) return; x.fillStyle = gdHex(dark); x.beginPath(); x.arc(o.x, o.y, o.r, 0, PI * 2); x.fill(); x.fillStyle = 'rgba(255,240,200,.35)'; x.beginPath(); x.arc(o.x - 1, o.y - 1, o.r * 0.45, 0, PI * 2); x.fill(); });
+    tex.needsUpdate = true;
+  }
+  let gdPhase = 'idle', gdT = 0, gdN = 0, gdSpread = 0, gdPaintH = -1;
+  // the pancakes already on the plate: each one is a copy of the cooked pancake as it left the pan (same body, same browned top)
+  const gdStack = [0, 1, 2].map(i => {
+    const g = new THREE.Group(), cv = document.createElement('canvas'); cv.width = cv.height = 256;
+    const tex = new THREE.CanvasTexture(cv), side = new THREE.MeshPhongMaterial({ color: '#c08a3c', shininess: 25 });
+    g.add(new THREE.Mesh(gdBody.geometry, side));
+    const top = new THREE.Mesh(new THREE.CircleGeometry(0.52, 40).rotateX(-PI / 2), new THREE.MeshPhongMaterial({ map: tex, shininess: 20 })); top.position.y = 0.0635; g.add(top);
+    g.position.set(1.15 + (i - 1) * 0.012, 0.05 + 0.058 + i * 0.108, (1 - i) * 0.012); g.rotation.y = i * 0.9; g.userData = { cv, tex, side }; g.visible = false; gdG.add(g); return g;
+  });
 
   // ----- cupcakes: scoop the batter into the tin, bake it, pipe the frosting, then put on the kitty ears -----
   const tinG = new THREE.Group(); tinG.position.set(0.5, TOP, 0.2); sc.add(tinG);
@@ -330,6 +389,7 @@ const kst = (() => {
     if (kind === 'press') { crustReset(); toolX = toolZ = 0; toolDown = false; }
     if (kind === 'pour' || kind === 'glaze') { level = 0; pouring = false; tilt = 0; }
     if (kind === 'knead') { kneadK = 0; kneadP = 0; rollP = 0; rollDown = false; cutN = 0; cutDone.fill(false); cutAge.fill(1); }
+    if (kind === 'griddle') { gdPhase = 'idle'; gdT = 0; gdN = 0; bakeHeat = 0; sideA = 0; gdStack.forEach(m => { m.visible = false; }); }
     if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; dipTime = 0; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.position.y = 1.6; d.userData.splashed = false; d.userData.body.material.color.set('#f3d2a2'); }); }
     if (kind === 'glaze') { trayY = 1.15; trayRot = PI; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; d.userData.dr.visible = false; }); }
     if (kind === 'bake') { bakeHeat = 0; ovenFill = null; ovenMat = null; }
@@ -345,7 +405,7 @@ const kst = (() => {
     else if (kind === 'bake' && id === 'kittycupcake') { inside.clear(); insideModel = tinGroup(); ovenMat = cupCakeM; insideBase = 0.6; insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
     else if (kind === 'bake') { inside.clear(); insideModel = batchModel(id); insideBase = WHOLE[id] ? 1.0 : 0.85; insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
     if (kind === 'deco' || kind === 'drizzle') {
-      hold.clear(); placed3d.splice(0).forEach(o => decoG.remove(o)); hold.position.y = 0.08; const m = id === 'cheesecake' || id === 'pretzelcake' ? plainCake() : batchModel(id);
+      hold.clear(); placed3d.splice(0).forEach(o => decoG.remove(o)); hold.position.y = 0.08; const m = id === 'cheesecake' || id === 'pretzelcake' ? plainCake() : id === 'pancake' ? pancakeStack() : batchModel(id);
       if (kind === 'drizzle') { layPos.forEach(([x, z]) => { const w = new THREE.Group(), pz = makePretzel({ salt: true, color: '#b9733a' }); pz.rotation.x = -PI / 2; pz.scale.setScalar(0.22); w.add(pz); w.position.set(x * 0.42, 0.3, z * 0.42); w.rotation.y = x * 7 + z * 3; w.scale.setScalar(0.62); m.add(w); }); drzLast = null; drzN = 0; bottleT.visible = false; } m.scale.setScalar(WHOLE[id] ? 1.6 : 0.95); hold.add(m); decoG.rotation.y = 0;
       sc.updateMatrixWorld(true); cakeTop = new THREE.Box3().setFromObject(m).max.y - TOP;
     }
@@ -732,6 +792,9 @@ const kst = (() => {
       return drzN;
     },
     flip() { sideA = bakeHeat; flipT = 0; hop = 0.5; },
+    pourBatter() { if (mode !== 'griddle') return; gdPhase = 'cooking'; gdT = 0; gdSpread = 0; bakeHeat = 0; sideA = 0; hop = 0.25; gdPaintH = -1; for (let i = 0; i < 8; i++) emit(gdG.localToWorld(V3(GD_X, 0.6, 0)), V3((Math.random() - 0.5) * 1.2, 0.5 + Math.random(), (Math.random() - 0.5) * 1.2), 0.5, '#f6e7c4', 0.035, 6); },
+    flipCake() { if (mode !== 'griddle') return; gdPhase = 'flipping'; gdT = 0; sideA = bakeHeat; hop = 0.5; },
+    plateCake() { if (mode !== 'griddle') return; gdPhase = 'plating'; gdT = 0; },
     sprinkle(n) {
       if (mode !== 'sprinkle') return;
       const cols = ['#ff5d8f', '#ffd54a', '#6fd3ff', '#8be28b', '#ffffff'];
@@ -748,10 +811,10 @@ const kst = (() => {
     },
     done() {
       mode = 'done'; modeT = 0; hop = 1.3;
-      if (id === 'donut' || id === 'kittycupcake') {   // six finished ones on the plate
+      if (id === 'donut' || id === 'kittycupcake' || id === 'pancake') {   // six finished ones on the plate
         placed3d.splice(0).forEach(o => decoG.remove(o)); hold.clear(); hold.position.y = 0.08; decoG.rotation.y = 0;
         const n = yieldOf(id);
-        for (let k = 0; k < n; k++) { const a = k * 2 * PI / n, m = dessertModel(id); m.scale.setScalar(1.2); m.position.set(Math.sin(a) * 0.55, 0, Math.cos(a) * 0.55); m.rotation.y = a; hold.add(m); }
+        for (let k = 0; k < n; k++) { const a = k * 2 * PI / n, m = dessertModel(id); const wide = id === 'pancake'; m.scale.setScalar(wide ? 1.05 : 1.2); m.position.set(Math.sin(a) * (wide ? 0.72 : 0.55), 0, Math.cos(a) * (wide ? 0.72 : 0.55)); m.rotation.y = a; hold.add(m); }
       } else if (WHOLE[id]) {   // cut the cake into slices, one for each piece the batch makes
         placed3d.splice(0).forEach(o => decoG.remove(o)); hold.clear();
         const n = yieldOf(id);
@@ -844,6 +907,35 @@ const kst = (() => {
         pin.visible = mode === 'roll'; pin.position.x += (rollX - pin.position.x) * Math.min(1, dt * 14); pin.position.y += ((rollDown ? 0.12 + sy + 0.12 : 0.12 + sy + 0.4) - pin.position.y) * Math.min(1, dt * 14);
         cutMarks.forEach((m, i) => { m.visible = mode === 'cut' && !cutDone[i]; m.scale.setScalar(1 + 0.08 * Math.sin(t * 6 + i)); });
         cutRings.forEach((d, i) => { cutAge[i] = Math.min(1, cutAge[i] + dt * 5); d.visible = mode === 'cut' && cutDone[i]; d.scale.setScalar(0.3 + 0.7 * ease(cutAge[i])); d.position.y = 0.22 + Math.sin(cutAge[i] * PI) * 0.15; });
+      }
+      decoLamp.intensity = (mode === 'deco' || mode === 'done') && id === 'pancake' ? 0.45 : 0;
+      gdG.visible = mode === 'griddle';
+      if (mode === 'griddle') {
+        gdT += dt;
+        const e = k => k * k * (3 - 2 * k), h = bakeHeat;
+        gdCake.visible = gdPhase !== 'idle';
+        gdFlames.forEach((f, i) => { const k = 0.5 + 0.5 * Math.min(1, h * 1.4); f.scale.set(1, k * (0.8 + 0.5 * Math.abs(Math.sin(t * 11 + i * 1.7))), 1); });
+        gdLight.intensity = gdPhase === 'idle' ? 0.5 : 0.7 + Math.min(1, h * 1.3) * 1.3;
+        if (gdPhase === 'cooking') {
+          gdSpread = Math.min(1, gdSpread + dt * 2.6); const s = 0.15 + 0.85 * e(gdSpread);
+          gdCake.scale.set(s, 0.5 + 0.5 * s + 0.12 * Math.min(1, h * 1.5), s); gdCake.position.set(GD_X, GD_Y, 0); gdCake.rotation.set(0, 0, 0); gdBot.visible = false;
+          if (Math.abs(h - gdPaintH) > 0.025 || gdPaintH < 0) { gdPaintH = h; paintCake(gdCanvas, gdTexTop, h, true); }
+          gdSide.color.copy(heatColor(Math.min(1, h * 1.24)));   // the edge is darker than it looks under the bright light
+        } else if (gdPhase === 'flipping') {
+          const k = Math.min(1, gdT / 0.55);
+          gdCake.position.set(GD_X, GD_Y + Math.sin(k * PI) * 0.9, 0); gdCake.rotation.x = k * PI;
+          if (!gdBot.visible) { paintCake(gdUnder, gdTexUnder, sideA, false); gdBot.visible = true; }
+          if (k >= 1) { paintCake(gdCanvas, gdTexTop, sideA, false); gdBot.visible = false; gdPhase = 'cooking2'; gdT = 0; gdCake.rotation.x = 0; gdPaintH = -1; }
+        } else if (gdPhase === 'cooking2') { gdCake.position.y = GD_Y; }
+        else if (gdPhase === 'plating') {
+          const k = Math.min(1, gdT / 0.5), y1 = 0.108 + gdN * 0.108;
+          gdCake.position.set(GD_X + 1.7 * e(k), GD_Y + (y1 - GD_Y) * e(k) + Math.sin(k * PI) * 0.5, 0); gdCake.rotation.set(0, 0, 0);
+          if (k >= 1) { if (gdN < 3) { const sl = gdStack[gdN], u = sl.userData; u.cv.getContext('2d').drawImage(gdCanvas, 0, 0); u.tex.needsUpdate = true; u.side.color.copy(gdSide.color); sl.scale.copy(gdCake.scale); sl.visible = true; } gdN++; gdPhase = 'idle'; hop = 0.3; for (let i = 0; i < 6; i++) emit(gdG.localToWorld(V3(1.15, 0.5, 0)), V3((Math.random() - 0.5) * 1.5, 1 + Math.random(), (Math.random() - 0.5) * 1.5), 0.5, '#ffd27a', 0.03, 7); }
+        }
+        if (gdPhase === 'cooking' || gdPhase === 'cooking2') {
+          if (h > 0.88 && Math.random() < 0.4) emit(gdG.localToWorld(V3(GD_X + (Math.random() - 0.5) * 0.8, 0.8, (Math.random() - 0.5) * 0.8)), V3(0, 0.7, 0), 0.9, '#4a4a4a', 0.09, -0.3, 0.8);
+          else if (Math.random() < 0.3) emit(gdG.localToWorld(V3(GD_X + (Math.random() - 0.5) * 0.8, 0.6, (Math.random() - 0.5) * 0.8)), V3(0, 0.5, 0), 0.5, '#fff6d8', 0.025, -0.1);
+        }
       }
       if (mode === 'fry') {
         flames.forEach((f, i) => { f.scale.set(0.9 + 0.2 * Math.sin(t * 13 + i), 0.8 + 0.5 * Math.abs(Math.sin(t * 9 + i * 1.7)), 0.9 + 0.2 * Math.sin(t * 11 + i)); });
@@ -988,7 +1080,7 @@ function renderStock() {
   el.innerHTML = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink).map(id => `<div>${icon(id)}×${stockOf(id)}</div>`).join('') + `<div>🍓×${kitchen.berries}</div><div>🪙${save.wallet || 0}</div>`;
 }
 const ING = { egg: ['🥚', 'Egg'], flour: ['🌾', 'Flour'], cheese: ['🧀', 'Cream cheese'], cookie: ['🍪', 'Cookie crust'], milk: ['🥛', 'Milk'], butter: ['🧈', 'Butter'], choc: ['🍫', 'Chocolate'], pretzel: ['🥨', 'Pretzel'], berry: ['🍓', 'Strawberry'] };
-const INGR = { cheesecake: ['cheese', 'egg', 'berry'], donut: ['flour', 'egg', 'milk', 'berry'], kittycupcake: ['egg', 'flour', 'choc', 'berry'], pretzelcake: ['flour', 'butter', 'choc'] };
+const INGR = { pancake: ['flour', 'egg', 'milk', 'berry'], cheesecake: ['cheese', 'egg', 'berry'], donut: ['flour', 'egg', 'milk', 'berry'], kittycupcake: ['egg', 'flour', 'choc', 'berry'], pretzelcake: ['flour', 'butter', 'choc'] };
 const PRAISE = ['Not bad!', 'Yummy!', 'Perfect!'];
 // pick a chip up and drop it on the kitchen picture (a plain tap works too)
 function dragChip(el, onDrop) {
@@ -1036,6 +1128,7 @@ function newStep(kind, id) {
   if (kind === 'cut') return { ...base, n: 0, miss: 0 };
   if (kind === 'fry') return { ...base, phase: 0, secs: Math.max(6, 8.5 - game.day * 0.2) };
   if (kind === 'sprinkle') return { ...base, n: 0 };
+  if (kind === 'griddle') return { ...base, n: 0, phase: 'pour', gr: [], secs: Math.max(4.5, 6.5 - game.day * 0.2) };
   if (kind === 'scoop' || kind === 'frost' || kind === 'topping') return { ...base, n: 0, miss: 0 };
   if (kind === 'lay') return { ...base, placed: [] };
   if (kind === 'drizzle') return { ...base, n: 0 };
@@ -1075,8 +1168,8 @@ function endKitchenTime() {
 function tickKitchen(dt, now) {
   const st = kitchen.step; if (!st) return;
   const wrap = $('kmeterwrap'), mk = $('kmeter');
-  if ((st.kind === 'bake' && st.timed) || st.kind === 'fry') {
-    if (!st.start) st.start = now + (st.kind === 'fry' ? 0.8 : 1.4);   // let the door close and the camera settle first
+  if ((st.kind === 'bake' && st.timed) || st.kind === 'fry' || (st.kind === 'griddle' && st.phase === 'cook')) {
+    if (!st.start) st.start = now + (st.kind === 'bake' ? 1.4 : 0.8);   // let the door close and the camera settle first
     const p = Math.max(0, (now - st.start) / st.secs); st.p = p; kst.setHeat(p);
     if (mk) mk.style.left = Math.min(100, p * 100) + '%'; if (wrap) wrap.classList.toggle('warn', p > 0.8 && p < 1);
     if (p >= 1) ruin('burnt');
@@ -1177,6 +1270,27 @@ function renderStage() {
       st.n = n; sfx.tap(); el.querySelector('.khint').textContent = `⭕ Tap each ring to cut out a donut! (${n}/6)`;
       if (n >= 6) { const secs = (performance.now() - st.t0) / 1000; setTimeout(() => { if (kitchen.step === st) nextStep(Math.max(1, (secs < 7 ? 3 : secs < 12 ? 2 : 1) - (st.miss > 3 ? 1 : 0))); }, 600); }
     };
+  } else if (st.kind === 'griddle') {
+    kst.set('griddle', st.id); if (st.phase === 'pour') showDemo('tap');
+    const NEED = 3;
+    if (st.phase === 'pour') {
+      el.innerHTML = `<p class="khint">🥞 Pour batter into the pan! (${st.n}/${NEED})</p><button class="go" id="actBtn" style="margin:0 auto">Pour</button>`;
+      const pour = () => { if (kitchen.step !== st || st.phase !== 'pour') return; sfx.tap(); kst.pourBatter(); st.phase = 'cook'; st.start = 0; st.p = null; renderStage(); };
+      $('actBtn').onclick = pour; cv.onpointerdown = pour;
+    } else {
+      el.innerHTML = `<p class="khint">🥞 Flip it when the bubbles pop and it's golden! (${st.n + 1}/${NEED})</p><div class="meter" id="kmeterwrap"><i class="z0" style="width:55%"></i><i class="z1" style="width:27%"></i><i class="z2" style="width:18%"></i><b id="kmeter"></b></div><button class="go" id="actBtn" style="margin:0 auto">Flip!</button>`;
+      const flip = () => {
+        if (kitchen.step !== st || st.phase !== 'cook' || !st.start || st.p == null || st.p < 0.05) return;
+        const p = st.p, g = p >= 0.62 && p <= 0.76 ? 3 : p >= 0.55 && p <= 0.82 ? 2 : 1;
+        st.gr.push(g); st.phase = 'plate'; st.p = null; sfx.pick(); kst.flipCake(); el.querySelector('.khint').textContent = g === 3 ? '✨ Perfect flip!' : g === 2 ? '👍 Nice flip' : '😅 A bit off';
+        setTimeout(() => {
+          if (kitchen.step !== st) return;
+          kst.plateCake(); st.n++;
+          setTimeout(() => { if (kitchen.step !== st) return; if (st.n >= NEED) nextStep(Math.max(1, Math.min(3, Math.round(st.gr.reduce((a, b) => a + b, 0) / st.gr.length)))); else { st.phase = 'pour'; renderStage(); } }, 700);
+        }, 1100);
+      };
+      $('actBtn').onclick = flip; cv.onpointerdown = flip;
+    }
   } else if (st.kind === 'fry') {
     kst.set('fry', st.id);
     el.innerHTML = `<p class="khint">${st.phase ? '🍩 Now the other side! Take them out when golden.' : '🍩 Flip the donuts when the first side is golden!'}</p><div class="meter" id="kmeterwrap"><i class="z0" style="width:55%"></i><i class="z1" style="width:27%"></i><i class="z2" style="width:18%"></i><b id="kmeter"></b></div><button class="go" id="actBtn" style="margin:0 auto">${st.phase ? 'Take out!' : 'Flip!'}</button>`;
