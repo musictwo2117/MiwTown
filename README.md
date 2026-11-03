@@ -6,19 +6,19 @@ Each Claude Code session moves in as a character. It walks to the Library when i
 
 ![Miw's Town: a floating pastel island with a rainbow road, a giant pretzel fountain, themed buildings, waterfalls and a pool islet](docs/town.jpg)
 
-## Play the café game
+## What's inside
 
-Just want to play Cheesecake Rush? You don't need Claude, an account or any install beyond Node.js or Python. Clone the repo and serve the folder (opening `game.html` by double-click won't work: browsers block the 3D models when a page is opened as a file).
+| Page | What it is |
+|---|---|
+| **Town** (`/town`) | A floating island with one building per state, a pool, a café, waterfalls and the 🐱 Cat Home |
+| **Cat Room** (`/room`) | The same agents indoors: living room, kitchen, bathroom, bedroom and a plant balcony |
+| **Cheesecake Rush** (`/game`) | A café game: bake, serve and give change (see below) |
 
-```bash
-git clone https://github.com/musictwo2117/MiwTown.git
-cd MiwTown
-node server.js
-```
+Two halves share the same characters: the **agent town** (Town and Cat Room, below) shows your Claude Code agents live, and **Cheesecake Rush** is a game you can [play on its own](#play-it).
 
-Then open http://localhost:19100/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
+## Watch your agents in the town
 
-## Quick start
+### Quick start
 
 You need [Node.js](https://nodejs.org) 18+ (no `npm install`, there are no dependencies), [Claude Code](https://claude.com/claude-code) logged in on the same machine, and a browser with WebGL.
 
@@ -28,13 +28,9 @@ You need [Node.js](https://nodejs.org) 18+ (no `npm install`, there are no depen
 
 The hook gives up after 800 ms, so Claude Code is never slowed down when the town isn't running. Without the server, the page plays a demo with made-up agents.
 
-## Three pages
+### The town and the cat room
 
-| Page | What it is |
-|---|---|
-| **Town** (`/town`) | A floating island with one building per state, a pool, a café, waterfalls and the 🐱 Cat Home |
-| **Cat Room** (`/room`) | The same agents indoors: living room, kitchen, bathroom, bedroom and a plant balcony |
-| **Cheesecake Rush** (`/game`) | A café game: bake, serve and give change (see below) |
+Each state an agent can be in has its own spot:
 
 | State | Town | Cat Room |
 |---|---|---|
@@ -48,7 +44,7 @@ The hook gives up after 800 ms, so Claude Code is never slowed down when the tow
 
 <img src="docs/room.jpg" alt="The Cat Room: a cozy floating home with a living room, kitchen, bathroom, bedroom and plant balcony, with agents resting inside" width="640">
 
-## What you can do
+### What you can do
 
 - **Send tasks.** ✨ New task starts a headless Claude Code run in a folder you pick, or messages an existing agent in a fork (your open window isn't touched). Tasks can only read and edit files in that folder.
 - **Play with your agents.** Tap one to pet it, rename it or change its look (cat, bunny, bear, frog, chick, penguin or Miw), and see its 3D portrait, today's timeline and recent activity.
@@ -61,11 +57,25 @@ The hook gives up after 800 ms, so Claude Code is never slowed down when the tow
 
 Friends sit down and order desserts and drinks; you play the café (`/game`, or 🍰 in the town's toolbar).
 
+### Play it
+
+You don't need Claude or an account, and nothing to install beyond Node.js or Python. Clone the repo and serve the folder (opening `game.html` by double-click won't work: browsers block the 3D models when a page is opened as a file).
+
+```bash
+git clone https://github.com/musictwo2117/MiwTown.git
+cd MiwTown
+node server.js
+```
+
+Then open http://localhost:19100/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
+
+### How it plays
+
 1. **Bake.** Cook each dessert step by step in a 3D kitchen, Cooking Mama style: crush, press, mix, pour and bake a cheesecake, or knead, roll, cut, fry and glaze donuts. Time it badly and the batch is ruined; bake well and it sells for more.
 2. **Serve.** Tap desserts onto Miw's tray (up to four), or tap a table and Miw fetches the whole order. Quick service earns bigger tips.
 3. **Cash up.** Friends pay with a note, exact money or QR. The right change on the first try earns the tip and keeps your combo going.
 
-Each day has a goal, unlocks more tables, desserts and drinks, and gives one to three stars. There are three save slots in the browser, and the whole game switches to Thai (ไทย) in Settings.
+Each day has a goal, unlocks more tables, desserts and drinks, and gives one to three stars. There are three save slots in the browser.
 
 <p>
 <img src="docs/game-cafe.jpg" alt="The café: a floating island with a pink-striped counter, the baker bunny, friends at tables, a juice bar, a pond and a strawberry plot" width="49%">
