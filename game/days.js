@@ -48,7 +48,7 @@ const SHOP_TABS = [['recipes', 'Recipes'], ['counter', 'Counter']];
 function openShop(day, back, tab) {
   if (tab) shopTab = tab;
   const ids = Object.keys(DESSERTS).filter(id => DESSERTS[id].cost);
-  $('panel').classList.add('shopwide');   // a wide, landscape window that scrolls, so a long menu is easy to browse
+  $('panel').classList.remove('wide'); $('panel').classList.add('shopwide');   // a wide, landscape window that scrolls, so a long menu is easy to browse
   const c = caseSection();
   $('panel').innerHTML = `
     <div class="shophead"><div><h2>🛒 Shop</h2><small>Spend the coins you keep.</small></div><div class="wallet">🪙 ${save.wallet}</div></div>
@@ -71,6 +71,14 @@ function openShop(day, back, tab) {
   });
   $('backBtn').onclick = back;
 }
+// the Shop button in the corner: pause the café, look round the shop, then carry on
+function shopMidDay() {
+  if (menuOpen || game.paused) return;
+  if (!game.running || kitchen.on) return toast('The shop is open during the day, or after closing 🛍');
+  game.paused = true; $('overlay').hidden = false;
+  openShop(game.day, () => { $('panel').classList.remove('shopwide'); $('overlay').hidden = true; game.paused = false; dressStations(); updatePlates(); renderHands(); sfx.bell(); });
+}
+$('shopHud').onclick = shopMidDay;
 // the display case: buy more plates for the counter, and choose which of your desserts stand on them
 function caseSection() {
   const lv = save.caseLv || 0, next = CASE_COST[lv + 1], mine = dessertIds().filter(id => unlocked(id, game.day)), on = shelfIds();
