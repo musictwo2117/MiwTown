@@ -1,0 +1,33 @@
+# Publishes the repo to GitHub Pages on every push to main. Before uploading it stamps the commit into the
+# game's file addresses (game.js?v=abc123 and so on), so browsers never keep an old script or model next to a new one.
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stamp the commit into the game's file addresses
+        run: |
+          V="?v=${GITHUB_SHA::8}"
+          sed -i -E "s#(src|href)=\"([^\"]+\.(js|css))\"#\1=\"\2${V}\"#g; s#window.BUILD_V = '';#window.BUILD_V = '${V}';#" game/game.html
+          grep -c "$V" game/game.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1075,17 +1075,17 @@ function wakeAudio() { if (!ac) try { ac = new (window.AudioContext || window.we
 // a tab nobody is looking at goes quiet (a second, forgotten tab used to keep playing the music)
 document.addEventListener('visibilitychange', () => { if (!ac) return; if (document.hidden) ac.suspend(); else ac.resume(); });
 // background music: a calm loop ("Slow Stride" by isaiah658, CC0), played through the same audio context so it loops without a gap
-const MUSIC_GAIN = 0.3, music = { buf: null, src: null, gain: null, loading: false };
+const MUSIC_GAIN = 0.3, music = { buf: null, src: null, gain: null, loading: false, failed: false };
 const musicLevel = () => settings.muted || !settings.music ? 0 : settings.vol * MUSIC_GAIN;
 function setMusicLevel(fade = 0.3) { if (music.gain) { const g = music.gain.gain, t = ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(musicLevel(), t + fade); } }
 async function startMusic() {
-  if (!ac || music.src || music.loading) return;
+  if (!ac || music.src || music.loading || music.failed) return;
   if (!music.buf) {
     music.loading = true;
     try {
       const file = document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';   // Safari doesn't play .ogg
-      music.buf = await ac.decodeAudioData(await (await fetch(`music/slow-stride.${file}`)).arrayBuffer());
-    } catch (e) { console.warn('the music did not load', e); music.loading = false; return; }
+      music.buf = await ac.decodeAudioData(await (await fetch(`music/slow-stride.${file}${window.BUILD_V || ''}`)).arrayBuffer());
+    } catch (e) { console.warn('the music did not load', e); music.loading = false; music.failed = true; return; }   // tried once; a missing file isn't fetched again on every tap
     music.loading = false;
   }
   if (music.src) return;
