@@ -116,7 +116,7 @@ const kst = (() => {
   ovenG.add(mesh(box(1.8, 1.1, 0.05), '', { y: 0.85, z: -0.7, mat: wallM }), mesh(box(0.05, 1.1, 1.4), '', { x: -0.88, y: 0.85, mat: wallM }), mesh(box(0.05, 1.1, 1.4), '', { x: 0.88, y: 0.85, mat: wallM }),
     mesh(box(1.8, 0.05, 1.4), '', { y: 1.38, mat: wallM }), mesh(box(1.8, 0.04, 1.4), '', { y: 0.32, mat: floorM }));
   const rodM = new THREE.MeshBasicMaterial({ color: '#6b4a3a' });   // the heating elements: dull when cold, glowing when hot
-  [1.32, 0.4].forEach(y => ovenG.add(mesh(cyl(0.025, 0.025, 1.6, 8), '', { y, z: 0.05, rz: PI / 2, mat: rodM, cast: false })));
+  [[1.32, 0.025], [0.345, 0.012]].forEach(([y, r]) => ovenG.add(mesh(cyl(r, r, 1.6, 8), '', { y, z: 0, rz: PI / 2, mat: rodM, cast: false })));   // the lower element lies flush with the floor, under the tray, so nothing sits inside it
   const ovenLight = new THREE.PointLight('#ff8a3c', 0, 3.6, 2); ovenLight.position.set(0, 0.85, 0.3); ovenG.add(ovenLight);
   [-0.6, 0.6].forEach(x => ovenG.add(mesh(sph(0.1, 10), '#ffffff', { x, y: 1.62, z: 0.78 })));
   const door = new THREE.Group(); door.position.set(0, 0.3, 0.78); door.rotation.x = OPEN; ovenG.add(door);   // hinged at the bottom of the opening
@@ -399,7 +399,7 @@ const kst = (() => {
       if (kind === 'frost') tinCups.forEach(c => { c.f = c.ft = 1; c.fr = c.frt = c.tp = c.tpt = 0; });   // the baked sponges, ready for frosting
     }
     if (kind === 'lay') { layMeshes.splice(0).forEach(m => m.parent && m.parent.remove(m)); layPos.length = 0; }
-    if (kind === 'bake' && (id === 'cheesecake' || id === 'pretzelcake')) { inside.clear(); insideModel = panGroup(); insideBase = 0.74;
+    if (kind === 'bake' && (id === 'cheesecake' || id === 'pretzelcake')) { inside.clear(); insideModel = panGroup(); insideBase = 0.62;   // small enough to fit between the oven's walls and clear of its door and back
       if (id === 'pretzelcake') layPos.forEach(([x, z]) => { const w = new THREE.Group(), pz = makePretzel({ salt: false, color: '#b9733a' }); pz.rotation.x = -PI / 2; pz.scale.setScalar(0.22); w.add(pz); w.position.set(x, 0.5, z); w.rotation.y = x * 7 + z * 3; insideModel.add(w); });
       insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
     else if (kind === 'bake' && id === 'kittycupcake') { inside.clear(); insideModel = tinGroup(); ovenMat = cupCakeM; insideBase = 0.6; insideModel.scale.setScalar(insideBase); inside.add(insideModel); doorA = OPEN; trayK = 0; ovenHot = 0; door.rotation.x = OPEN; inside.position.set(0, 0.36, 1.55); }
@@ -997,7 +997,7 @@ const kst = (() => {
         if (mode === 'bake') { tT = k01((modeT - 0.15) / 0.85); dT = modeT < 1.0 ? OPEN : OPEN * (1 - ease(k01((modeT - 1.0) / 0.55))); }
         else { tT = 1 - k01((modeT - 0.45) / 0.8); dT = OPEN * ease(k01(modeT / 0.5)); }
         doorA += (dT - doorA) * Math.min(1, dt * 12); trayK += (tT - trayK) * Math.min(1, dt * 9);
-        door.rotation.x = doorA; inside.position.z = lerp(1.55, 0.05, ease(trayK));
+        door.rotation.x = doorA; inside.position.z = lerp(1.55, 0, ease(trayK));
         const closed = doorA < 0.35, fl = 0.86 + 0.14 * Math.sin(t * 23) + 0.07 * Math.sin(t * 7.3);   // a flicker
         ovenHot += ((mode === 'bake' && closed ? 1 : 0) - ovenHot) * Math.min(1, dt * 2.6);
         const over = bakeHeat > 0.82, hotC = over ? '#ff3b1a' : '#ff8a22';
