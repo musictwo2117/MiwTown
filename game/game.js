@@ -43,7 +43,7 @@ const onCounter = id => DESSERTS[id].drink ? unlocked(id, game.day) : shelfIds()
 // ---------- saved progress (this browser only) ----------
 const SAVE_KEY = 'miw-cheesecake-rush';
 const SLOT_KEY = n => `${SAVE_KEY}-slot-${n}`, SET_KEY = `${SAVE_KEY}-settings`;
-const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [] });   // wallet: coins kept from every day, spent in the shop
+const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [], decor: {}, decorOwned: [] });   // wallet: coins kept from every day, spent in the shop
 let save = defaultSave(), slot = 0, menuOpen = false;   // the slot is picked on the home screen (home.js)
 let settings = { muted: false, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
@@ -436,7 +436,7 @@ function layoutStations() {
   });
 }
 function dressStations() {
-  layoutStations();
+  layoutStations(); if (typeof dressDecor === 'function') dressDecor();
   STATIONS.forEach(st => {
     const open = onCounter(st.id), d = DESSERTS[st.id];
     st.show.clear();
@@ -594,7 +594,7 @@ function removeActor(a) { scene.remove(a.root); scene.remove(a.blob); }
 // ---------- walking around the tables ----------
 // a small grid search, then the corners are cut wherever a straight line is clear of every table
 const NAV = { x0: -9.5, z0: -3.6, cs: 0.4, nx: 48, nz: 26, r: 1.2 };
-const nearTable = (x, z) => TABLES.some(t => t.g.visible && Math.hypot(x - t.g.position.x, z - t.g.position.z) < NAV.r);
+const nearTable = (x, z) => TABLES.some(t => t.g.visible && Math.hypot(x - t.g.position.x, z - t.g.position.z) < NAV.r) || decorBlocks.some(b => Math.hypot(x - b.x, z - b.z) < b.r + 0.4);
 function clearLine(ax, az, bx, bz) {
   const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.15);
   for (let i = 1; i < n; i++) { const k = i / n; if (nearTable(ax + (bx - ax) * k, az + (bz - az) * k)) return false; }
@@ -860,7 +860,7 @@ function spawn() {
   if (two) { const second = pick(); if (second) order.push(second); }
   const drinks = Object.keys(DESSERTS).filter(id => DESSERTS[id].drink && unlocked(id, game.day));
   if (drinks.length && Math.random() < 0.45 + game.day * 0.05) order.push(drinks[Math.random() * drinks.length | 0]);   // and a drink to go with it
-  const patience = Math.max(26, 38 - (game.day - 1) * 0.8) * sp.patience * (order.length > 1 ? 1.3 : 1);
+  const patience = Math.max(26, 38 - (game.day - 1) * 0.8) * sp.patience * decorPerk('patience') * (order.length > 1 ? 1.3 : 1);
   const c = { species, t, order, served: order.map(() => false), state: 'in', patience, max: patience, timer: 0, actor: makeActor(species, sp.color) };
   c.actor.root.position.copy(GATE); c.actor.grow = 0.001; c.actor.speed = 2.6;
   c.bubble = label('bub think', '');
@@ -894,7 +894,7 @@ function serve(t) {
   // paid in full: the dessert's price, a tip for being quick, more for a favorite or a bear, and a combo bonus
   const sp = SPECIES[c.species], base = c.order.reduce((s, id) => s + priceOf(id), 0);
   const fav = c.order.includes(sp.fav);
-  let tip = Math.round(base * 0.6 * (c.patience / c.max) * sp.tip * (fav ? 1.5 : 1));
+  let tip = Math.round(base * 0.6 * (c.patience / c.max) * sp.tip * decorPerk('tip') * (fav ? 1.5 : 1));
   game.combo++;
   const bonus = Math.min(game.combo - 1, 5) * 2;
   // they pay the bill at the register with a note or two; tips and the combo bonus come with a correct change
