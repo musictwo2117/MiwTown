@@ -6,8 +6,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(#b9e0f
 #camctl button{border:0;background:var(--card);border-radius:12px;width:38px;height:38px;font:600 18px 'Fredoka';color:var(--ink);box-shadow:0 6px 18px rgba(160,80,115,.16);display:grid;place-items:center}
 #camctl button:active{transform:scale(.94)}
 body.homing #camctl{display:none}
-/* the ways back to the AI-agent town only show where the town's server is running; on a plain web host there is no town to go back to */
-body.solo .townlink{display:none !important}
 /* when the café can't keep up, the blurred strips and the vignette go first */
 body.lite .ts,body.lite #vig{display:none}
 body.lite #overlay{backdrop-filter:none;-webkit-backdrop-filter:none}
