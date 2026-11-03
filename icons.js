@@ -69,10 +69,23 @@
     if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
     if (link.href !== thumbs.cheesecake) link.href = thumbs.cheesecake;
   };
-  ICONS.forEach((n, i) => setTimeout(() => loadModel(n, () => { makeThumb(n, () => makeScenery(n).g); sweep(); }), i * 40));   // a few at a time, so the dev server isn't swamped
+  // The pictures are drawn from the models, which takes a moment after every refresh. So each finished picture is kept in
+  // this browser (bump V when an icon is re-sculpted) and put straight back next time: the page opens already dressed.
+  const V = 'cr-icons-v1';
+  let cache = {};
+  try { cache = JSON.parse(localStorage.getItem(V) || '{}'); } catch (e) {}
+  Object.assign(thumbs, cache);
+  const keep = () => {
+    let changed = false;
+    new Set(Object.values(MAP)).forEach(n => { if (thumbs[n] && cache[n] !== thumbs[n]) { cache[n] = thumbs[n]; changed = true; } });
+    if (changed) try { localStorage.setItem(V, JSON.stringify(cache)); } catch (e) {}   // full or blocked storage: just draw them again next time
+  };
+  walk(document.body); setIcon();
+  const fresh = ICONS.filter(n => !cache[n]);
+  fresh.forEach((n, i) => setTimeout(() => loadModel(n, () => { makeThumb(n, () => makeScenery(n).g); sweep(); }), i * 8));
   whenModelsLoaded(() => {
     // a friend's face: just the head of its model, lit like the rest
-    Object.entries(FACES).forEach(([key, sp]) => makeThumb(key, () => {
+    Object.entries(FACES).filter(([key]) => !cache[key]).forEach(([key, sp]) => makeThumb(key, () => {
       const m = makeModel(sp, SPECIES[sp].color), head = m.head;
       head.parent.remove(head); head.position.set(0, 0, 0); head.rotation.set(0, 0, 0);
       const w = new THREE.Group(); w.add(head); return w;
@@ -80,6 +93,6 @@
     sweep();
   });
   // the desserts and drinks get their pictures as their own models load: look again for a little while
-  let tries = 0; const again = setInterval(() => { sweep(); if (++tries > 16) clearInterval(again); }, 900);
+  let tries = 0; const again = setInterval(() => { sweep(); keep(); if (++tries > 16) clearInterval(again); }, 900);
   window.ICONS = { sweep, MAP };
 })();
