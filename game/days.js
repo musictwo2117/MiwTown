@@ -45,7 +45,7 @@ function daySummary(goal, won, stars) {
 // the shop: spend the coins you have kept on dishes and drinks that are open by now
 // the shop sells things by category: each tab is one category (add outfits, furniture... here as they come)
 let shopTab = 'recipes';
-const SHOP_TABS = [['recipes', 'Recipes'], ['counter', 'Counter'], ['decor', 'Decor']];
+const SHOP_TABS = [['recipes', 'Recipes'], ['counter', 'Counter'], ['decor', 'Decor'], ['outfit', 'Outfit']];
 function openShop(day, back, tab) {
   if (tab) shopTab = tab;
   const ids = Object.keys(DESSERTS).filter(id => DESSERTS[id].cost);
@@ -54,10 +54,11 @@ function openShop(day, back, tab) {
   $('panel').innerHTML = `
     <div class="shophead"><div><h2>🛒 Shop</h2><small>Spend the coins you keep.</small></div><div class="wallet">🪙 ${save.wallet}</div></div>
     <div class="shoptabs">${SHOP_TABS.map(([k, n]) => `<button data-tab="${k}" class="${k === shopTab ? 'on' : ''}">${n}</button>`).join('')}</div>
-    ${shopTab === 'decor' ? `<div class="shopgrid">${decorCards()}</div>` : shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
+    ${shopTab === 'decor' ? `<div class="shopgrid">${decorCards()}</div>` : shopTab === 'outfit' ? `<div class="shopgrid">${outfitCards()}</div>` : shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
       return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>`}
     <button class="go" id="backBtn">Back</button>`;
   if (shopTab === 'decor') decorBind($('panel'), () => openShop(day, back));
+  if (shopTab === 'outfit') outfitBind($('panel'), () => openShop(day, back));
   $('panel').querySelectorAll('.shoptabs button').forEach(b => b.onclick = () => { sfx.tap(); openShop(day, back, b.dataset.tab); });
   $('panel').querySelectorAll('.shopgrid button[data-id]').forEach(b => b.onclick = () => {
     const id = b.dataset.id, d = DESSERTS[id]; if (owns(id) || save.wallet < d.cost) return;
