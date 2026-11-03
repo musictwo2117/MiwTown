@@ -1,5 +1,5 @@
 # Miw's Town: the desserts on Cheesecake Rush's menu, sculpted in Blender.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/menu.py -- models/kittycupcake.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/menu.py -- shared/models/kittycupcake.glb [preview.png]
 # The output file's name picks the dessert. Each sits on the table at its origin, about 0.6 across, facing +z.
 #   cheesecake — a slice of strawberry cheesecake, the shop's own
 #   pretzelcake  — a slice of vanilla-caramel layer cake with a pink zigzag and a mini pretzel on top

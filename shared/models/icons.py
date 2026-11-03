@@ -1,5 +1,5 @@
 # Miw's Town: the little pictures Cheesecake Rush uses where it used to use emoji, sculpted in Blender.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/icons.py -- models/strawberry.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/icons.py -- shared/models/strawberry.glb [preview.png]
 # The output file's name picks the icon. Each stands on the ground at its origin, about one unit tall, facing +z,
 # in the same soft toy style as the characters. The game turns each model into a small picture once it loads.
 #   ingredients  strawberry egg cheese flour cookie milk butter chocolate pretzel sparkle

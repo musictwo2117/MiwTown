@@ -1,5 +1,5 @@
 # Miw's Town: Miw's Cheesecake, the shop the intro video is set in, sculpted in Blender.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/shop.py -- models/shop.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/shop.py -- shared/models/shop.glb [preview.png]
 # The output file's name picks the piece, each in the same coordinates video/intro.html builds around it:
 #   shop     — the set, in the shop group's space (the wallpaper wall is z = 0, +z comes towards the camera)
 #   sign     — the chalkboard's frame, in the same space as shop; the page keeps it in focus as the title

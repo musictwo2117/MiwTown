@@ -96,7 +96,7 @@
           <button class="hbtn" data-go="how">🍓 How to play</button>
           <button class="hbtn" data-go="settings">⚙ Settings</button>
           <button class="hbtn" data-go="credits">💖 Credits</button>
-          <a class="hbtn" href="./" style="text-decoration:none">🥨 Back to the town</a>
+          <a class="hbtn" href="../agent/town.html" style="text-decoration:none">🥨 Back to the town</a>
         </div><div class="hver">v0.1 · saved on this device</div>`;
     },
     pause() {

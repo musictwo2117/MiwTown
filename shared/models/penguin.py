@@ -1,5 +1,5 @@
 # Miw's Town: the penguin — a heart-shaped white face, a cosy pink scarf and orange flippy feet.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/penguin.py -- models/penguin.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/penguin.py -- shared/models/penguin.glb [preview.png]
 import os, sys; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 

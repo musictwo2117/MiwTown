@@ -1,5 +1,5 @@
 # Miw's Town: small decorations used over and over (trees, flowers, lamp posts), sculpted in Blender.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/props.py -- models/tree.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/props.py -- shared/models/tree.glb [preview.png]
 # The output file's name picks the prop. Each sits on the ground at its origin, in the pages' own units.
 # Material names the pages recolor per copy: "leaf" (a tree's canopy) and "petal" (a flower's petals);
 # "bulb" is swapped for the pages' night-glowing material.

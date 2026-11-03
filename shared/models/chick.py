@@ -1,5 +1,5 @@
 # Miw's Town: the chick — a round yellow puff with a feather tuft, tiny wings and orange toes.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/chick.py -- models/chick.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/chick.py -- shared/models/chick.glb [preview.png]
 import os, sys; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 

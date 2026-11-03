@@ -9,7 +9,7 @@ const path = require('path');
 const { launch } = require('./cdp');
 
 const W = 1080, H = 1920, FPS = 30;
-const GAME_URL = process.env.GAME_URL || 'http://localhost:19101/game.html';
+const GAME_URL = process.env.GAME_URL || 'http://localhost:19101/game/game.html';
 const OUT = path.join(__dirname, 'out', 'rushv');
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true); };
 

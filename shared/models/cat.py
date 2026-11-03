@@ -1,5 +1,5 @@
 # Miw's Town: the cat — chubby, big-eared, with tabby stripes and white socks.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/cat.py -- models/cat.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/cat.py -- shared/models/cat.glb [preview.png]
 import os, sys; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 

@@ -1,5 +1,5 @@
 # Miw's Town: the bear — round ears, a cream muzzle and a button nose.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/bear.py -- models/bear.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/bear.py -- shared/models/bear.glb [preview.png]
 import os, sys; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 

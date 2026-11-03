@@ -1,6 +1,6 @@
 # Miw's Town: Miw — a little girl with long straight dark hair and blunt bangs, round gold glasses, a big yellow sweater,
 # brown shorts, white socks and sneakers, and a little brown backpack.
-#   /Applications/Blender.app/Contents/MacOS/Blender -b -P models/miw.py -- models/miw.glb [preview.png]
+#   /Applications/Blender.app/Contents/MacOS/Blender -b -P shared/models/miw.py -- shared/models/miw.glb [preview.png]
 import os, sys, random; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
 
