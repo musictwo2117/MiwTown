@@ -1145,6 +1145,14 @@ function leaveKitchen() {
   kitchen.on = false; prep.on = true; $('overlay').hidden = true; $('prepBar').hidden = false;
   updatePlates(); renderHands(); sfx.pick();
 }
+// tapping a dessert in the café before opening: back to the kitchen, ready to bake that one
+function bakeFromCafe(id) {
+  if (!prep.on || menuOpen) return;
+  if (!unlocked(id, game.day)) return toast(game.day >= DESSERTS[id].day ? `Buy the ${DESSERTS[id].name} recipe in the shop after closing 🛒` : `${DESSERTS[id].name} opens on day ${DESSERTS[id].day}`);
+  backToKitchen();
+  if (INGR[id].includes('berry') && kitchen.berries < 1) { kitchen.step = null; return renderStage(); }   // the picker says what's missing
+  beginRecipe(id); renderStage(); sfx.tap();
+}
 function backToKitchen() { prep.on = false; $('prepBar').hidden = true; kitchen.on = true; $('overlay').hidden = false; sfx.tap(); }
 function openTheShop() {
   // nothing on the shelves: make sure that's what they meant
@@ -1172,7 +1180,7 @@ function openKitchen(d, opts = {}) {
     leaveKitchen();
   };
   $('kcanvas').appendChild(kst.r.domElement); kst.reset();
-  $('pickBtn').textContent = pickLabel(); $('pickBtn').onclick = () => { harvest(6, true); renderStock(); };
+  $('pickBtn').textContent = pickLabel(); $('pickBtn').onclick = () => { harvest(6, true); renderStock(); if (!kitchen.step) renderStage(); };
   renderStage(); renderStock();
 }
 function renderStock() {
@@ -1289,7 +1297,10 @@ function renderStage() {
   if (!st) {
     kst.set(null);
     const ids = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink);
-    el.innerHTML = `<p class="khint">${kitchen.msg || 'Pick a dessert to bake'}</p><div class="recs">${ids.map(id => `<button class="rec" data-id="${id}"><i>${icon(id)}</i>${DESSERTS[id].name}</button>`).join('')}</div>`;
+    // a dessert that needs strawberries can't be started without any: say so here, on the card and on the garden button, not in a toast the window covers
+    const noBerry = kitchen.berries < 1, needs = id => noBerry && INGR[id].includes('berry');
+    el.innerHTML = `<p class="khint">${kitchen.msg || (noBerry ? '🍓 Out of strawberries! Pick some from the garden first' : 'Pick a dessert to bake')}</p><div class="recs">${ids.map(id => `<button class="rec${needs(id) ? ' need' : ''}" data-id="${id}"><i>${icon(id)}</i>${DESSERTS[id].name}${needs(id) ? '<small>🍓 needs strawberries</small>' : ''}</button>`).join('')}</div>`;
+    if ($('pickBtn')) $('pickBtn').classList.toggle('pulse', noBerry);
     el.querySelectorAll('.rec').forEach(b => b.onclick = () => { wakeAudio(); kitchen.msg = ''; const rid = b.dataset.id; if (INGR[rid].includes('berry') && kitchen.berries < 1) { toast('🍓 No strawberries left! Pick some from the garden first'); sfx.nope(); return; } beginRecipe(rid); sfx.tap(); renderStage(); });
   } else if (st.kind === 'ruined') {
     kst.set(null);
