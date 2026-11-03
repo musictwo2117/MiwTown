@@ -210,12 +210,14 @@ const kst = (() => {
 
   // ----- donuts: knead, roll, cut, fry, glaze, sprinkles -----
   const dnG = new THREE.Group(); dnG.position.set(0.5, TOP, 0.2); sc.add(dnG);
-  const DN_SPOTS = [[-0.62, -0.3], [0, -0.3], [0.62, -0.3], [-0.62, 0.3], [0, 0.3], [0.62, 0.3]], DN_GLAZE = '#f6a5bd';
+  const DN_SPOTS = [[-0.62, -0.3], [0, -0.3], [0.62, -0.3], [-0.62, 0.3], [0, 0.3], [0.62, 0.3]], DN_GLAZE = '#ee6f9b';
   function makeDonut() {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.09, 12, 28), new THREE.MeshPhongMaterial({ color: '#f3d2a2', shininess: 20 })); body.rotation.x = PI / 2;
-    const gl = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.094, 12, 28), new THREE.MeshPhongMaterial({ color: DN_GLAZE, shininess: 90, specular: new THREE.Color(0x999999) })); gl.rotation.x = PI / 2; gl.scale.set(1, 1, 0.6); gl.position.y = 0.06; gl.visible = false;
-    g.add(body, gl); g.userData = { body, gl }; return g;
+    const gl = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.094, 16, 36), new THREE.MeshPhongMaterial({ color: '#f7a6c2', shininess: 45, specular: new THREE.Color(0x77666c), emissive: new THREE.Color('#5a1c33') })); gl.rotation.x = PI / 2; gl.scale.set(1, 1, 0.85); gl.position.y = 0.05; gl.visible = false;
+    const dr = new THREE.Group(); dr.visible = false;   // thick drips of glaze running down the outside edge
+    for (let i = 0; i < 7; i++) { const a = i / 7 * PI * 2 + 0.4, len = 0.025 + 0.03 * ((i * 37) % 5) / 4; dr.add(mesh(sph(0.03, 8), DN_GLAZE, { x: Math.cos(a) * 0.285, y: 0.03 - len * 0.5, z: Math.sin(a) * 0.285, s: [1, 1 + len * 28, 1], cast: false })); }
+    g.add(body, gl, dr); g.userData = { body, gl, dr }; return g;
   }
   // the board: a ball of dough that is kneaded, rolled flat and cut into six rings
   const boardG = new THREE.Group(); dnG.add(boardG);
@@ -243,7 +245,11 @@ const kst = (() => {
   // the glaze bowl, with the tray of donuts held over it
   const glzG = new THREE.Group(); dnG.add(glzG);
   glzG.add(mesh(cyl(1.3, 1.15, 0.5, 36), '#fbf8f1', { y: 0.25, s: [1, 1, 0.75] }));
-  const glazePool = new THREE.Mesh(cyl(1.22, 1.22, 0.04, 36), new THREE.MeshPhongMaterial({ color: DN_GLAZE, shininess: 90, specular: new THREE.Color(0xffffff) })); glazePool.position.y = 0.52; glazePool.scale.z = 0.75; glzG.add(glazePool);
+  // the glaze is a glossy, rippling surface: the donuts leave dimples in it and rings spread out from them
+  const glazePool = new THREE.Mesh(new THREE.RingGeometry(0.001, 1.22, 48, 14).rotateX(-PI / 2), new THREE.MeshPhongMaterial({ color: '#ffffff', vertexColors: true, shininess: 38, specular: new THREE.Color(0x6a5a60), emissive: new THREE.Color('#33101f'), side: THREE.DoubleSide })); glazePool.position.y = 0.56; glazePool.scale.z = 0.75; glzG.add(glazePool);
+  const poolBase = glazePool.geometry.attributes.position.array.slice(); glazePool.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(glazePool.geometry.attributes.position.count * 3), 3));   // soft streaks of lighter and deeper cream, painted per vertex
+  const glazeLight = new THREE.PointLight('#fff4f0', 0, 7, 2); glazeLight.position.set(0.2, 1.5, 2.6); glzG.add(glazeLight);   // a bright light near the camera, so the wet glaze catches a highlight
+  glzG.add(mesh(new THREE.TorusGeometry(1.2, 0.05, 10, 48), '#ffcadb', { rx: PI / 2, y: 0.55, s: [1, 0.75, 1], cast: false }));   // glaze climbing the bowl wall
   const tray = new THREE.Group(); glzG.add(tray); tray.add(mesh(box(2.1, 0.05, 1.0), '#fffaf3', { y: -0.025 }));
   const trayDonuts = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x * 0.92, 0.09, z * 0.9); tray.add(d); return d; });
   let trayY = 1.15, trayRot = PI, sprinkles = [];
@@ -325,7 +331,7 @@ const kst = (() => {
     if (kind === 'pour' || kind === 'glaze') { level = 0; pouring = false; tilt = 0; }
     if (kind === 'knead') { kneadK = 0; kneadP = 0; rollP = 0; rollDown = false; cutN = 0; cutDone.fill(false); cutAge.fill(1); }
     if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; dipTime = 0; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.position.y = 1.6; d.userData.splashed = false; d.userData.body.material.color.set('#f3d2a2'); }); }
-    if (kind === 'glaze') { trayY = 1.15; trayRot = PI; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; }); }
+    if (kind === 'glaze') { trayY = 1.15; trayRot = PI; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; d.userData.dr.visible = false; }); }
     if (kind === 'bake') { bakeHeat = 0; ovenFill = null; ovenMat = null; }
     if (TIN_MODES.includes(kind)) {
       cupDone.fill(false); cupN = 0; toolI = 4; toolK = 1;
@@ -864,8 +870,19 @@ const kst = (() => {
         } else { trayY += (0.85 - trayY) * Math.min(1, dt * 5); trayRot += (0 - trayRot) * Math.min(1, dt * 5); }
         tray.position.y = trayY; tray.rotation.x = trayRot;
         const a = 0.55 + 0.45 * Math.min(1, level / POUR_T);
-        trayDonuts.forEach(d => { d.userData.gl.visible = level > 0.3; d.userData.gl.scale.set(a, a, 0.6); });
-        glazePool.position.y = 0.52 - 0.02 * level;
+        trayDonuts.forEach(d => { d.userData.gl.visible = level > 0.3; d.userData.gl.scale.set(a, a, 0.85); d.userData.dr.visible = level > 0.3; });
+        glazePool.position.y = 0.56 - 0.02 * level; glazeLight.intensity = 1.3;
+        // ripples: a dimple under each dipped donut, and rings spreading out of it; the pool also heaves gently
+        const pp = glazePool.geometry.attributes.position, glazeCol = glazePool.geometry.attributes.color, dip = mode === 'glaze' ? Math.min(1, Math.max(0, (level - 0.15) / 0.5)) * (trayY < 0.95 ? 1 : 0.3) : 0;
+        for (let i = 0; i < pp.count; i++) {
+          const x = poolBase[i * 3], z = poolBase[i * 3 + 2]; let y = 0.012 * Math.sin(x * 4 + t * 1.6) + 0.01 * Math.sin(z * 5 - t * 1.3);
+          if (dip > 0) for (let k = 0; k < 6; k++) { const dx = x - DN_SPOTS[k][0] * 0.92, dz = z + DN_SPOTS[k][1] * 0.9 / 0.75, d2 = dx * dx + dz * dz, d = Math.sqrt(d2); y += dip * (-0.06 * Math.exp(-d2 / 0.07) + 0.045 * Math.exp(-((d - 0.34) ** 2) / 0.012) + 0.012 * Math.sin(d * 14 - t * 7) * Math.exp(-d * 3)); }   // a dimple with a thick fold of cream pushed up round it
+          pp.array[i * 3 + 1] = Math.max(y, -0.04);
+          const r = Math.hypot(x, z), th = Math.atan2(z, x), sw = 0.5 + 0.5 * Math.sin(th * 3 + r * 7 - t * 0.5) * Math.cos(r * 5 + t * 0.3), cc = glazeCol.array;   // creamy swirls, lighter on the folds
+          cc[i * 3] = 0.95 + 0.05 * sw; cc[i * 3 + 1] = 0.4 + 0.17 * sw + Math.max(0, y) * 4; cc[i * 3 + 2] = 0.58 + 0.14 * sw + Math.max(0, y) * 3;
+        }
+        pp.needsUpdate = true; glazeCol.needsUpdate = true; glazePool.geometry.computeVertexNormals();
+        if (mode === 'glaze' && !pouring && level > 0.3 && Math.random() < 0.3) { const d = trayDonuts[(Math.random() * 6) | 0]; emit(tray.localToWorld(d.position.clone().add(V3((Math.random() - 0.5) * 0.4, -0.02, (Math.random() - 0.5) * 0.3))), V3(0, -0.2, 0), 0.55, DN_GLAZE, 0.03, 4, 0.5); }
       }
       mixG.visible = mode === 'add' || mode === 'stir'; ovenG.visible = mode === 'bake' || mode === 'bake-out'; decoG.visible = mode === 'deco' || mode === 'drizzle' || mode === 'done';
       if (mode === 'stir' || mode === 'add') {
