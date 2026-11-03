@@ -5,7 +5,7 @@
 #   ingredients  strawberry egg cheese flour cookie milk butter chocolate pretzel sparkle
 #   money        coin banknote moneybag phone receipt
 #   feelings     heart star flame angry thought
-#   shop         clock bell lock pan spoon bowl ribbon chefhat sprout mallet finger
+#   shop         clock bell lock pan spoon bowl ribbon chefhat sprout mallet finger showcase
 #   buttons      speaker mute gear bin disk
 # Written in the pages' own coordinates (y up, the front faces +z), like the buildings and furniture.
 import os, sys, math, random; sys.path.insert(0, os.path.dirname(__file__))
@@ -257,6 +257,16 @@ def pan(g):
 def spoon(g):
     cyl('handle', g, 0.045, 0.06, 0.85, (-0.0, 0.42, 0), C(WOOD, 0.6), r=0.02, rot=(0, 0, -0.45), seg=14)
     ball('scoop', g, 0.22, (0.19, 0.9, 0), C('#d9a66e', 0.55), scale=(1, 1.3, 0.35), rot=(0, 0, -0.45), seg=18)
+
+@icon
+def showcase(g):   # a glass cloche on a cake plate: the counter's display case
+    cyl('plate', g, 0.56, 0.5, 0.07, (0, 0.035, 0), C('#ffc4d6', 0.5), r=0.025, seg=40)
+    dome('cloche', g, 0.46, (0, 0.07, 0), C('#e3eef8', 0.2), squash=1.1, seg=40, lip=0.03)
+    torus('band', g, 0.465, 0.025, (0, 0.085, 0), C('#ffffff', 0.3), rot=(math.pi / 2, 0, 0), seg=40, sides=8)
+    ball('knob', g, 0.07, (0, 0.62, 0), C(GOLD, 0.3), seg=14)
+    cyl('cake', g, 0.18, 0.18, 0.16, (0, 0.15, 0), C('#f48fa8', 0.5), r=0.04, seg=24)
+    ball('cherry', g, 0.05, (0, 0.28, 0), C('#ef5470', 0.35), seg=12)
+    shine(g, 'shine', (-0.22, 0.42, 0.3), 0.06)
 
 @icon
 def bowl(g):

@@ -25,7 +25,7 @@ const DAY_SECONDS = 90;
 // the daily goal climbs steeply over the first five days (learning the shop), then slowly: a fast player keeps up for weeks, a steady one hits a wall around day 11
 const goalFor = d => Math.round((d <= 5 ? 75 + (d - 1) * 26 : 179 + (d - 5) * 6) / 5) * 5;
 const tablesFor = d => Math.min(5, d + 2);
-// the basic menu opens by day; the others (they have a `cost`) must also be bought with coins in the recipe shop
+// the basic menu opens by day; the others (they have a `cost`) must also be bought with coins in the shop
 const owns = id => !DESSERTS[id].cost || (save.recipes || []).includes(id);
 const unlocked = (id, d) => DESSERTS[id].day <= d && owns(id);
 // the counter's display case holds 4, 6 or 8 plates (upgraded in the shop); you pick which of your desserts stand on them
@@ -441,7 +441,7 @@ function updatePlates() {
     const open = onCounter(st.id), d = DESSERTS[st.id], n = stockOf(st.id);
     st.label.className = 'plate' + (!open ? ' locked' : n ? '' : ' sold') + (caseSlots() > 4 ? ' tiny' : '');
     st.label.innerHTML = !open ? (game.day >= d.day ? '🔒 recipe' : `🔒 day ${d.day}`) : n ? `${d.emoji} ${priceOf(st.id)}🪙${d.drink ? '' : ` ×${n}`}` : `${d.emoji} sold out`;
-    st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the recipe shop` : `Opens on day ${d.day}`;
+    st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the shop` : `Opens on day ${d.day}`;
   });
 }
 

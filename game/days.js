@@ -34,24 +34,29 @@ function daySummary(goal, won, stars) {
     <div class="stats"><div><b>${game.coins}</b><span>coins</span></div><div><b>${game.served}</b><span>happy friends</span></div><div><b>${game.missed}</b><span>left hungry</span></div></div>
     <div class="wallet">🪙 ${save.wallet} saved</div>
     <button class="go" id="goBtn">${won ? `Open day ${game.day + 1} →` : `Try day ${game.day} again`}</button>
-    <button class="alt" id="shopBtn">🛒 Recipe shop${news ? ' ✨' : ''}</button>
+    <button class="alt" id="shopBtn">🛒 Shop${news ? ' ✨' : ''}</button>
     ${won ? `<button class="alt" id="againBtn">Replay day ${game.day}</button>` : ''}`;
   $('overlay').hidden = false;
   $('shopBtn').onclick = () => openShop(next, () => daySummary(goal, won, stars));
   $('goBtn').onclick = () => openKitchen(won ? game.day + 1 : game.day);
   if (won) $('againBtn').onclick = () => openKitchen(game.day);
 }
-// the recipe shop: spend the coins you have kept on dishes and drinks that are open by now
-function openShop(day, back) {
+// the shop: spend the coins you have kept on dishes and drinks that are open by now
+// the shop sells things by category: each tab is one category (add outfits, furniture... here as they come)
+let shopTab = 'recipes';
+const SHOP_TABS = [['recipes', 'Recipes'], ['counter', 'Counter']];
+function openShop(day, back, tab) {
+  if (tab) shopTab = tab;
   const ids = Object.keys(DESSERTS).filter(id => DESSERTS[id].cost);
   $('panel').classList.add('shopwide');   // a wide, landscape window that scrolls, so a long menu is easy to browse
   const c = caseSection();
   $('panel').innerHTML = `
-    <div class="shophead"><div><h2>🛒 Recipe shop</h2><small>Learn new recipes with the coins you keep.</small></div><div class="wallet">🪙 ${save.wallet}</div></div>
-    <div class="shopgrid">${c.upgrade}${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
-      return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>
-    ${c.pick}
+    <div class="shophead"><div><h2>🛒 Shop</h2><small>Spend the coins you keep.</small></div><div class="wallet">🪙 ${save.wallet}</div></div>
+    <div class="shoptabs">${SHOP_TABS.map(([k, n]) => `<button data-tab="${k}" class="${k === shopTab ? 'on' : ''}">${n}</button>`).join('')}</div>
+    ${shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
+      return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>`}
     <button class="go" id="backBtn">Back</button>`;
+  $('panel').querySelectorAll('.shoptabs button').forEach(b => b.onclick = () => { sfx.tap(); openShop(day, back, b.dataset.tab); });
   $('panel').querySelectorAll('.shopgrid button[data-id]').forEach(b => b.onclick = () => {
     const id = b.dataset.id, d = DESSERTS[id]; if (owns(id) || save.wallet < d.cost) return;
     save.wallet -= d.cost; (save.recipes = save.recipes || []).push(id); store(); sfx.fanfare(); openShop(day, back);
@@ -69,8 +74,8 @@ function openShop(day, back) {
 // the display case: buy more plates for the counter, and choose which of your desserts stand on them
 function caseSection() {
   const lv = save.caseLv || 0, next = CASE_COST[lv + 1], mine = dessertIds().filter(id => unlocked(id, game.day)), on = shelfIds();
-  const upgrade = next === undefined ? `<div class="shoprow"><i>🧁</i><span><b>Display case</b><small>${caseSlots()} plates · full</small></span><em>✓ Max</em></div>`
-    : `<div class="shoprow"><i>🧁</i><span><b>Bigger display case</b><small>${caseSlots()} → ${CASE_SLOTS[lv + 1]} plates on the counter</small></span><button id="caseBtn" ${save.wallet < next ? 'disabled' : ''}>${next} 🪙</button></div>`;
+  const upgrade = next === undefined ? `<div class="shoprow"><i>🏪</i><span><b>Display case</b><small>${caseSlots()} plates · full</small></span><em>✓ Max</em></div>`
+    : `<div class="shoprow"><i>🏪</i><span><b>Bigger display case</b><small>${caseSlots()} → ${CASE_SLOTS[lv + 1]} plates on the counter</small></span><button id="caseBtn" ${save.wallet < next ? 'disabled' : ''}>${next} 🪙</button></div>`;
   const pick = mine.length > caseSlots() ? `<p class="hint">On the counter (${on.length}/${caseSlots()}): tap to swap</p><div class="chips">${mine.map(id => `<button data-id="${id}" class="${on.includes(id) ? 'on' : ''}">${DESSERTS[id].emoji} ${DESSERTS[id].name}</button>`).join('')}</div>` : '';
   return { upgrade, pick };
 }
