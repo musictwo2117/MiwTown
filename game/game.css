@@ -6,6 +6,20 @@ html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(#b9e0f
 #camctl button{border:0;background:var(--card);border-radius:12px;width:38px;height:38px;font:600 18px 'Fredoka';color:var(--ink);box-shadow:0 6px 18px rgba(160,80,115,.16);display:grid;place-items:center}
 #camctl button:active{transform:scale(.94)}
 body.homing #camctl{display:none}
+/* the stock tab in the left corner: what's left of each dessert, in one place that stays put when the camera turns */
+#stockTab{position:fixed;left:12px;top:76px;z-index:5;display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:16px}
+#stockTab:empty{display:none}
+body.homing #stockTab{display:none}
+.srow{border:0;background:#fff8fa;border-radius:12px;display:grid;grid-template-columns:30px auto;grid-template-rows:auto auto;column-gap:6px;align-items:center;padding:4px 9px 4px 5px;min-width:78px;text-align:left;font:600 11px 'Nunito';color:var(--ink);cursor:pointer}
+.srow i{grid-row:1/3;width:30px;height:30px;display:grid;place-items:center;font-style:normal;font-size:20px}
+.srow i img{width:30px;height:30px;object-fit:contain}
+.srow b{font:600 15px 'Fredoka';line-height:1}
+.srow small{font:600 10px 'Nunito';color:var(--soft)}
+.srow.sold{background:#4b3442;color:#fff;animation:glow 1s infinite}
+.srow.sold small{color:#ffd0dc}
+.srow.locked{background:rgba(75,52,66,.12);color:var(--soft)}
+.srow.locked i{opacity:.5}
+@media (max-width:560px){#stockTab{top:70px;padding:4px;gap:3px}.srow{min-width:64px;padding:3px 7px 3px 4px;grid-template-columns:24px auto}.srow i,.srow i img{width:24px;height:24px}.srow b{font-size:13px}}
 #vig{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 46%,transparent 42%,rgba(16,74,108,.62) 100%);mix-blend-mode:multiply}
 .ts{position:fixed;left:0;right:0;height:20%;pointer-events:none;z-index:1;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 #tsT{top:0;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}

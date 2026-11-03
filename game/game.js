@@ -423,11 +423,12 @@ const STATIONS = Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).map((id
   return st;
 });
 // spread the plates along the counter: the chosen desserts first, then the ones still locked, up to however many plates the case holds
+const counterOrder = () => [...shelfIds(), ...dessertIds().filter(id => !unlocked(id, game.day))].slice(0, caseSlots());
 function layoutStations() {
-  const n = caseSlots(), order = [...shelfIds(), ...dessertIds().filter(id => !unlocked(id, game.day))].slice(0, n), step = 9.3 / (n - 1), k = Math.min(1, 0.45 + step / 6);
+  const n = caseSlots(), order = counterOrder(), step = 9.3 / (n - 1), k = Math.min(1, 0.45 + step / 6);
   STATIONS.filter(st => !DESSERTS[st.id].drink).forEach(st => {
     const i = order.indexOf(st.id); st.off = i < 0;
-    st.stand.visible = st.hit.visible = !st.off; st.label.style.display = st.off ? 'none' : '';
+    st.stand.visible = st.hit.visible = !st.off; st.label.style.display = 'none';   // the counts are in the stock tab, which doesn't sway when the camera turns
     if (st.off) return;
     const x = -4.65 + i * step; st.x = x; st.pick.x = x; st.stand.position.x = x; st.stand.scale.setScalar(k);
     st.hit.position.x = x; st.hit.scale.x = Math.min(1, step * 0.95 / 2.4);
@@ -449,6 +450,23 @@ function updatePlates() {
     st.label.innerHTML = !open ? (game.day >= d.day ? '🔒 recipe' : `🔒 day ${d.day}`) : n ? `${d.emoji} ${priceOf(st.id)}🪙${d.drink ? '' : ` ×${n}`}` : `${d.emoji} sold out`;
     st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the shop` : `Opens on day ${d.day}`;
   });
+  drawStockTab();
+}
+// the stock tab in the left corner: one row for each plate on the counter, with how many are left
+function drawStockTab() {
+  const el = $('stockTab'); if (!el) return;
+  el.innerHTML = counterOrder().map(id => {
+    const d = DESSERTS[id], open = onCounter(id), n = stockOf(id);
+    return open ? `<button class="srow${n ? '' : ' sold'}" data-id="${id}" title="${d.name}"><i>${icon(id)}</i><b>×${n}</b><small>${priceOf(id)}🪙</small></button>`
+      : `<button class="srow locked" data-id="${id}" title="${d.name}"><i>${icon(id)}</i><small>🔒 ${game.day >= d.day ? 'recipe' : 'day ' + d.day}</small></button>`;
+  }).join('');
+  el.querySelectorAll('.srow').forEach(b => b.onclick = () => tapStock(b.dataset.id));
+}
+function tapStock(id) {
+  if (!game.running || game.paused || menuOpen) return;
+  if (!unlocked(id, game.day)) return toast(game.day >= DESSERTS[id].day ? `Buy the ${DESSERTS[id].name} recipe in the shop after closing 🛒` : `${DESSERTS[id].name} opens on day ${DESSERTS[id].day}`);
+  if (!stockOf(id)) return soldOutTap(id);
+  toast(`${DESSERTS[id].name}: ${stockOf(id)} left`);
 }
 
 // ---------- the cashier: the register at the end of the counter, and a queue to pay in ----------
@@ -654,6 +672,12 @@ pond[1].root.position.set(POND.x + 2.9, 0, POND.z - 1.0); pond[1].hop = true;
 // ---------- the game ----------
 const game = { day: save.day, running: false, open: false, time: DAY_SECONDS, coins: 0, shown: 0, combo: 0, served: 0, missed: 0, spawnIn: 0 };
 let hands = [], queue = [], customers = [], miwPause = 0, soldOutArm = { id: null, until: 0 };
+// sold out: a second tap within a few seconds goes back to the kitchen to bake more
+function soldOutTap(id) {
+  if (soldOutArm.id === id && performance.now() < soldOutArm.until) { soldOutArm.id = null; return restock(id); }
+  soldOutArm = { id, until: performance.now() + 4000 };
+  toast(`${DESSERTS[id].name} is sold out! Tap it again to bake more 🍳`);
+}
 const HAND_MAX = 4, QUEUE_MAX = 12;   // a tray of four, and as many steps queued ahead
 
 function renderHands() {
@@ -700,11 +724,7 @@ function tapScene(e) {
     const d = hit.object.userData;
     if (d.kind === 'field') return enqueue({ kind: 'field', at: FIELD_SPOT });
     if (d.kind === 'station' && !unlocked(d.st.id, game.day)) return toast(game.day >= DESSERTS[d.st.id].day ? `Buy the ${DESSERTS[d.st.id].name} recipe in the shop after closing 🛒` : `${DESSERTS[d.st.id].name} opens on day ${DESSERTS[d.st.id].day}`);
-    if (d.kind === 'station' && !stockOf(d.st.id)) {   // sold out: a second tap within a few seconds goes back to the kitchen to bake more
-      if (soldOutArm.id === d.st.id && performance.now() < soldOutArm.until) { soldOutArm.id = null; return restock(d.st.id); }
-      soldOutArm = { id: d.st.id, until: performance.now() + 4000 };
-      return toast(`${DESSERTS[d.st.id].name} is sold out! Tap it again to bake more 🍳`);
-    }
+    if (d.kind === 'station' && !stockOf(d.st.id)) return soldOutTap(d.st.id);
     if (d.kind === 'table') return tapTable(d.t);
     return enqueue(d.kind === 'station' ? { kind: 'station', st: d.st, at: d.st.pick } : { kind: 'register', at: REG.back });
   }
