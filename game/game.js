@@ -25,14 +25,24 @@ const DAY_SECONDS = 90;
 // the daily goal climbs steeply over the first five days (learning the shop), then slowly: a fast player keeps up for weeks, a steady one hits a wall around day 11
 const goalFor = d => Math.round((d <= 5 ? 75 + (d - 1) * 26 : 179 + (d - 5) * 6) / 5) * 5;
 const tablesFor = d => Math.min(5, d + 2);
-// the basic menu opens by day; the others (they have a `cost`) must also be bought with coins in the recipe shop
+// the basic menu opens by day; the others (they have a `cost`) must also be bought with coins in the shop
 const owns = id => !DESSERTS[id].cost || (save.recipes || []).includes(id);
 const unlocked = (id, d) => DESSERTS[id].day <= d && owns(id);
+// the counter's display case holds 4, 6 or 8 plates (upgraded in the shop); you pick which of your desserts stand on them
+const CASE_SLOTS = [4, 6, 8], CASE_COST = [0, 150, 300];
+const caseSlots = () => CASE_SLOTS[Math.min(2, save.caseLv || 0)];
+const dessertIds = () => Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink);
+function shelfIds() {   // the desserts on the counter: the ones you put there, then any other you can sell, until the plates run out
+  const ok = id => unlocked(id, game.day) && !(save.off || []).includes(id), want = (save.shelf || []).filter(id => DESSERTS[id] && !DESSERTS[id].drink && ok(id));
+  dessertIds().forEach(id => { if (ok(id) && !want.includes(id)) want.push(id); });
+  return want.slice(0, caseSlots());
+}
+const onCounter = id => DESSERTS[id].drink ? unlocked(id, game.day) : shelfIds().includes(id);
 
 // ---------- saved progress (this browser only) ----------
 const SAVE_KEY = 'miw-cheesecake-rush';
 const SLOT_KEY = n => `${SAVE_KEY}-slot-${n}`, SET_KEY = `${SAVE_KEY}-settings`;
-const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [] });   // wallet: coins kept from every day, spent in the shop
+const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [] });   // wallet: coins kept from every day, spent in the shop
 let save = defaultSave(), slot = 0, menuOpen = false;   // the slot is picked on the home screen (home.js)
 let settings = { muted: false, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
@@ -406,9 +416,21 @@ const STATIONS = Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).map((id
   st.hit = hitBox(2.4, 3, 2.4, new THREE.Vector3(x, 1.3, COUNTER_Z + 0.4), { kind: 'station', st });
   return st;
 });
+// spread the plates along the counter: the chosen desserts first, then the ones still locked, up to however many plates the case holds
+function layoutStations() {
+  const n = caseSlots(), order = [...shelfIds(), ...dessertIds().filter(id => !unlocked(id, game.day))].slice(0, n), step = 9.3 / (n - 1), k = Math.min(1, 0.45 + step / 6);
+  STATIONS.filter(st => !DESSERTS[st.id].drink).forEach(st => {
+    const i = order.indexOf(st.id); st.off = i < 0;
+    st.stand.visible = st.hit.visible = !st.off; st.label.style.display = st.off ? 'none' : '';
+    if (st.off) return;
+    const x = -4.65 + i * step; st.x = x; st.pick.x = x; st.stand.position.x = x; st.stand.scale.setScalar(k);
+    st.hit.position.x = x; st.hit.scale.x = Math.min(1, step * 0.95 / 2.4);
+  });
+}
 function dressStations() {
+  layoutStations();
   STATIONS.forEach(st => {
-    const open = unlocked(st.id, game.day), d = DESSERTS[st.id];
+    const open = onCounter(st.id), d = DESSERTS[st.id];
     st.show.clear();
     if (open) st.show.add(dessertModel(st.id));
   });
@@ -416,10 +438,10 @@ function dressStations() {
 }
 function updatePlates() {
   STATIONS.forEach(st => {
-    const open = unlocked(st.id, game.day), d = DESSERTS[st.id], n = stockOf(st.id);
-    st.label.className = 'plate' + (!open ? ' locked' : n ? '' : ' sold');
+    const open = onCounter(st.id), d = DESSERTS[st.id], n = stockOf(st.id);
+    st.label.className = 'plate' + (!open ? ' locked' : n ? '' : ' sold') + (caseSlots() > 4 ? ' tiny' : '');
     st.label.innerHTML = !open ? (game.day >= d.day ? '🔒 recipe' : `🔒 day ${d.day}`) : n ? `${d.emoji} ${priceOf(st.id)}🪙${d.drink ? '' : ` ×${n}`}` : `${d.emoji} sold out`;
-    st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the recipe shop` : `Opens on day ${d.day}`;
+    st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the shop` : `Opens on day ${d.day}`;
   });
 }
 
@@ -758,7 +780,7 @@ function spawn() {
   const t = free[Math.random() * free.length | 0];
   const kinds = Object.keys(SPECIES), species = kinds[Math.random() * kinds.length | 0], sp = SPECIES[species];
   // only promise what can really be served: the shelf plus the tray, minus what friends already ordered and haven't been given
-  const all = Object.keys(DESSERTS).filter(id => unlocked(id, game.day) && !DESSERTS[id].drink), avail = {};
+  const all = dessertIds().filter(id => onCounter(id)), avail = {};
   all.forEach(id => { avail[id] = stockOf(id) + hands.filter(h => h === id).length; });
   customers.forEach(c => { if (['in', 'think', 'wait'].includes(c.state)) c.order.forEach((id, i) => { if (!c.served[i] && avail[id] !== undefined) avail[id]--; }); });
   const have = () => all.filter(id => avail[id] > 0);
