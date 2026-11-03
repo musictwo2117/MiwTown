@@ -211,7 +211,7 @@ http.createServer((req, res) => {
     res.setHeader('cache-control', 'no-store');
     return res.end(html);
   }
-  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js' || url === '/game.js' || url === '/town.js' || url === '/room.js') && req.method === 'GET') {
+  if ((url === '/panel.js' || url === '/scenery.js' || url === '/models.js' || url === '/home.js' || url === '/i18n.js' || url === '/icons.js' || url === '/game.js' || url === '/kitchen.js' || url === '/days.js' || url === '/town.js' || url === '/room.js') && req.method === 'GET') {
     res.setHeader('content-type', 'text/javascript; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
