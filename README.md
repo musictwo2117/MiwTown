@@ -22,7 +22,7 @@ Two halves share the same characters: the **agent town** (Town and Cat Room, bel
 
 You need [Node.js](https://nodejs.org) 18+ (no `npm install`, there are no dependencies), [Claude Code](https://claude.com/claude-code) logged in on the same machine, and a browser with WebGL.
 
-1. Run `node agent/server.js` and open http://localhost:19100.
+1. Run `node agent/server.js` and open http://127.0.0.1:19100.
 2. Add the hooks from `agent/claude-settings-snippet.json` to `~/.claude/settings.json`, with `/path/to/MiwTown` replaced by this folder (use the full path to `node` if hooks can't find it).
 3. Start a Claude Code session anywhere. A new friend moves into town. 🎉
 
@@ -67,7 +67,7 @@ cd MiwTown
 node serve.js
 ```
 
-Then open http://localhost:19100/game. Run it from the repo folder (`serve.js` just starts `agent/server.js`, the one server behind the town and the game). If it stops with `EADDRINUSE`, a copy of the server is already running on that port: just open the link above, or stop the old one first (`lsof -ti :19100 | xargs kill`), or pick another port with `AGENT_OFFICE_PORT=19200 node serve.js` and open http://localhost:19200/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
+Then open http://127.0.0.1:19100/game. Run it from the repo folder (`serve.js` just starts `agent/server.js`, the one server behind the town and the game). If it stops with `EADDRINUSE`, a copy of the server is already running on that port: just open the link above, or stop the old one first (`lsof -ti :19100 | xargs kill`), or pick another port with `AGENT_OFFICE_PORT=19200 node serve.js` and open http://127.0.0.1:19200/game. (The links use `127.0.0.1` rather than `localhost` because the server listens on IPv4 only, and some browsers try `localhost` over IPv6 first and show "refused to connect".) No Node.js? Python works too: run `python3 -m http.server 19101` and open http://127.0.0.1:19101/game/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
 
 ### How it plays
 
