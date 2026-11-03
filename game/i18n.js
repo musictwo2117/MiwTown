@@ -16,6 +16,9 @@
     ['Roll the dough flat: drag the rolling pin back and forth!', 'รีดแป้งให้แบน: ลากไม้นวดไปมา!'], ['Tap each ring to cut out a donut!', 'แตะวงกลมแต่ละอันเพื่อตัดโดนัท!'],
     ['Flip the donuts when the first side is golden!', 'พลิกโดนัทตอนด้านแรกเหลืองทอง!'], ['Now the other side! Take them out when golden.', 'ทีนี้อีกด้าน! เอาออกตอนเหลืองทอง'], ['Flip!', 'พลิก!'],
     ['Hold to dip the donuts, let go in the green. Too deep and the glaze goes everywhere!', 'กดค้างเพื่อจุ่มโดนัท ปล่อยตอนอยู่ในโซนเขียว จุ่มลึกไปไอซิ่งจะเลอะ!'], ['Hold to dip', 'กดค้างเพื่อจุ่ม'],
+    ['Tap each paper cup to scoop batter into it!', 'แตะถ้วยกระดาษทีละใบเพื่อตักแป้งใส่!'], ['Tap each cupcake to pipe the frosting!', 'แตะคัพเค้กทีละลูกเพื่อบีบครีม!'], ['Tap each cupcake to add the kitty ears!', 'แตะคัพเค้กทีละลูกเพื่อใส่หูแมว!'],
+    ['Tap the batter to lay the pretzels, nice and spread out!', 'แตะที่แป้งเพื่อวางเพรทเซล ให้กระจายสวย ๆ!'], ['Drag over the cake to drizzle the caramel!', 'ลากไปบนเค้กเพื่อราดคาราเมล!'],
+    ['just sold out! Tap its plate twice to bake more 🍳', 'เพิ่งหมด! แตะป้ายสองครั้งเพื่ออบเพิ่ม 🍳'], ['sold out! Tap its plate twice to bake more 🍳', 'หมดแล้ว! แตะป้ายสองครั้งเพื่ออบเพิ่ม 🍳'], ['is sold out! Tap it again to bake more 🍳', 'หมดแล้ว! แตะอีกครั้งเพื่ออบเพิ่ม 🍳'],
     ['Shake the sprinkles over the donuts!', 'เขย่าช็อกโกแลตเม็ดสีโรยบนโดนัท!'], ['Shake!', 'เขย่า!'], ['Nice!', 'ดีเลย!'], ['Great!', 'เก่งมาก!'], ['Pick the next one!', 'เลือกอันต่อไป!'],
     // the HUD, toasts and popups
     ['One thing at a time! 🙈', 'ทีละอย่างนะ! 🙈'], ['Hands full! Serve something first 🙌', 'มือเต็มแล้ว! เสิร์ฟก่อนนะ 🙌'],
