@@ -71,7 +71,7 @@
   ];
   // texts that are a whole piece of text on their own (short words that must not match inside others)
   const X = {
-    HANDS: 'มือ', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', 'Back to the town': 'กลับไปที่เมือง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
+    HANDS: 'มือ', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
     Strawberry: 'สตรอว์เบอร์รี่', CHANGE: 'เงินทอน', Egg: 'ไข่', Flour: 'แป้ง', 'Cream cheese': 'ครีมชีส', 'Cookie crust': 'ฐานคุกกี้', Milk: 'นม', Butter: 'เนย', Chocolate: 'ช็อกโกแลต', Pretzel: 'เพรทเซล',
     coins: 'เหรียญ', 'happy friends': 'เพื่อนที่อิ่มสุข', 'left hungry': 'เพื่อนที่หิวกลับไป',
     Continue: 'เล่นต่อ', 'New game': 'เริ่มเกมใหม่', Volume: 'ระดับเสียง', Music: 'เพลง', 'Visual effects': 'เอฟเฟกต์ภาพ', Camera: 'มุมกล้อง', Language: 'ภาษา',
@@ -140,7 +140,6 @@
   const font = document.createElement('style');
   font.textContent = `html.th *{font-family:'Mali','Fredoka','Nunito',sans-serif !important}html.th .hlogo{font-family:'Fredoka',sans-serif !important}html.th .hlogo i{font-family:system-ui !important}`;
   document.head.appendChild(font);
-  let fontLoaded = false;
   window.I18N = {
     get lang() { return lang; },
     guess() { return (navigator.language || '').toLowerCase().startsWith('th') ? 'th' : 'en'; },
@@ -150,7 +149,6 @@
       document.documentElement.lang = next;
       document.documentElement.classList.toggle('th', next === 'th');
       if (next === 'th') {
-        if (!fontLoaded) { fontLoaded = true; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Mali:wght@400;600&display=swap'; document.head.appendChild(l); }
         walk(document.body);
       } else restore();
     },
