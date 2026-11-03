@@ -197,6 +197,15 @@ button{font:inherit;color:inherit;cursor:pointer}
 .go:active{transform:scale(.97)}
 .alt{border:0;background:none;color:var(--soft);font:600 13px 'Nunito';margin-top:8px;display:block;margin-inline:auto;padding:6px}
 .wallet{font:600 16px 'Fredoka';color:var(--ink,#5b3a47);margin:6px 0}
+#panel.shopwide{width:min(980px,100%);padding:18px 24px 16px}
+.shophead{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;margin-bottom:8px}
+.shophead h2{margin:0}.shophead small{color:var(--soft);font-size:13px}
+.shophead .wallet{font-size:22px;background:#fff6f9;border-radius:99px;padding:6px 16px;margin:0;white-space:nowrap}
+.shopgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;max-height:min(52vh,480px);overflow-y:auto;padding:2px 6px 6px 2px;text-align:left}
+.shopgrid .shoprow{padding:12px 14px;gap:12px}
+.shopgrid .shoprow i{width:56px;height:56px;font-size:34px}.shopgrid .shoprow i img{width:56px;height:56px}
+.shopgrid .shoprow b{font-size:16px}.shopgrid .shoprow small{font-size:12.5px}
+.shopgrid .shoprow button{padding:10px 16px;font-size:15px;white-space:nowrap}
 .shop{display:flex;flex-direction:column;gap:8px;margin:8px 0;text-align:left}
 .shoprow{display:flex;align-items:center;gap:10px;background:#fff6f9;border-radius:14px;padding:8px 10px}
 .shoprow i{width:44px;height:44px;flex:none;display:grid;place-items:center;font-style:normal;font-size:28px}.shoprow i img{width:44px;height:44px}
