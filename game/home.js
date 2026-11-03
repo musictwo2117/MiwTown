@@ -65,7 +65,8 @@
   function startSlot(n, fresh) {
     slot = n;
     if (fresh) { save = defaultSave(); resetKitchen(); }
-    else { const d = readSlot(n) || {}; save = { ...defaultSave(), day: d.day || 1, best: d.best || 0, total: d.total || 0 }; kitchen.stock = d.stock || {}; kitchen.qual = d.qual || {}; kitchen.berries = d.berries ?? 6; plot.ready = d.ripe ?? 8; setPlotView(); updateBerryHud(); }
+    // a save from before the shop keeps the recipes it had already opened
+    else { const d = readSlot(n) || {}; save = { ...defaultSave(), day: d.day || 1, best: d.best || 0, total: d.total || 0, wallet: d.wallet || 0, recipes: d.recipes || Object.keys(DESSERTS).filter(id => DESSERTS[id].cost && DESSERTS[id].day <= (d.day || 1)) }; kitchen.stock = d.stock || {}; kitchen.qual = d.qual || {}; kitchen.berries = d.berries ?? 6; plot.ready = d.ripe ?? 8; setPlotView(); updateBerryHud(); }
     store(); hideHome(); wakeAudio(); openKitchen(save.day);
   }
 

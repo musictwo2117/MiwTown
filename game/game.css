@@ -195,4 +195,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .go{border:0;border-radius:16px;padding:12px 22px;font:600 17px 'Fredoka';background:linear-gradient(140deg,#ff9fbf,#ff7ea6);color:#fff;box-shadow:0 6px 16px rgba(255,90,140,.35);margin-top:12px}
 .go:active{transform:scale(.97)}
 .alt{border:0;background:none;color:var(--soft);font:600 13px 'Nunito';margin-top:8px;display:block;margin-inline:auto;padding:6px}
+.wallet{font:600 16px 'Fredoka';color:var(--ink,#5b3a47);margin:6px 0}
+.shop{display:flex;flex-direction:column;gap:8px;margin:8px 0;text-align:left}
+.shoprow{display:flex;align-items:center;gap:10px;background:#fff6f9;border-radius:14px;padding:8px 10px}
+.shoprow i{width:44px;height:44px;flex:none;display:grid;place-items:center;font-style:normal;font-size:28px}.shoprow i img{width:44px;height:44px}
+.shoprow span{flex:1}.shoprow b{display:block;font:600 15px 'Fredoka'}.shoprow small{color:var(--soft);font-size:12px}
+.shoprow em{font-style:normal;font:600 13px 'Nunito';color:var(--soft)}
+.shoprow button{border:0;border-radius:12px;padding:8px 14px;font:600 14px 'Fredoka';background:linear-gradient(140deg,#ff9fbf,#ff7ea6);color:#fff}
+.shoprow button:disabled{background:#e6dce0;color:#a8959d}
 @media (max-width:560px){#day{min-width:0;padding:8px 11px}#day b{font-size:15px}#clock{font-size:17px;padding:7px 11px}#clock small{display:none}.slot{width:54px;height:54px}}

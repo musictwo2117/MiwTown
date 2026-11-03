@@ -5,12 +5,12 @@ const PI = Math.PI;
 const DESSERTS = {
   cheesecake:   { name: 'Strawberry Cheesecake', emoji: '🍰', price: 10, day: 1, color: '#f48fa8' },
   donut:        { name: 'Strawberry Donut',      emoji: '🍩', price: 8,  day: 1, color: '#f6a5bd' },
-  kittycupcake: { name: 'Kitty Cupcake',         emoji: '🧁', price: 12, day: 2, color: '#ffd1a6' },
-  pretzelcake:  { name: 'Pretzel Cake',          emoji: '🥨', price: 14, day: 3, color: '#eda95e' },
+  kittycupcake: { name: 'Kitty Cupcake',         emoji: '🧁', price: 12, day: 2, cost: 60, color: '#ffd1a6' },
+  pretzelcake:  { name: 'Pretzel Cake',          emoji: '🥨', price: 14, day: 3, cost: 120, color: '#eda95e' },
   // drinks: made at the juice bar, never baked, so they don't run out
   milktea:      { name: 'Pink Milk Tea',         emoji: '🧋', price: 6,  day: 1, color: '#f6b8c8', drink: true },
-  cocoa:        { name: 'Marshmallow Cocoa',     emoji: '☕', price: 7,  day: 2, color: '#a8664a', drink: true },
-  lemonade:     { name: 'Lemon Soda',            emoji: '🍋', price: 6,  day: 3, color: '#fff3a8', drink: true },
+  cocoa:        { name: 'Marshmallow Cocoa',     emoji: '☕', price: 7,  day: 2, cost: 40, color: '#a8664a', drink: true },
+  lemonade:     { name: 'Lemon Soda',            emoji: '🍋', price: 6,  day: 3, cost: 50, color: '#fff3a8', drink: true },
 };
 const SPECIES = {
   cat:     { color: '#f7a072', fav: 'kittycupcake', patience: 1,   tip: 1,   note: 'loves the Kitty Cupcake' },
@@ -25,18 +25,20 @@ const DAY_SECONDS = 90;
 // the daily goal climbs steeply over the first five days (learning the shop), then slowly: a fast player keeps up for weeks, a steady one hits a wall around day 11
 const goalFor = d => Math.round((d <= 5 ? 75 + (d - 1) * 26 : 179 + (d - 5) * 6) / 5) * 5;
 const tablesFor = d => Math.min(5, d + 2);
-const unlocked = (id, d) => DESSERTS[id].day <= d;
+// the basic menu opens by day; the others (they have a `cost`) must also be bought with coins in the recipe shop
+const owns = id => !DESSERTS[id].cost || (save.recipes || []).includes(id);
+const unlocked = (id, d) => DESSERTS[id].day <= d && owns(id);
 
 // ---------- saved progress (this browser only) ----------
 const SAVE_KEY = 'miw-cheesecake-rush';
 const SLOT_KEY = n => `${SAVE_KEY}-slot-${n}`, SET_KEY = `${SAVE_KEY}-settings`;
-const defaultSave = () => ({ day: 1, best: 0, total: 0 });
+const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [] });   // wallet: coins kept from every day, spent in the shop
 let save = defaultSave(), slot = 0, menuOpen = false;   // the slot is picked on the home screen (home.js)
 let settings = { muted: false, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
 const storeSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch {} };
 // the current slot keeps the progress and what's left on the shelves
-const SAVE_VERSION = 1;   // bump when the save's shape changes, and upgrade older saves (no v = version 0) where they are loaded
+const SAVE_VERSION = 2;   // bump when the save's shape changes, and upgrade older saves (no v = version 0) where they are loaded
 const store = () => { if (!slot) return; try { localStorage.setItem(SLOT_KEY(slot), JSON.stringify({ ...save, v: SAVE_VERSION, stock: kitchen.stock, qual: kitchen.qual, berries: kitchen.berries, ripe: plot.ready, updated: Date.now() })); } catch {} };
 
 // ---------- renderer / camera / lights ----------
@@ -416,8 +418,8 @@ function updatePlates() {
   STATIONS.forEach(st => {
     const open = unlocked(st.id, game.day), d = DESSERTS[st.id], n = stockOf(st.id);
     st.label.className = 'plate' + (!open ? ' locked' : n ? '' : ' sold');
-    st.label.innerHTML = !open ? `🔒 day ${d.day}` : n ? `${d.emoji} ${priceOf(st.id)}🪙${d.drink ? '' : ` ×${n}`}` : `${d.emoji} sold out`;
-    st.label.title = open ? d.name : `Opens on day ${d.day}`;
+    st.label.innerHTML = !open ? (game.day >= d.day ? '🔒 recipe' : `🔒 day ${d.day}`) : n ? `${d.emoji} ${priceOf(st.id)}🪙${d.drink ? '' : ` ×${n}`}` : `${d.emoji} sold out`;
+    st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the recipe shop` : `Opens on day ${d.day}`;
   });
 }
 
@@ -669,7 +671,7 @@ renderer.domElement.addEventListener('pointerdown', e => {
   if (hit) {
     const d = hit.object.userData;
     if (d.kind === 'field') return enqueue({ kind: 'field', at: FIELD_SPOT });
-    if (d.kind === 'station' && !unlocked(d.st.id, game.day)) return toast(`${DESSERTS[d.st.id].name} opens on day ${DESSERTS[d.st.id].day}`);
+    if (d.kind === 'station' && !unlocked(d.st.id, game.day)) return toast(game.day >= DESSERTS[d.st.id].day ? `Buy the ${DESSERTS[d.st.id].name} recipe in the shop after closing 🛒` : `${DESSERTS[d.st.id].name} opens on day ${DESSERTS[d.st.id].day}`);
     if (d.kind === 'station' && !stockOf(d.st.id)) {   // sold out: a second tap within a few seconds goes back to the kitchen to bake more
       if (soldOutArm.id === d.st.id && performance.now() < soldOutArm.until) { soldOutArm.id = null; return restock(d.st.id); }
       soldOutArm = { id: d.st.id, until: performance.now() + 4000 };
