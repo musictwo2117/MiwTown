@@ -99,6 +99,28 @@ Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).forEach(id => loadModel(
 }));
 
 // ---------- loop ----------
+// the HUD only touches the page when a value changed: writing the same text every frame still makes the browser redo its layout
+const hudCache = {};
+function hud(id, text) { if (hudCache[id] !== text) { hudCache[id] = text; $(id).textContent = text; } }
+function hudW(id, pct) { const w = pct.toFixed(1) + '%'; if (hudCache['w' + id] !== w) { hudCache['w' + id] = w; $(id).firstElementChild.style.width = w; } }
+function hudClass(id, cls, on) { const k = 'c' + id + cls; if (hudCache[k] !== on) { hudCache[k] = on; $(id).classList.toggle(cls, on); } }
+// keep the café smooth: when the frame rate sags, shed the costly extras one step at a time (blurred strips and vignette, then pixel count)
+const PR_CAP = [2, 2, 1.5, 1.25, 1], perf = { ema: 16.7, tier: 0, since: 0, frames: 0, t: 0, calls: 0 };
+const basePixelRatio = () => Math.min(settings.fancy ? Math.min(devicePixelRatio, 2) : 1, PR_CAP[perf.tier]);
+function applyQuality() {
+  document.body.classList.toggle('lite', perf.tier >= 1);
+  if (typeof sparks !== 'undefined') sparks.p.visible = settings.fancy && perf.tier < 3;
+  renderer.setPixelRatio(basePixelRatio());
+}
+function keepSmooth(dt, now) {
+  if (!document.hidden && dt < 0.25) perf.ema += (dt * 1000 - perf.ema) * 0.04;   // a hitch or a hidden tab says nothing about the machine
+  if (perf.fps) {   // ?fps shows the frame rate on screen
+    perf.frames++; if (now - perf.t > 0.5) { perf.fps.textContent = `${Math.round(perf.frames / (now - perf.t))} fps · ${perf.ema.toFixed(1)} ms · tier ${perf.tier} · ${renderer.info.render.calls} calls · ${renderer.getPixelRatio()}x`; perf.frames = 0; perf.t = now; }
+  }
+  if (now - perf.since < 3 || perf.ema < 22 || perf.tier >= PR_CAP.length - 1 || game.paused || menuOpen || !$('overlay').hidden) return;
+  perf.since = now; perf.tier++; perf.ema = 16.7; applyQuality();
+}
+if (/[?&]fps\b/.test(location.search)) { perf.fps = document.body.appendChild(Object.assign(document.createElement('div'), { id: 'fps' })); }
 const clock = new THREE.Clock();
 function frame() {
   requestAnimationFrame(frame);
@@ -139,15 +161,16 @@ function frame() {
   // the HUD
   game.shown += (game.coins - game.shown) * Math.min(1, dt * 8);
   const goal = goalFor(game.day);
-  $('coins').textContent = `${Math.round(game.shown)} / ${goal} 🪙`;
-  $('bar').firstElementChild.style.width = Math.min(100, game.shown / goal * 100) + '%';
-  $('bar').classList.toggle('met', game.coins >= goal);
+  hud('coins', `${Math.round(game.shown)} / ${goal} 🪙`);
+  hudW('bar', Math.min(100, game.shown / goal * 100));
+  hudClass('bar', 'met', game.coins >= goal);
   const s = Math.ceil(game.time);
-  $('time').textContent = `${s / 60 | 0}:${String(s % 60).padStart(2, '0')}`;
-  $('clockNote').textContent = game.running && !game.open ? 'closing' : '';
-  $('clock').classList.toggle('hurry', game.running && game.open && game.time < 10);
-  placeLabels();
-  renderer.render(scene, camera);
+  hud('time', `${s / 60 | 0}:${String(s % 60).padStart(2, '0')}`);
+  hud('clockNote', game.running && !game.open ? 'closing' : '');
+  hudClass('clock', 'hurry', game.running && game.open && game.time < 10);
+  // a window (the kitchen, the shop) covers the café: don't draw what nobody can see
+  if ($('overlay').hidden || document.body.classList.contains('homing')) { placeLabels(); renderer.render(scene, camera); }
+  keepSmooth(dt, now);
 }
 dressStations(); dressTables(); renderHands();
 frame();

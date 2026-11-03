@@ -75,7 +75,7 @@
   function applySettings() {
     const [el, d] = CAM_LOOKS[settings.cam] || CAM_LOOKS.low;
     CAM.el = el * Math.PI / 180; CAM.d = d;
-    renderer.setPixelRatio(settings.fancy ? Math.min(devicePixelRatio, 2) : 1);
+    renderer.setPixelRatio(basePixelRatio());
     ['vig', 'tsT', 'tsB'].forEach(id => { $(id).style.display = settings.fancy ? '' : 'none'; });
     if (typeof sparks !== 'undefined') sparks.p.visible = settings.fancy;
     $('mute').textContent = settings.muted ? '🔇' : '🔊';
