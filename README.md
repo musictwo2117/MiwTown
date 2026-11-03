@@ -67,7 +67,7 @@ cd MiwTown
 node agent/server.js
 ```
 
-Then open http://localhost:19100/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
+Then open http://localhost:19100/game. Run it from the repo folder (the one that holds `agent/` and `game/`). If it stops with `EADDRINUSE`, a copy of the server is already running on that port: just open the link above, or stop the old one first (`lsof -ti :19100 | xargs kill`), or pick another port with `AGENT_OFFICE_PORT=19200 node agent/server.js` and open http://localhost:19200/game. No Node.js? Python works too: run `python3 -m http.server 19101` and open http://localhost:19101/game/game.html. You need a browser with WebGL, and your saves stay in that browser. The game switches to Thai (ไทย) in Settings.
 
 ### How it plays
 
