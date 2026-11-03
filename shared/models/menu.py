@@ -6,7 +6,7 @@
 #   kittycupcake — a cupcake whose frosting is a tabby cat's face, in a polka-dot wrapper like Miw's dress
 #   donut        — a strawberry-glazed donut with a cream zigzag and golden sprinkles
 #   pancake      — a stack of three strawberry pancakes with maple syrup, a pat of butter and cream
-#   cheesefull, pretzelfull — the whole round cakes that go in the oven; a batch is cut into four slices
+#   macaron      — three pastel macarons (pink, mint, lilac) with a strawberry\n#   cheesefull, pretzelfull — the whole round cakes that go in the oven; a batch is cut into four slices
 # Written in Blender's own coordinates (z up, the front faces -y), like the characters.
 import os, sys, random; sys.path.insert(0, os.path.dirname(__file__))
 from kit import *
@@ -258,6 +258,33 @@ def pancake(g):
     blob('cream', g, (0.04, 0.03, 0.31), (0.105, 0.105, 0.07), C('#fffaf3', 0.5), seg=18, ring=10)
     strawberry(g, 'berry', (0.07, -0.06, 0.32), 0.7)
     strawberry(g, 'berry2', (-0.1, -0.1, 0.285), 0.5)
+
+# ---------- 🍬 strawberry macarons ----------
+def one_macaron(g, name, loc, tilt, shell, cream, size=1.0):
+    """Two domed shells with ruffled feet, around a thick ring of cream."""
+    m = node(name, g, loc)
+    m.rotation_euler = tilt
+    m.scale = (size, size, size)
+    sm, cm = C(shell, 0.45), C(cream, 0.55)
+    R_ = 0.19
+    dome_up = [(0.0005, 0.07), (0.07, 0.069), (0.13, 0.061), (0.17, 0.045), (0.186, 0.026), (R_, 0.0), (0.0005, 0.0)]
+    lathe(f'{name}_top', m, (0, 0, 0.095), dome_up, sm, seg=48)
+    lathe(f'{name}_bot', m, (0, 0, 0.055), [(r, -z) for r, z in dome_up][::-1], sm, seg=48)
+    # the cream sits between them, bulging out a little
+    blob(f'{name}_cream', m, (0, 0, 0.075), (R_ * 1.03, R_ * 1.03, 0.032), cm, seg=40, ring=12)
+    for k in range(20):   # the frilly "feet" of a macaron: a wavy ring just under each shell's rim
+        a = k / 20 * 2 * math.pi
+        for z0, sg in ((0.098, 1), (0.052, -1)):
+            blob(f'{name}_foot_{k}_{sg}', m, (math.cos(a) * (R_ + 0.002), math.sin(a) * (R_ + 0.002), z0 - sg * 0.003), (0.026, 0.026, 0.012), sm, seg=8, ring=5)
+    return m
+
+@dessert
+def macaron(g):
+    one_macaron(g, 'm_back', (0.12, 0.08, 0.04), (0.5, 0.0, 0.5), '#b9e4cf', '#fff6ea', 0.95)
+    one_macaron(g, 'm_side', (-0.17, 0.02, 0.04), (-0.45, 0.0, -0.3), '#cdb8f0', '#fff6ea', 0.92)
+    one_macaron(g, 'm_front', (0.0, -0.17, 0.0), (0.0, 0.0, 0.2), '#f6a5bd', '#fff1e6', 1.05)
+    # a strawberry on the side
+    strawberry(g, 'berry', (0.2, -0.17, 0.0), 0.5)
 
 root = scenery(WHO)
 BUILT[WHO](root)

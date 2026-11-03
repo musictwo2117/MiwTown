@@ -9,7 +9,7 @@ CHARACTERS="cat bunny bear frog chick penguin miw"
 BUILDINGS="cottage tower studio library factory postoffice clinic cafe cathome"
 PROPS="tree treetall flower lamppost"
 SHOP="shop sign bigcake shoplamp"
-MENU="cheesecake pretzelcake kittycupcake donut pancake cheesefull pretzelfull"
+MENU="cheesecake pretzelcake kittycupcake donut pancake macaron cheesefull pretzelfull"
 ICONS="strawberry egg cheese flour cookie milk butter chocolate pretzel sparkle coin banknote moneybag phone receipt heart star flame angry thought clock bell lock pan spoon bowl ribbon chefhat sprout mallet finger showcase shopbag speaker mute gear bin disk"
 FURNITURE="bookshelf whiteboard routertable serverrack desk sofa floorlamp cornerplant catbed kitchen fridge diningtable bathtub toilet washbasin bed nightstand wardrobe planters balconyplants beanbags"
 for name in ${@:-$CHARACTERS $BUILDINGS $FURNITURE $PROPS $SHOP $MENU $ICONS}; do
