@@ -6,7 +6,7 @@ Each Claude Code session moves in as a character. It walks to the Library when i
 
 ![Miw's Town: a floating pastel island with a rainbow road, a giant pretzel fountain, themed buildings, waterfalls and a pool islet](docs/town.jpg)
 
-## Play the café game (เล่นเกมคาเฟ่)
+## Play the café game
 
 Just want to play Cheesecake Rush? You don't need Claude, an account or any install beyond Node.js or Python. Clone the repo and serve the folder (opening `game.html` by double-click won't work: browsers block the 3D models when a page is opened as a file).
 
