@@ -95,9 +95,9 @@ sh models/build.sh cat cafe   # just these
 | `server.js`, `hook.js` | The Node server (state, tasks, weather, pages) and the Claude Code hook |
 | `town.html`, `room.html` | The town and the cat room |
 | `panel.js`, `scenery.js`, `models.js` | Shared UI, shared 3D scenery, and the model loader and animations |
-| `game.html`, `home.js`, `icons.js`, `i18n.js` | Cheesecake Rush, its home and pause screens, its Blender icons and its Thai translation |
-| `models/` | Blender scripts, the `.glb` files they make, and `build.sh` |
+| `game.html`, `game.css`, `game.js`, `home.js`, `icons.js`, `i18n.js` | Cheesecake Rush (page, styles, script), its home and pause screens, its Blender icons and its Thai translation |
+| `vendor/` | three.js r128 and its loaders, kept here so the pages work offline |
+| `models/` | Blender scripts, the `.glb` files they make, `build.sh`, and `optimize.py` (shrinks each `.glb` after export) |
 | `video/` | Code-made promo clips and their capture and encoding tools |
-| `styletest.html` | Looks tried for the café (`/style`) |
 
 Built with [three.js](https://threejs.org) r128.

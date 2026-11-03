@@ -204,7 +204,7 @@ http.createServer((req, res) => {
     return send(res, 200, [...seen].filter(p => typeof checkFolder(p) !== 'string'));
   }
 
-  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html', '/game': 'game.html', '/style': 'styletest.html' };
+  const PAGES = { '/': 'town.html', '/town': 'town.html', '/room': 'room.html', '/game': 'game.html' };
   if (PAGES[url] && req.method === 'GET') {
     const html = fs.readFileSync(path.join(__dirname, PAGES[url]), 'utf8').replace('__MIW_TOKEN__', TOKEN);
     res.setHeader('content-type', 'text/html; charset=utf-8');
