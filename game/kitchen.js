@@ -45,7 +45,7 @@ function batchModel(id) {
 const kst = (() => {
   const W = 720, H = 520;   // drawn at twice the old size so the kitchen is easy to see and to touch
   const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.setSize(W, H);
+  r.setPixelRatio(Math.min(devicePixelRatio, PR_MAX)); r.setSize(W, H);
   r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
   r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.2;
   r.domElement.style.cssText = 'width:min(100%,calc(50vh * 720 / 520));aspect-ratio:720/520;height:auto;display:block;margin:0 auto;border-radius:18px;background:linear-gradient(#f6ecdd,#ebdcc6);touch-action:none;cursor:pointer';

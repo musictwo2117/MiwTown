@@ -107,8 +107,8 @@ function hud(id, text) { if (hudCache[id] !== text) { hudCache[id] = text; $(id)
 function hudW(id, pct) { const w = pct.toFixed(1) + '%'; if (hudCache['w' + id] !== w) { hudCache['w' + id] = w; $(id).firstElementChild.style.width = w; } }
 function hudClass(id, cls, on) { const k = 'c' + id + cls; if (hudCache[k] !== on) { hudCache[k] = on; $(id).classList.toggle(cls, on); } }
 // keep the café smooth: when the frame rate sags, shed the costly extras one step at a time (blurred strips and vignette, then pixel count)
-const PR_CAP = [2, 2, 1.5, 1.25, 1], perf = { ema: 16.7, tier: 0, since: 0, frames: 0, t: 0, calls: 0 };
-const basePixelRatio = () => Math.min(settings.fancy ? Math.min(devicePixelRatio, 2) : 1, PR_CAP[perf.tier]);
+const PR_CAP = [2, 2, 1.5, 1.25, 1], perf = { ema: 16.7, tier: 0, since: 0, kitchenSince: 0, frames: 0, t: 0, calls: 0 };
+const basePixelRatio = () => Math.min(settings.fancy ? Math.min(devicePixelRatio, PR_MAX) : 1, PR_CAP[perf.tier]);
 function applyQuality() {
   document.body.classList.toggle('lite', perf.tier >= 1);
   if (typeof sparks !== 'undefined') sparks.p.visible = settings.fancy && perf.tier < 3;
@@ -118,6 +118,9 @@ function keepSmooth(dt, now) {
   if (!document.hidden && dt < 0.25) perf.ema += (dt * 1000 - perf.ema) * 0.04;   // a hitch or a hidden tab says nothing about the machine
   if (perf.fps) {   // ?fps shows the frame rate on screen
     perf.frames++; if (now - perf.t > 0.5) { perf.fps.textContent = `${Math.round(perf.frames / (now - perf.t))} fps · ${perf.ema.toFixed(1)} ms · tier ${perf.tier} · ${renderer.info.render.calls} calls · ${renderer.getPixelRatio()}x`; perf.frames = 0; perf.t = now; }
+  }
+  if (kitchen.on && !menuOpen && perf.ema > 24 && now - perf.kitchenSince > 3 && kst.r.getPixelRatio() > 1) {   // the kitchen picture is the biggest thing on screen: draw it with fewer pixels, then at most 1x
+    perf.kitchenSince = now; kst.r.setPixelRatio(Math.max(1, kst.r.getPixelRatio() - 0.25)); perf.ema = 16.7;
   }
   if (now - perf.since < 3 || perf.ema < 22 || perf.tier >= PR_CAP.length - 1 || game.paused || menuOpen || !$('overlay').hidden) return;
   perf.since = now; perf.tier++; perf.ema = 16.7; applyQuality();
