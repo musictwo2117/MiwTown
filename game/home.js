@@ -16,6 +16,11 @@
   .hbtn:hover{transform:translateY(-2px)}.hbtn:active{transform:scale(.97)}
   .hbtn.main{background:linear-gradient(140deg,#ff9fbf,#ff7ea6);color:#fff;box-shadow:0 8px 20px rgba(255,90,140,.38);font-size:21px;padding:15px 18px}
   .hver{margin-top:18px;font:600 12px 'Nunito',sans-serif;color:#b79aa8}
+  @media (max-height:520px){   /* a phone held sideways: a smaller logo and the menu in two columns, so nothing needs scrolling */
+    .hlogo{font-size:30px}.hlogo i{font-size:38px;margin-bottom:0}.hlogo small{margin-top:4px;font-size:12px}
+    .hmenu{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px auto 4px;width:min(420px,100%)}
+    .hbtn{padding:8px 12px;font-size:15px}.hbtn.main{grid-column:1/-1;padding:10px 12px;font-size:18px}.hver{margin-top:8px}
+  }
   .hcard{background:rgba(255,255,255,.95);border-radius:22px;box-shadow:0 10px 30px rgba(160,80,115,.2);padding:20px 20px 16px;text-align:center;max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box}
   .hcard h2{margin:0 0 10px;font:600 24px 'Fredoka',sans-serif}
   .hcard p{margin:6px 0;font-size:14px;line-height:1.5;color:#9a7f8c}
