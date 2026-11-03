@@ -20,6 +20,7 @@
     ['Potted plant', 'กระถางต้นไม้'], ['Flower box', 'กล่องดอกไม้'], ['Little tree', 'ต้นไม้เล็ก'], ['Floor lamp', 'โคมไฟตั้งพื้น'], ['Tall tree', 'ต้นไม้สูง'], ['Lamp post', 'เสาไฟ'], ['Menu board', 'กระดานเมนู'], ['Café sign', 'ป้ายร้าน'],
     ['Bean bags', 'บีนแบ็ก'], ['Cat bed', 'เตียงแมว'], ['Sofa', 'โซฟา'], ['Pink rug', 'พรมสีชมพู'], ['Mint rug', 'พรมสีมินต์'], ['Rainbow rug', 'พรมสายรุ้ง'], ['Flower boxes', 'แถวกล่องดอกไม้'], ['Garden lamp', 'โคมไฟสวน'], ['Garden tree', 'ต้นไม้ในสวน'],
     ['Just pretty', 'สวยอย่างเดียว'], ['Tips +', 'ทิป +'], ['Friends wait ', 'เพื่อนรอได้นานขึ้น '], [' longer', ''], ['✓ Placed', '✓ วางอยู่'], ['Place', 'วาง'],
+    ['Total price', 'ราคาสินค้าทั้งหมด'], ['QR payment', 'จ่ายผ่าน QR'], ['Exact money', 'จ่ายพอดี'], ['Customer paid', 'ลูกค้าให้มา'], ['Paid by QR', 'จ่ายด้วย QR'], ['Give the change', 'ทอนเงิน'], ['Clear', 'ล้าง'],
     // the step-by-step kitchen
     ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
     ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
@@ -70,7 +71,7 @@
   ];
   // texts that are a whole piece of text on their own (short words that must not match inside others)
   const X = {
-    HANDS: 'มือ', closing: 'ปิดร้าน', Sound: 'เสียง', 'Back to the town': 'กลับไปที่เมือง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
+    HANDS: 'มือ', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', 'Back to the town': 'กลับไปที่เมือง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
     Strawberry: 'สตรอว์เบอร์รี่', CHANGE: 'เงินทอน', Egg: 'ไข่', Flour: 'แป้ง', 'Cream cheese': 'ครีมชีส', 'Cookie crust': 'ฐานคุกกี้', Milk: 'นม', Butter: 'เนย', Chocolate: 'ช็อกโกแลต', Pretzel: 'เพรทเซล',
     coins: 'เหรียญ', 'happy friends': 'เพื่อนที่อิ่มสุข', 'left hungry': 'เพื่อนที่หิวกลับไป',
     Continue: 'เล่นต่อ', 'New game': 'เริ่มเกมใหม่', Volume: 'ระดับเสียง', Music: 'เพลง', 'Visual effects': 'เอฟเฟกต์ภาพ', Camera: 'มุมกล้อง', Language: 'ภาษา',
@@ -79,6 +80,7 @@
   };
   // patterns with numbers in them, tried in order (the specific ones first)
   const R = [
+    [/Paid (\d+) − bill (\d+): key in the change/g, 'ลูกค้าให้มา $1 − ราคา $2: กดตัวเลขเงินทอน'],
     [/Not enough! Short by (\d+) 🙅/g, 'ไม่พอ! ขาดไป $1 🙅'], [/Too much! (\d+) too many 🙅/g, 'เกินไป! เกินมา $1 🙅'], [/\((\d+) ripe\)/g, '(สุก $1 ลูก)'],
     [/Day (\d+): earn (\d+)/g, 'วันที่ $1: หาให้ได้ $2'], [/Open day (\d+) →/g, 'เปิดร้านวันที่ $1 →'], [/Try day (\d+) again/g, 'ลองวันที่ $1 อีกครั้ง'], [/Replay day (\d+)/g, 'เล่นวันที่ $1 ซ้ำ'],
     [/Continue day (\d+) →/g, 'เล่นวันที่ $1 ต่อ →'], [/opens on day (\d+)/g, 'เปิดวันที่ $1'], [/Opens on day (\d+)/g, 'เปิดวันที่ $1'], [/Day (\d+) · goal (\d+)/g, 'วันที่ $1 · เป้า $2'],
