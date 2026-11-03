@@ -1,5 +1,6 @@
 // ---------- days ----------
 function startDay(d) {
+  prep.on = false; $('prepBar').hidden = true;
   customers.forEach(c => { removeActor(c.actor); c.bubble.remove(); });
   TABLES.forEach(t => { t.food.forEach(m => scene.remove(m)); t.food = []; t.customer = null; });
   queue.forEach(a => a.mark.remove());
@@ -79,6 +80,8 @@ function shopMidDay() {
   openShop(game.day, () => { $('panel').classList.remove('shopwide'); $('overlay').hidden = true; game.paused = false; dressStations(); updatePlates(); renderHands(); sfx.bell(); });
 }
 $('shopHud').onclick = shopMidDay;
+$('prepKitchen').onclick = backToKitchen;
+$('prepOpen').onclick = openTheShop;
 // the display case: buy more plates for the counter, and choose which of your desserts stand on them
 function caseSection() {
   const lv = save.caseLv || 0, next = CASE_COST[lv + 1], mine = dessertIds().filter(id => unlocked(id, game.day)), on = shelfIds();

@@ -6,6 +6,12 @@ html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(#b9e0f
 #camctl button{border:0;background:var(--card);border-radius:12px;width:38px;height:38px;font:600 18px 'Fredoka';color:var(--ink);box-shadow:0 6px 18px rgba(160,80,115,.16);display:grid;place-items:center}
 #camctl button:active{transform:scale(.94)}
 body.homing #camctl{display:none}
+/* after baking: back in the café, with a button to open the shop */
+#prepBar{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:6}
+#prepBar[hidden]{display:none}
+#prepBar .go,#prepBar .alt{margin:0;padding:12px 22px;font-size:17px}
+#prepBar .alt{border:0;border-radius:16px;background:var(--card);color:var(--ink);font-family:'Fredoka';font-weight:600;box-shadow:0 8px 24px rgba(160,80,115,.16);cursor:pointer}
+body.homing #prepBar{display:none}
 /* the stock tab in the left corner: what's left of each dessert, in one place that stays put when the camera turns */
 #stockTab{position:fixed;left:12px;top:76px;z-index:5;display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:16px}
 #stockTab:empty{display:none}
