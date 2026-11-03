@@ -11,9 +11,9 @@ body.lite .ts,body.lite #vig{display:none}
 body.lite #overlay{backdrop-filter:none;-webkit-backdrop-filter:none}
 #fps{position:fixed;left:8px;bottom:8px;z-index:50;font:600 11px 'Nunito';background:rgba(0,0,0,.6);color:#fff;border-radius:8px;padding:3px 7px;pointer-events:none}
 /* after baking: back in the café, with a button to open the shop */
-#prepBar{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:10px;align-items:center;z-index:6}
+#prepBar{position:fixed;left:50%;bottom:calc(122px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:8px;align-items:center;z-index:6}
 #prepBar[hidden]{display:none}
-#prepBar .go,#prepBar .alt{margin:0;padding:12px 22px;font-size:17px}
+#prepBar .go,#prepBar .alt{margin:0;padding:7px 15px;font-size:14px;border-radius:13px}
 #prepBar .alt{border:0;border-radius:16px;background:var(--card);color:var(--ink);font-family:'Fredoka';font-weight:600;box-shadow:0 8px 24px rgba(160,80,115,.16);cursor:pointer}
 body.homing #prepBar{display:none}
 /* the stock tab in the left corner: what's left of each dessert, in one place that stays put when the camera turns */
