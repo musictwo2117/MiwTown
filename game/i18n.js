@@ -73,7 +73,7 @@
     HANDS: 'มือ', closing: 'ปิดร้าน', Sound: 'เสียง', 'Back to the town': 'กลับไปที่เมือง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
     Strawberry: 'สตรอว์เบอร์รี่', CHANGE: 'เงินทอน', Egg: 'ไข่', Flour: 'แป้ง', 'Cream cheese': 'ครีมชีส', 'Cookie crust': 'ฐานคุกกี้', Milk: 'นม', Butter: 'เนย', Chocolate: 'ช็อกโกแลต', Pretzel: 'เพรทเซล',
     coins: 'เหรียญ', 'happy friends': 'เพื่อนที่อิ่มสุข', 'left hungry': 'เพื่อนที่หิวกลับไป',
-    Continue: 'เล่นต่อ', 'New game': 'เริ่มเกมใหม่', Volume: 'ระดับเสียง', 'Visual effects': 'เอฟเฟกต์ภาพ', Camera: 'มุมกล้อง', Language: 'ภาษา',
+    Continue: 'เล่นต่อ', 'New game': 'เริ่มเกมใหม่', Volume: 'ระดับเสียง', Music: 'เพลง', 'Visual effects': 'เอฟเฟกต์ภาพ', Camera: 'มุมกล้อง', Language: 'ภาษา',
     On: 'เปิด', Off: 'ปิด', Fancy: 'สวยงาม', Simple: 'เรียบง่าย', Low: 'ต่ำ', Mid: 'กลาง', High: 'สูง', Credits: 'เครดิต', Settings: 'ตั้งค่า',
     GAME: 'เกม', '3D MODELS': 'โมเดล 3 มิติ', ENGINE: 'เอนจิน', FONTS: 'ฟอนต์', SOUND: 'เสียง', THANKS: 'ขอบคุณ', 'Sure?': 'แน่ใจนะ?',
   };

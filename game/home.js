@@ -130,6 +130,7 @@
       const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button data-set="${key}" data-v="${v}" class="${String(settings[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
       return `<div class="hcard"><h2>⚙ Settings</h2>
         <div class="row3">Sound ${seg('muted', [[false, 'On'], [true, 'Off']])}</div>
+        <div class="row3">Music ${seg('music', [[true, 'On'], [false, 'Off']])}</div>
         <div class="row3">Volume <input type="range" id="volume" min="0" max="1" step="0.05" value="${settings.vol}"></div>
         <div class="row3">Visual effects ${seg('fancy', [[true, 'Fancy'], [false, 'Simple']])}</div>
         <div class="row3">Camera ${seg('cam', [['low', 'Low'], ['mid', 'Mid'], ['high', 'High']])}</div>

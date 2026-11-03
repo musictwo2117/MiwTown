@@ -46,7 +46,7 @@ const SAVE_KEY = 'miw-cheesecake-rush';
 const SLOT_KEY = n => `${SAVE_KEY}-slot-${n}`, SET_KEY = `${SAVE_KEY}-settings`;
 const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [], decor: {}, decorOwned: [] });   // wallet: coins kept from every day, spent in the shop
 let save = defaultSave(), slot = 0, menuOpen = false;   // the slot is picked on the home screen (home.js)
-let settings = { muted: false, vol: 0.8, fancy: true, cam: 'low' };
+let settings = { muted: false, music: true, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
 const storeSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch {} };
 // the current slot keeps the progress and what's left on the shelves
@@ -1066,9 +1066,11 @@ function showCombo() {
 // ---------- sound: a few soft blips made on the spot ----------
 let ac = null;
 function wakeAudio() { if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} ac && ac.state === 'suspended' && ac.resume(); startMusic(); }
+// a tab nobody is looking at goes quiet (a second, forgotten tab used to keep playing the music)
+document.addEventListener('visibilitychange', () => { if (!ac) return; if (document.hidden) ac.suspend(); else ac.resume(); });
 // background music: a calm loop ("Slow Stride" by isaiah658, CC0), played through the same audio context so it loops without a gap
 const MUSIC_GAIN = 0.3, music = { buf: null, src: null, gain: null, loading: false };
-const musicLevel = () => settings.muted ? 0 : settings.vol * MUSIC_GAIN;
+const musicLevel = () => settings.muted || !settings.music ? 0 : settings.vol * MUSIC_GAIN;
 function setMusicLevel(fade = 0.3) { if (music.gain) { const g = music.gain.gain, t = ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(musicLevel(), t + fade); } }
 async function startMusic() {
   if (!ac || music.src || music.loading) return;
