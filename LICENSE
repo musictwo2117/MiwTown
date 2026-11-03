@@ -1,0 +1,17 @@
+Copyright (c) 2026 musictwo2117. All rights reserved.
+
+Miw's Town and Cheesecake Rush (the source code, the 3D models and the scripts
+that build them, the pictures in docs/ and everything else in this repository)
+are the property of the copyright holder. The source is visible so that people
+can look at it and play the game, but no permission is given to copy, modify,
+redistribute, sell or use any part of it in other projects without written
+permission from the copyright holder.
+
+Third-party material keeps its own licence and is not covered by the notice
+above:
+
+- three.js r128 (shared/vendor/): MIT licence, see shared/vendor/LICENSE-three.txt.
+- "Slow Stride" by isaiah658 (game/music/): CC0 1.0, public domain
+  (https://opengameart.org/content/slow-stride).
+- The fonts Fredoka, Nunito and Mali are loaded from Google Fonts and are
+  licensed under the SIL Open Font License 1.1.
