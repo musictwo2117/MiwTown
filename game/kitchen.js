@@ -579,18 +579,23 @@ const kst = (() => {
   const skin = M('#ffd9c4'), sleeveM = M('#ffd23f');
   const handG = new THREE.Group(); handG.visible = false; sc.add(handG);
   const armM = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 1, 10), skin), sleeveMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.115, 0.24, 12), sleeveM);
-  const fist = new THREE.Mesh(new THREE.SphereGeometry(0.125, 14, 10), skin), thumb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), skin);
-  fist.scale.set(1.15, 0.85, 1.05); armM.visible = false;   // just a hand with a cuff, no arm
-  const fingers = [0, 1, 2, 3].map(() => new THREE.Mesh(new THREE.SphereGeometry(0.044, 8, 6), skin));
-  handG.add(armM, sleeveMesh, fist, thumb, ...fingers);
+  const fist = new THREE.Mesh(new THREE.SphereGeometry(0.125, 14, 10), skin);   // the palm
+  fist.scale.set(1.0, 0.7, 1.0); armM.visible = false;   // just a hand with a cuff, no arm
+  // four rounded fingers of slightly different lengths, side by side and curled a little, and a thumb out to the side
+  const FING = [0.15, 0.17, 0.15, 0.115], mkDigit = r => ({ s: new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.9, 1, 8), skin), tip: new THREE.Mesh(new THREE.SphereGeometry(r * 0.9, 8, 6), skin), r });
+  const fingers = FING.map(() => mkDigit(0.036)), thumb = mkDigit(0.042);
+  handG.add(armM, sleeveMesh, fist, ...fingers.flatMap(f => [f.s, f.tip]), thumb.s, thumb.tip);
   let handP = null; const UP = V3(0, 1, 0);
   function placeArm(a, b) {                       // a: where the hand comes from (off-screen), b: where the hand is
     const d = b.clone().sub(a).normalize();
     fist.position.copy(b);
     sleeveMesh.position.copy(b).addScaledVector(d, -0.19); sleeveMesh.quaternion.setFromUnitVectors(UP, d);
     let side = d.clone().cross(UP); side = side.lengthSq() < 1e-4 ? V3(1, 0, 0) : side.normalize();   // across the palm
-    fingers.forEach((f, i) => f.position.copy(b).addScaledVector(d, 0.13).addScaledVector(side, (i - 1.5) * 0.062).addScaledVector(UP, -0.015));
-    thumb.position.copy(b).addScaledVector(UP, 0.105).addScaledVector(d, 0.04);
+    const digit = (dg, base, dir, len) => { dg.s.position.copy(base).addScaledVector(dir, len / 2); dg.s.scale.set(1, len, 1); dg.s.quaternion.setFromUnitVectors(UP, dir); dg.tip.position.copy(base).addScaledVector(dir, len); };
+    const curl = d.clone().multiplyScalar(0.9).addScaledVector(UP, -0.42).normalize();   // the fingers point forward and bend down a little
+    fingers.forEach((f, i) => digit(f, b.clone().addScaledVector(d, 0.1).addScaledVector(side, (i - 1.5) * 0.066).addScaledVector(UP, -0.012), curl, FING[i]));
+    const tdir = d.clone().multiplyScalar(0.7).addScaledVector(side, -0.55).addScaledVector(UP, -0.3).normalize();
+    digit(thumb, b.clone().addScaledVector(side, -0.1).addScaledVector(d, 0.03), tdir, 0.12);
   }
   const px = (e) => { const rc = r.domElement.getBoundingClientRect(); return [(e.clientX - rc.left) / rc.width, (e.clientY - rc.top) / rc.height]; };
   return {
