@@ -209,7 +209,7 @@ http.createServer((req, res) => {
 
   // the old addresses still work and lead to the pages' new homes
   const GO = { '/': '/agent/town.html', '/town': '/agent/town.html', '/room': '/agent/room.html', '/game': '/game/game.html' };
-  if (GO[url] && req.method === 'GET') { res.statusCode = 302; res.setHeader('location', GO[url]); return res.end(); }
+  if (GO[url] && req.method === 'GET') { res.statusCode = 302; res.setHeader('location', GO[url] + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '')); return res.end(); }   // keep ?fps and the like
   // pages, scripts, styles and models from agent/, game/ and shared/ (never the server itself or the hook)
   if (req.method === 'GET' && /^\/(agent|game|shared)\//.test(url)) {
     let file; try { file = path.resolve(ROOT, decodeURIComponent(url).slice(1)); } catch { res.statusCode = 400; return res.end(); }
