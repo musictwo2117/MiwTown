@@ -1065,7 +1065,26 @@ function showCombo() {
 
 // ---------- sound: a few soft blips made on the spot ----------
 let ac = null;
-function wakeAudio() { if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} ac && ac.state === 'suspended' && ac.resume(); }
+function wakeAudio() { if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} ac && ac.state === 'suspended' && ac.resume(); startMusic(); }
+// background music: a calm loop ("Slow Stride" by isaiah658, CC0), played through the same audio context so it loops without a gap
+const MUSIC_GAIN = 0.3, music = { buf: null, src: null, gain: null, loading: false };
+const musicLevel = () => settings.muted ? 0 : settings.vol * MUSIC_GAIN;
+function setMusicLevel(fade = 0.3) { if (music.gain) { const g = music.gain.gain, t = ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(musicLevel(), t + fade); } }
+async function startMusic() {
+  if (!ac || music.src || music.loading) return;
+  if (!music.buf) {
+    music.loading = true;
+    try {
+      const file = document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';   // Safari doesn't play .ogg
+      music.buf = await ac.decodeAudioData(await (await fetch(`music/slow-stride.${file}`)).arrayBuffer());
+    } catch (e) { console.warn('the music did not load', e); music.loading = false; return; }
+    music.loading = false;
+  }
+  if (music.src) return;
+  music.gain = ac.createGain(); music.gain.gain.value = 0; music.gain.connect(ac.destination);
+  music.src = ac.createBufferSource(); music.src.buffer = music.buf; music.src.loop = true; music.src.connect(music.gain); music.src.start();
+  setMusicLevel(2);
+}
 function tone(f, at = 0, dur = 0.12, type = 'sine', vol = 0.12) {
   if (!ac || settings.muted) return;
   const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at;
@@ -1084,6 +1103,6 @@ const sfx = {
   bell: () => tone(1568, 0, 0.25, 'sine', 0.05),
   fanfare: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, 'triangle', 0.1)),
 };
-$('mute').onclick = () => { settings.muted = !settings.muted; storeSettings(); $('mute').textContent = settings.muted ? '🔇' : '🔊'; };
+$('mute').onclick = () => { settings.muted = !settings.muted; storeSettings(); $('mute').textContent = settings.muted ? '🔇' : '🔊'; setMusicLevel(); };
 $('mute').textContent = settings.muted ? '🔇' : '🔊';
 
