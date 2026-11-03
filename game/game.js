@@ -7,6 +7,7 @@ const DESSERTS = {
   donut:        { name: 'Strawberry Donut',      emoji: '🍩', price: 8,  day: 1, color: '#f6a5bd' },
   kittycupcake: { name: 'Kitty Cupcake',         emoji: '🧁', price: 12, day: 2, cost: 60, color: '#ffd1a6' },
   pretzelcake:  { name: 'Pretzel Cake',          emoji: '🥨', price: 14, day: 3, cost: 120, color: '#eda95e' },
+  pancake:      { name: 'Strawberry Pancakes',   emoji: '🥞', price: 11, day: 3, cost: 90, color: '#e9b358' },
   // drinks: made at the juice bar, never baked, so they don't run out
   milktea:      { name: 'Pink Milk Tea',         emoji: '🧋', price: 6,  day: 1, color: '#f6b8c8', drink: true },
   cocoa:        { name: 'Marshmallow Cocoa',     emoji: '☕', price: 7,  day: 2, cost: 40, color: '#a8664a', drink: true },

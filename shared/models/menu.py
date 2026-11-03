@@ -5,6 +5,7 @@
 #   pretzelcake  — a slice of vanilla-caramel layer cake with a pink zigzag and a mini pretzel on top
 #   kittycupcake — a cupcake whose frosting is a tabby cat's face, in a polka-dot wrapper like Miw's dress
 #   donut        — a strawberry-glazed donut with a cream zigzag and golden sprinkles
+#   pancake      — a stack of three strawberry pancakes with maple syrup, a pat of butter and cream
 #   cheesefull, pretzelfull — the whole round cakes that go in the oven; a batch is cut into four slices
 # Written in Blender's own coordinates (z up, the front faces -y), like the characters.
 import os, sys, random; sys.path.insert(0, os.path.dirname(__file__))
@@ -243,6 +244,20 @@ def pretzelfull(g):
     for k in range(8):   # a ring of little pink icing dots
         a = k / 8 * 2 * math.pi
         blob(f'dot_{k}', s, (0.3 * math.cos(a), 0.3 * math.sin(a), 0.36), (0.035, 0.035, 0.03), C('#f9cdd9', 0.4), seg=10, ring=6)
+
+# ---------- 🥞 strawberry pancakes ----------
+@dessert
+def pancake(g):
+    # three fluffy pancakes, the top one a little paler, with golden edges
+    for i, (r, z0, col) in enumerate([(0.30, 0.0, '#e4a64a'), (0.285, 0.085, '#e9b358'), (0.292, 0.17, '#f0c06a')]):
+        disk(f'cake_{i}', g, r, z0, 0.092, C(col, 0.75), rd=0.04)
+    # maple syrup pooled on top and running down the sides
+    blob('syrup', g, (0, 0, 0.262), (0.235, 0.235, 0.03), C('#c8632b', 0.2), seg=32, ring=10)
+    ring_drips('syrup_drip', g, 0.285, 0.272, C('#c8632b', 0.25), 0.022, 11, 4, long=0.15)
+    blob('butter', g, (-0.06, 0.04, 0.3), (0.075, 0.07, 0.03), C('#ffe27a', 0.4), rot=(0, 0, 0.4))
+    blob('cream', g, (0.04, 0.03, 0.31), (0.105, 0.105, 0.07), C('#fffaf3', 0.5), seg=18, ring=10)
+    strawberry(g, 'berry', (0.07, -0.06, 0.32), 0.7)
+    strawberry(g, 'berry2', (-0.1, -0.1, 0.285), 0.5)
 
 root = scenery(WHO)
 BUILT[WHO](root)
