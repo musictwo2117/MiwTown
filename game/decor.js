@@ -55,14 +55,28 @@ function dressDecor() {
     if (it.block) decorBlocks.push({ x: sp.at[0], z: sp.at[2], r: it.block });
   });
 }
-Object.values(DECOR_ITEMS).forEach(it => { if (it.model) loadModel(it.model, dressDecor); });
+// each item's picture in the Shop is its own model (the rugs are drawn flat, tipped up a little so they read as rugs)
+const decorThumb = id => makeThumb('decor_' + id, () => {
+  const g = decorBuild(DECOR_ITEMS[id]); if (!g) throw new Error('model not loaded');
+  if (!DECOR_ITEMS[id].rug) { if (DECOR_ITEMS[id].model === 'planters') g.scale.set(0.3, 1.5, 1.5); g.rotation.y = 0.5; return g; }   // a long row of boxes: shortened, so it fills the picture
+  // pale rugs on a pale card vanish: give each a darker rim underneath
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(1.72, 1.72, 0.05, 44), new THREE.MeshLambertMaterial({ color: new THREE.Color(DECOR_ITEMS[id].rug[0]).multiplyScalar(0.8) }));
+  rim.position.y = -0.01; g.add(rim);
+  const w = new THREE.Group(); g.rotation.x = 0.9; w.add(g); return w;
+});
+const decorIcon = id => thumbs['decor_' + id] ? `<img src="${thumbs['decor_' + id]}" alt="${DECOR_ITEMS[id].name}">` : DECOR_ITEMS[id].emoji;
+Object.keys(DECOR_ITEMS).forEach(id => {
+  const it = DECOR_ITEMS[id];
+  if (it.model) loadModel(it.model, () => { dressDecor(); decorThumb(id); });
+  else decorThumb(id);
+});
 // ---------- the Shop's Decor tab ----------
 function decorCards() {
   const owned = save.decorOwned || [];
   return DECOR_SPOTS.map(sp => `<h3 class="shopspot">${sp.name}</h3>` + Object.keys(DECOR_ITEMS).filter(id => DECOR_ITEMS[id].spot === sp.id).map(id => {
     const it = DECOR_ITEMS[id], on = decorOf(sp.id) === id, has = owned.includes(id), perk = Object.entries(it.perk || {}).map(([k, v]) => PERK_TEXT[k](Math.round(v * 100))).join(' · ');
     const act = on ? '<button data-decor="' + id + '" class="on">✓ Placed</button>' : has ? '<button data-decor="' + id + '">Place</button>' : `<button data-decor="${id}" ${save.wallet < it.cost ? 'disabled' : ''}>${it.cost} 🪙</button>`;
-    return `<div class="shoprow"><i>${it.emoji}</i><span><b>${it.name}</b><small>${perk || 'Just pretty'}</small></span>${act}</div>`;
+    return `<div class="shoprow"><i>${decorIcon(id)}</i><span><b>${it.name}</b><small>${perk || 'Just pretty'}</small></span>${act}</div>`;
   }).join('')).join('');
 }
 function decorBind(root, rerender) {
