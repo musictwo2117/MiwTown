@@ -243,8 +243,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 <div id="toast" class="card"></div>
 <div id="overlay"><div id="panel" class="card"></div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
 <script src="scenery.js"></script>
 <script src="models.js"></script>
 <script>
@@ -286,7 +286,8 @@ let settings = { muted: false, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
 const storeSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch {} };
 // the current slot keeps the progress and what's left on the shelves
-const store = () => { if (!slot) return; try { localStorage.setItem(SLOT_KEY(slot), JSON.stringify({ ...save, stock: kitchen.stock, qual: kitchen.qual, berries: kitchen.berries, ripe: plot.ready, updated: Date.now() })); } catch {} };
+const SAVE_VERSION = 1;   // bump when the save's shape changes, and upgrade older saves (no v = version 0) where they are loaded
+const store = () => { if (!slot) return; try { localStorage.setItem(SLOT_KEY(slot), JSON.stringify({ ...save, v: SAVE_VERSION, stock: kitchen.stock, qual: kitchen.qual, berries: kitchen.berries, ripe: plot.ready, updated: Date.now() })); } catch {} };
 
 // ---------- renderer / camera / lights ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });

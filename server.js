@@ -216,6 +216,10 @@ http.createServer((req, res) => {
     res.setHeader('cache-control', 'no-store');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
   }
+  if (/^\/vendor\/[A-Za-z.]+\.js$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {   // three.js and its loaders, kept here so the pages work offline
+    res.setHeader('content-type', 'text/javascript; charset=utf-8');
+    return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
+  }
   if (/^\/models\/[a-z]+\.glb$/.test(url) && req.method === 'GET' && fs.existsSync(path.join(__dirname, url.slice(1)))) {
     res.setHeader('content-type', 'model/gltf-binary');
     return fs.createReadStream(path.join(__dirname, url.slice(1))).pipe(res);
