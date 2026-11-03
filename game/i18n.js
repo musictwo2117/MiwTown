@@ -15,6 +15,11 @@
     ['Pour batter into the pan!', 'เทแป้งลงกระทะ!'], ['Pour', 'เท'], ["Flip it when the bubbles pop and it's golden!", 'พลิกตอนฟองแตกและเหลืองทอง!'], ['Perfect flip!', 'พลิกสวยมาก!'], ['Nice flip', 'พลิกดี'], ['A bit off', 'พลิกพลาดนิดหน่อย'],
     ['Press and hold to pipe a round, let go when it fills the ring!', 'กดค้างเพื่อบีบแป้ง ปล่อยตอนเต็มวง!'], ['Perfect round!', 'กลมสวยมาก!'], ['A bit big', 'ใหญ่ไปนิด'], ['A bit small', 'เล็กไปนิด'], ['Tap each macaron to add cream and its top shell!', 'แตะมาการองแต่ละอันเพื่อใส่ครีมและปิดฝา!'],
     ["Take them out when the shells are set. Don't let them brown!", 'เอาออกตอนเปลือกตั้งตัวแล้ว อย่าให้เป็นสีน้ำตาลนะ!'],
+    // decorating the café
+    ['Decor', 'ตกแต่ง'], ['Left corner', 'มุมซ้าย'], ['Counter side', 'ข้างเคาน์เตอร์'], ['Wall', 'ผนัง'], ['Cozy corner', 'มุมนั่งเล่น'], ['Floor', 'พื้น'], ['Front garden', 'สวนหน้าร้าน'],
+    ['Potted plant', 'กระถางต้นไม้'], ['Flower box', 'กล่องดอกไม้'], ['Little tree', 'ต้นไม้เล็ก'], ['Floor lamp', 'โคมไฟตั้งพื้น'], ['Tall tree', 'ต้นไม้สูง'], ['Lamp post', 'เสาไฟ'], ['Menu board', 'กระดานเมนู'], ['Café sign', 'ป้ายร้าน'],
+    ['Bean bags', 'บีนแบ็ก'], ['Cat bed', 'เตียงแมว'], ['Sofa', 'โซฟา'], ['Pink rug', 'พรมสีชมพู'], ['Mint rug', 'พรมสีมินต์'], ['Rainbow rug', 'พรมสายรุ้ง'], ['Flower boxes', 'แถวกล่องดอกไม้'], ['Garden lamp', 'โคมไฟสวน'], ['Garden tree', 'ต้นไม้ในสวน'],
+    ['Just pretty', 'สวยอย่างเดียว'], ['Tips +', 'ทิป +'], ['Friends wait ', 'เพื่อนรอได้นานขึ้น '], [' longer', ''], ['✓ Placed', '✓ วางอยู่'], ['Place', 'วาง'],
     // the step-by-step kitchen
     ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
     ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
