@@ -1,7 +1,7 @@
 #!/bin/sh
 # Turns the frames a clip captured (open http://localhost:19200/<clip>?capture) into an MP4 for X,
-# a looping GIF and a contact sheet: sh video/encode.sh intro
-# (a promo clip that doesn't loop: FADE=0.8 NOLOOP=1 sh video/encode.sh rush)
+# a looping GIF and a contact sheet: sh tools/video/encode.sh intro
+# (a promo clip that doesn't loop: FADE=0.8 NOLOOP=1 sh tools/video/encode.sh rush)
 set -e
 CLIP=${1:-intro}; FPS=${FPS:-30}
 OUT="$(dirname "$0")/out/$CLIP"

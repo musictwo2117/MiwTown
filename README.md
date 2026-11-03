@@ -120,6 +120,6 @@ sh models/build.sh cat cafe   # just these
 | `game.html`, `game.css`, `game.js`, `home.js`, `icons.js`, `i18n.js` | Cheesecake Rush (page, styles, script), its home and pause screens, its Blender icons and its Thai translation |
 | `vendor/` | three.js r128 and its loaders, kept here so the pages work offline |
 | `models/` | Blender scripts, the `.glb` files they make, `build.sh`, and `optimize.py` (shrinks each `.glb` after export) |
-| `video/` | Code-made promo clips and their capture and encoding tools |
+| `tools/video/` | Code-made promo clips and their capture and encoding tools |
 
 Built with [three.js](https://threejs.org) r128.

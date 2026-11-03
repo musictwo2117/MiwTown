@@ -13,7 +13,7 @@
       "name": "video-studio",
       "runtimeExecutable": "node",
       "runtimeArgs": [
-        "video/serve.js"
+        "tools/video/serve.js"
       ],
       "port": 19200
     }
