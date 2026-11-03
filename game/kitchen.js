@@ -279,7 +279,7 @@ const kst = (() => {
   glzG.add(mesh(new THREE.TorusGeometry(1.2, 0.05, 10, 48), '#ffcadb', { rx: PI / 2, y: 0.55, s: [1, 0.75, 1], cast: false }));   // glaze climbing the bowl wall
   const tray = new THREE.Group(); glzG.add(tray); tray.add(mesh(box(2.1, 0.05, 1.0), '#fffaf3', { y: -0.025 }));
   const trayDonuts = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x * 0.92, 0.09, z * 0.9); tray.add(d); return d; });
-  let trayY = 1.15, trayRot = PI, sprinkles = [];
+  let trayY = 1.15, trayRot = PI, sprinkles = [], glazeK = 0;   // glazeK: how far the donuts have really been dipped into the glaze (it only coats what touched it)
   const DN_MODES = ['knead', 'roll', 'cut', 'fry', 'glaze', 'sprinkle', 'griddle', 'pipe', 'sandwich'];
   // ----- macarons: pipe six rounds of batter onto a parchment-lined tray, bake them pale, then sandwich them with cream -----
   const mcG = new THREE.Group(); dnG.add(mcG);
@@ -430,7 +430,7 @@ const kst = (() => {
     if (kind === 'knead') { kneadK = 0; kneadP = 0; rollP = 0; rollDown = false; cutN = 0; cutDone.fill(false); cutAge.fill(1); }
     if (kind === 'griddle') { gdPhase = 'idle'; gdT = 0; gdN = 0; bakeHeat = 0; sideA = 0; gdStack.forEach(m => { m.visible = false; }); }
     if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; dipTime = 0; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.position.y = 1.6; d.userData.splashed = false; d.userData.body.material.color.set('#f3d2a2'); }); }
-    if (kind === 'glaze') { trayY = 1.15; trayRot = PI; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; d.userData.dr.visible = false; }); }
+    if (kind === 'glaze') { trayY = 1.15; trayRot = PI; glazeK = 0; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; d.userData.dr.visible = false; }); }
     if (kind === 'bake') { bakeHeat = 0; ovenFill = null; ovenMat = null; ovenColor = null; }
     if (kind === 'pipe') { mcDown = -1; mcSpots.forEach(s => { s.size = 0; s.done = false; s.filled = false; s.cream.visible = s.top.visible = false; }); }
     if (kind === 'sandwich') { mcFilled = 0; mcSpots.forEach(s => { s.filled = false; s.fillT = 1; s.cream.visible = s.top.visible = false; }); }
@@ -979,7 +979,7 @@ const kst = (() => {
         const e = mode === 'knead' ? 0 : mode === 'roll' ? ease(rollP) : 1;
         const sx = lerp(0.5 + 0.18 * kneadK, 1.15, e), sy = lerp(0.5 - 0.14 * kneadK, 0.07, e), sz = lerp(0.5 + 0.18 * kneadK, 0.72, e);
         dough.scale.set(sx, sy, sz); dough.position.y = 0.12 + sy; dough.visible = true;
-        pin.visible = mode === 'roll'; pin.position.x += (rollX - pin.position.x) * Math.min(1, dt * 14); pin.position.y += ((rollDown ? 0.12 + sy + 0.12 : 0.12 + sy + 0.4) - pin.position.y) * Math.min(1, dt * 14);
+        pin.visible = mode === 'roll'; pin.position.x += (rollX - pin.position.x) * Math.min(1, dt * 14); pin.position.y += ((rollDown ? 0.12 + 2 * sy + 0.12 : 0.12 + 2 * sy + 0.4) - pin.position.y) * Math.min(1, dt * 14);
         cutMarks.forEach((m, i) => { m.visible = mode === 'cut' && !cutDone[i]; m.scale.setScalar(1 + 0.08 * Math.sin(t * 6 + i)); });
         cutRings.forEach((d, i) => { cutAge[i] = Math.min(1, cutAge[i] + dt * 5); d.visible = mode === 'cut' && cutDone[i]; d.scale.setScalar(0.3 + 0.7 * ease(cutAge[i])); d.position.y = 0.22 + Math.sin(cutAge[i] * PI) * 0.15; });
       }
@@ -1050,11 +1050,11 @@ const kst = (() => {
           trayY += ((1.15 - level * 0.7) - trayY) * Math.min(1, dt * 8); trayRot += (PI - trayRot) * Math.min(1, dt * 8);
         } else { trayY += (0.85 - trayY) * Math.min(1, dt * 5); trayRot += (0 - trayRot) * Math.min(1, dt * 5); }
         tray.position.y = trayY; tray.rotation.x = trayRot;
-        const a = 0.55 + 0.45 * Math.min(1, level / POUR_T);
-        trayDonuts.forEach(d => { d.userData.gl.visible = level > 0.3; d.userData.gl.scale.set(a, a, 0.85); d.userData.dr.visible = level > 0.3; });
+        const contact = k01((0.76 - trayY) / 0.12); glazeK = Math.max(glazeK, contact); const a = 0.5 + 0.5 * glazeK;
+        trayDonuts.forEach(d => { d.userData.gl.visible = glazeK > 0.03; d.userData.gl.scale.set(a, a, 0.85); d.userData.dr.visible = glazeK > 0.6 && contact < 0.6; });
         glazePool.position.y = 0.56 - 0.02 * level; glazeLight.intensity = 1.3;
         // ripples: a dimple under each dipped donut, and rings spreading out of it; the pool also heaves gently
-        const pp = glazePool.geometry.attributes.position, glazeCol = glazePool.geometry.attributes.color, dip = mode === 'glaze' ? Math.min(1, Math.max(0, (level - 0.15) / 0.5)) * (trayY < 0.95 ? 1 : 0.3) : 0;
+        const pp = glazePool.geometry.attributes.position, glazeCol = glazePool.geometry.attributes.color, dip = mode === 'glaze' ? contact : 0;
         for (let i = 0; i < pp.count; i++) {
           const x = poolBase[i * 3], z = poolBase[i * 3 + 2]; let y = 0.012 * Math.sin(x * 4 + t * 1.6) + 0.01 * Math.sin(z * 5 - t * 1.3);
           if (dip > 0) for (let k = 0; k < 6; k++) { const dx = x - DN_SPOTS[k][0] * 0.92, dz = z + DN_SPOTS[k][1] * 0.9 / 0.75, d2 = dx * dx + dz * dz, d = Math.sqrt(d2); y += dip * (-0.06 * Math.exp(-d2 / 0.07) + 0.045 * Math.exp(-((d - 0.34) ** 2) / 0.012) + 0.012 * Math.sin(d * 14 - t * 7) * Math.exp(-d * 3)); }   // a dimple with a thick fold of cream pushed up round it
@@ -1063,7 +1063,7 @@ const kst = (() => {
           cc[i * 3] = 0.95 + 0.05 * sw; cc[i * 3 + 1] = 0.4 + 0.17 * sw + Math.max(0, y) * 4; cc[i * 3 + 2] = 0.58 + 0.14 * sw + Math.max(0, y) * 3;
         }
         pp.needsUpdate = true; glazeCol.needsUpdate = true; glazePool.geometry.computeVertexNormals();
-        if (mode === 'glaze' && !pouring && level > 0.3 && Math.random() < 0.3) { const d = trayDonuts[(Math.random() * 6) | 0]; emit(tray.localToWorld(d.position.clone().add(V3((Math.random() - 0.5) * 0.4, -0.02, (Math.random() - 0.5) * 0.3))), V3(0, -0.2, 0), 0.55, DN_GLAZE, 0.03, 4, 0.5); }
+        if (mode === 'glaze' && glazeK > 0.6 && contact < 0.5 && Math.random() < 0.3) { const d = trayDonuts[(Math.random() * 6) | 0]; emit(tray.localToWorld(d.position.clone().add(V3((Math.random() - 0.5) * 0.4, -0.02, (Math.random() - 0.5) * 0.3))), V3(0, -0.2, 0), 0.55, DN_GLAZE, 0.03, 4, 0.5); }
       }
       mixG.visible = mode === 'add' || mode === 'stir'; ovenG.visible = mode === 'bake' || mode === 'bake-out'; decoG.visible = mode === 'deco' || mode === 'drizzle' || mode === 'done';
       if (mode === 'stir' || mode === 'add') {
