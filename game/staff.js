@@ -43,6 +43,8 @@ function pickJob(s) {
     if (c.state !== 'wait' || c.claim || !c.t || c.t.customer !== c || mine.has(c.t)) return;
     const need = c.order.filter((id, i) => !c.served[i]);
     if (!need.length || need.length > HAND_MAX) return;
+    const plates = need.filter(id => !DESSERTS[id].drink).length;
+    if (dish.plates - staff.reduce((a, o) => a + (o !== s && o.job ? o.job.fetch.filter(id => !DESSERTS[id].drink).length : 0), 0) < plates) return;   // no clean plates for it yet
     const want = {}; need.forEach(id => { want[id] = (want[id] || 0) + 1; });
     if (!Object.keys(want).every(id => DESSERTS[id].drink || stockOf(id) >= want[id] + (pending[id] || 0))) return;   // never fetch what isn't there
     const u = c.patience / c.max;
@@ -59,7 +61,7 @@ function runJob(s) {
       s.a.face = st.face ?? PI;
       if (!DESSERTS[id].drink && !stockOf(id)) return releaseJob(s);   // the last one went to somebody else
       if (!DESSERTS[id].drink) kitchen.stock[id]--;
-      s.tray.push(id); j.fetch.shift(); renderStaffTray(s); updatePlates(); sfx.pick(); s.wait = 0.25;
+      s.tray.push(id); j.fetch.shift(); openCase(st); renderStaffTray(s); updatePlates(); sfx.pick(); s.wait = 0.25;
     });
   } else {
     walkTo(s.a, c.t.serve, () => {

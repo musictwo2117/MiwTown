@@ -419,9 +419,9 @@ function makeThumb(id, build) {
 // the four stations on the counter, each with its dessert turning on a cake stand
 const STATIONS = Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).map((id, i) => {
   const x = -4.65 + i * 3.1, st = { id, x, pick: new THREE.Vector3(x, 0, COUNTER_Z + 1.35) };
-  st.stand = new THREE.Group(); st.stand.position.set(x, 1.19, COUNTER_Z + 0.05); scene.add(st.stand);
-  st.stand.add(mesh(cyl(0.55, 0.5, 0.06, 28), '#ffffff', { y: 0.32 }), mesh(cyl(0.08, 0.2, 0.3, 12), '#ffffff', { y: 0.15 }));
-  st.show = new THREE.Group(); st.show.position.y = 0.35; st.show.scale.setScalar(1.55); st.stand.add(st.show);
+  st.stand = new THREE.Group(); st.stand.position.set(x, 1.19, COUNTER_Z); scene.add(st.stand);
+  st.cab = new THREE.Group(); st.stand.add(st.cab);   // the glass compartment (showcase.js)
+  st.show = new THREE.Group(); st.show.position.y = 0.14; st.stand.add(st.show);   // the desserts on its shelf
   st.label = label('plate', '');
   st.hit = hitBox(2.4, 3, 2.4, new THREE.Vector3(x, 1.3, COUNTER_Z + 0.4), { kind: 'station', st });
   return st;
@@ -429,21 +429,20 @@ const STATIONS = Object.keys(DESSERTS).filter(id => !DESSERTS[id].drink).map((id
 // spread the plates along the counter: the chosen desserts first, then the ones still locked, up to however many plates the case holds
 const counterOrder = () => [...shelfIds(), ...dessertIds().filter(id => !unlocked(id, game.day))].slice(0, caseSlots());
 function layoutStations() {
-  const n = caseSlots(), order = counterOrder(), step = 9.3 / (n - 1), k = Math.min(1, 0.45 + step / 6);
+  const order = counterOrder(), W = (CASE_X1 - CASE_X0) / Math.max(1, order.length);   // one compartment for each dessert on show, side by side along the counter
   STATIONS.filter(st => !DESSERTS[st.id].drink).forEach(st => {
     const i = order.indexOf(st.id); st.off = i < 0;
     st.stand.visible = st.hit.visible = !st.off; st.label.style.display = 'none';   // the counts are in the stock tab, which doesn't sway when the camera turns
     if (st.off) return;
-    const x = -4.65 + i * step; st.x = x; st.pick.x = x; st.stand.position.x = x; st.stand.scale.setScalar(k);
-    st.hit.position.x = x; st.hit.scale.x = Math.min(1, step * 0.95 / 2.4);
+    const x = CASE_X0 + (i + 0.5) * W; st.x = x; st.pick.x = x; st.stand.position.x = x; buildCase(st, W);
+    st.hit.position.x = x; st.hit.scale.x = Math.min(1, W * 0.95 / 2.4);
   });
 }
 function dressStations() {
   layoutStations(); if (typeof dressDecor === 'function') dressDecor();
   STATIONS.forEach(st => {
-    const open = onCounter(st.id), d = DESSERTS[st.id];
-    st.show.clear();
-    if (open) st.show.add(dessertModel(st.id));
+    if (!DESSERTS[st.id].drink) showStock(st, true);   // (the drinks keep their cups on the bar)
+    else { st.show.clear(); if (onCounter(st.id)) st.show.add(dessertModel(st.id)); }
   });
   updatePlates();
 }
@@ -453,6 +452,7 @@ function updatePlates() {
     st.label.className = 'plate' + (!open ? ' locked' : n ? '' : ' sold') + (caseSlots() > 4 ? ' tiny' : '');
     st.label.innerHTML = !open ? (game.day >= d.day ? '🔒 recipe' : `🔒 day ${d.day}`) : n ? `${d.emoji} ${priceOf(st.id)}🪙${d.drink ? '' : ` ×${n}`}` : `${d.emoji} sold out`;
     st.label.title = open ? d.name : game.day >= d.day ? `Buy the ${d.name} recipe in the shop` : `Opens on day ${d.day}`;
+    if (!d.drink) showStock(st);   // the case shows what is really left
   });
   drawStockTab();
 }
@@ -583,8 +583,8 @@ function stepActor(a, dt) {
     }
   }
   a.root.rotation.y = lerpAngle(a.root.rotation.y, a.face, Math.min(1, dt * 12));
-  if (a === miw) a.root.position.y = floorY(a.root.position.x, a.root.position.z);
-  { const g = a.root.scale.x; a.blob.position.set(a.root.position.x, 0.06 + (a === miw ? a.root.position.y : 0), a.root.position.z); a.blob.scale.set(0.8 * g, 1, 0.8 * g); }
+  if (a === miw || a.kitchenWalker) a.root.position.y = floorY(a.root.position.x, a.root.position.z);
+  { const g = a.root.scale.x; a.blob.position.set(a.root.position.x, 0.06 + (a === miw || a.kitchenWalker ? a.root.position.y : 0), a.root.position.z); a.blob.scale.set(0.8 * g, 1, 0.8 * g); }
   a.t += dt;
   const { body, head } = a.look;
   // happy hops and worried wobbles; sitting on a stool they're gentle (a small bob, a slow head-tilt) instead of jumping or trembling
@@ -656,7 +656,7 @@ function miwRoute(from, to) {
   if (toK) return [...findPath(from, front), gap, back, to.clone()];
   return [back, gap, front, ...findPath(front, to)];
 }
-function walkTo(a, p, cb) { const pts = a === miw ? miwRoute(a.root.position, p) : findPath(a.root.position, p); a.target = pts.shift(); a.path = pts; a.onArrive = cb; }
+function walkTo(a, p, cb) { const pts = a === miw || a.kitchenWalker ? miwRoute(a.root.position, p) : findPath(a.root.position, p); a.target = pts.shift(); a.path = pts; a.onArrive = cb; }
 
 // Miw runs the shop and carries up to two desserts on a tray
 const miw = makeActor('miw', '#ffd9c4');
@@ -843,7 +843,7 @@ function nextAction(dt) {
       miw.face = act.st.face ?? PI;
       if (hands.length >= HAND_MAX) { toast('Tray is full! Serve something first 🙌'); sfx.nope(); }
       else if (!stockOf(act.st.id)) { toast(`${DESSERTS[act.st.id].name} ran out! Tap its plate twice to bake more 🍳`); sfx.nope(); }
-      else { if (!DESSERTS[act.st.id].drink) kitchen.stock[act.st.id]--; hands.push(act.st.id); renderHands(); updatePlates(); sfx.pick(); miwPause = 0.15;
+      else { if (!DESSERTS[act.st.id].drink) kitchen.stock[act.st.id]--; hands.push(act.st.id); openCase(act.st); renderHands(); updatePlates(); sfx.pick(); miwPause = 0.15;
         if (!stockOf(act.st.id)) toast(`${DESSERTS[act.st.id].name} just sold out! Tap its plate twice to bake more 🍳`); }
     } else if (act.kind === 'table') {
       miw.face = Math.atan2(act.t.g.position.x + 0.2 - miw.root.position.x, act.t.g.position.z - miw.root.position.z);
@@ -862,7 +862,7 @@ function nextAction(dt) {
 
 // customers
 function spawn() {
-  const free = openTables().filter(t => !t.customer);
+  const free = openTables().filter(t => !t.customer && !t.dirtyN);   // a table with dirty plates on it is not ready for the next friend
   if (!free.length) return;
   const t = free[Math.random() * free.length | 0];
   const kinds = Object.keys(SPECIES), species = kinds[Math.random() * kinds.length | 0], sp = SPECIES[species];
@@ -901,16 +901,18 @@ function serve(t, tray = hands) {   // tray: Miw's hands, or a waiter's tray
   const c = t.customer;
   if (!c || c.state !== 'wait') return;
   let gave = false;
+  let noPlate = false;
   c.order.forEach((id, i) => {
     if (c.served[i]) return;
     const k = tray.indexOf(id);
     if (k < 0) return;
-    tray.splice(k, 1); c.served[i] = gave = true;
+    if (!DESSERTS[id].drink && dish.plates <= 0) { noPlate = true; return; }   // every dessert goes on a clean plate
+    tray.splice(k, 1); c.served[i] = gave = true; if (!DESSERTS[id].drink) { dish.plates--; showRack(); }
     const m = dessertModel(id); m.scale.setScalar(0.85);
     m.position.set(t.g.position.x + 0.25 - i * 0.45, 1.09, t.g.position.z + (i ? 0.3 : 0));
     scene.add(m); t.food.push(m);
   });
-  if (!gave) { if (tray !== hands) return; toast(`${EMOJI[c.species]} wants ${c.order.filter((_, i) => !c.served[i]).map(id => DESSERTS[id].name).join(' + ')}`); sfx.nope(); return; }
+  if (!gave) { if (tray !== hands) return; if (noPlate) { toast('No clean plates! Tap 🍽 Dishes to call the bunny'); sfx.nope(); return; } toast(`${EMOJI[c.species]} wants ${c.order.filter((_, i) => !c.served[i]).map(id => DESSERTS[id].name).join(' + ')}`); sfx.nope(); return; }
   if (tray === hands) renderHands();
   drawBubble(c); sfx.serve();
   if (!c.served.every(Boolean)) return;
@@ -934,7 +936,7 @@ function serve(t, tray = hands) {   // tray: Miw's hands, or a waiter's tray
 }
 // when they've eaten they get up, free the table, and queue at the register
 function toRegister(c) {
-  c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null;
+  c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null; dirtyTable(c.t, c.order.filter(id => !DESSERTS[id].drink).length);   // the plates stay on the table
   c.actor.root.position.y = 0; c.actor.hop = false; c.actor.seated = false;
   c.state = 'walkpay'; c.payMax = c.payLeft = Math.max(24, 34 - (game.day - 1) * 0.8);
   payQueue.push(c); repackQueue();
@@ -1009,7 +1011,7 @@ function leave(c, happy, why) {
   c.state = 'out'; c.claim = null; c.actor.hop = c.actor.shake = false;
   c.bubble.remove();
   c.actor.root.position.y = 0; c.actor.seated = false;
-  if (c.t.customer === c) { c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null; }
+  if (c.t.customer === c) { const eaten = c.order.filter((id, i) => c.served[i] && !DESSERTS[id].drink).length; c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null; if (eaten) dirtyTable(c.t, eaten); }
   const qi = payQueue.indexOf(c); if (qi >= 0) { payQueue.splice(qi, 1); repackQueue(); }
   if (pay.c === c) { pay.c = null; $('pay').hidden = true; }
   if (!happy) {

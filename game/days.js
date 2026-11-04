@@ -2,7 +2,7 @@
 function startDay(d) {
   prep.on = false; $('prepBar').hidden = true;
   customers.forEach(c => { removeActor(c.actor); c.bubble.remove(); });
-  TABLES.forEach(t => { t.food.forEach(m => scene.remove(m)); t.food = []; t.customer = null; });
+  TABLES.forEach(t => { t.food.forEach(m => scene.remove(m)); t.food = []; t.customer = null; }); resetDishes();
   queue.forEach(a => a.mark.remove());
   customers = []; queue = []; hands = []; payQueue.length = 0; pay.c = null; $('pay').hidden = true; syncStaff();
   Object.assign(game, { day: d, running: true, paused: false, open: true, time: DAY_SECONDS, coins: 0, shown: 0, combo: 0, served: 0, missed: 0, spawnIn: 1.2 });
@@ -168,11 +168,13 @@ function frame() {
     nextAction(dt);
     stepCustomers(dt);
     stepStaff(dt);
+    stepDishes(dt);
   }
   if (!game.paused && !menuOpen) { stepActor(miw, dt); staff.forEach(s => stepActor(s.a, dt)); }   // frozen while the shop is paused, so she can't finish a job behind the kitchen or the menu
-  STATIONS.forEach((st, i) => { st.show.rotation.y = now * 0.6 + i; });
+  STATIONS.forEach((st, i) => { if (DESSERTS[st.id].drink) st.show.rotation.y = now * 0.6 + i; });   // the cups on the bar still turn; the case holds still
+  stepCases(dt);
   updateDoor(dt);
-  pond[1].face += dt * 0.6; baker.hop = payQueue.some(c => c.state === 'pay'); [...pond, baker].forEach(a => stepActor(a, dt)); worldFx(now, dt);
+  pond[1].face += dt * 0.6; baker.hop = bakerHops(); [...pond, baker].forEach(a => stepActor(a, dt)); worldFx(now, dt);
   plot.timer += dt; if (plot.timer >= 6) { plot.timer = 0; if (plot.ready < plot.max) { plot.ready++; setPlotView(); if ($('pickBtn')) $('pickBtn').textContent = pickLabel(); } }
   if (baker.look && !baker.fallback && !baker.hat) { baker.hat = true; const hat = new THREE.Group(); hat.add(mesh(cyl(0.2, 0.22, 0.2, 14), '#ffffff', { y: 0.44 }), mesh(sph(0.26, 12), '#ffffff', { y: 0.62, s: [1, 0.8, 1] })); baker.look.head.add(hat); }
   sign.rotation.y = Math.sin(now * 0.8) * 0.15;
@@ -187,7 +189,10 @@ function frame() {
   hud('clockNote', game.running && !game.open ? 'closing' : '');
   hudClass('clock', 'hurry', game.running && game.open && game.time < 10);
   { const waiting = payQueue.filter(c => c.state === 'pay').length, show = game.running && !game.paused && !menuOpen && waiting > 0 && $('pay').hidden;   // the cashier shortcut shows while someone waits to pay
-    if (hudCache.cash !== show) { hudCache.cash = show; $('cashBtn').hidden = !show; } hud('cashN', waiting > 1 ? '×' + waiting : ''); }
+    if (hudCache.cash !== show) { hudCache.cash = show; $('cashBtn').hidden = !show; } hud('cashN', waiting > 1 ? '×' + waiting : '');
+    const dirty = dirtyTables().length, showDish = game.running && !game.paused && !menuOpen && dirty > 0 && dish.state === 'idle';   // the pager shows while plates wait to be washed
+    if (hudCache.dishB !== showDish) { hudCache.dishB = showDish; $('dishBtn').hidden = !showDish; } hud('dishN', dirty > 1 ? '×' + dirty : '');
+    hud('plates', `🍽 ${dish.plates}/${dish.total}`); hudClass('plates', 'low', dish.plates <= 1); }
   // a window (the kitchen, the shop) covers the café: don't draw what nobody can see
   if ($('overlay').hidden || document.body.classList.contains('homing')) { placeLabels(); renderer.render(scene, camera); }
   keepSmooth(dt, now);
