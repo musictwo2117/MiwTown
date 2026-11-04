@@ -1062,10 +1062,8 @@ function popup(p, text, sad) {
   setTimeout(() => el.remove(), 1300);
 }
 function placeLabels() {
-  STATIONS.forEach(st => put(st.label, tmp.set(st.lx ?? st.x, 0.25, st.lz ?? COUNTER_Z + 0.62)));
   const waiting = payQueue.filter(c => c.state === 'pay' || c.state === 'paying').length;
   regLabel.innerHTML = waiting ? `💰 pay ×${waiting}` : '💰 cashier'; regLabel.classList.toggle('call', waiting > 0);
-  put(regLabel, tmp.set(REG.x, 0.25, COUNTER_Z + 0.62));
   customers.forEach(c => c.bubble.isConnected && put(c.bubble, c.actor.root.position, 2.25));
   const seen = new Map();
   queue.forEach(a => {

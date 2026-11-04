@@ -91,6 +91,7 @@ body.homing #cashBtn{display:none}
 .bub.think{padding:6px 10px;font:600 16px 'Fredoka'}
 .bub.shake{animation:shake .35s infinite}
 @keyframes shake{25%{margin-left:-2px}75%{margin-left:2px}}
+.plate{display:none!important}   /* the floating lock, price and cashier tags are gone: the stock tab and the Cashier button say it all, and they flickered */
 .plate{font:600 11.5px 'Nunito';background:rgba(255,255,255,.95);border-radius:99px;padding:3px 9px;white-space:nowrap;box-shadow:0 3px 10px rgba(160,80,115,.18)}
 .plate.tiny{font-size:9px;padding:2px 5px;letter-spacing:-.2px}
 .plate em{font:600 11px 'Fredoka';font-style:normal;color:#b07a0c;margin-left:4px}

@@ -30,12 +30,20 @@ function buildCase(st, W) {
   st.caseW = W; st.showKey = null; st.cab.clear();
   const c = st.cab, D = CASE_D, H = CASE_H, R = CASE_R;
   c.add(mesh(box(W, 0.1, D), '#fff6ef', { y: 0.05 }), mesh(box(W - 0.1, 0.04, D - 0.15), '#ffe3ec', { y: 0.12, cast: false }),
-    mesh(box(W, H - 0.07, 0.06), '#ffd3e0', { y: (H + 0.07) / 2, z: -D / 2 + 0.03 }),
+    mesh(box(W, 0.07, 0.1), '#ffd3e0', { y: H - 0.035, z: -D / 2 + 0.05, cast: false }), mesh(box(W, 0.05, 0.1), '#ffd3e0', { y: 0.075, z: -D / 2 + 0.05, cast: false }),   // the rails the back doors run on
     mesh(box(W + 0.02, 0.1, D - R + 0.06), '#ff9fbf', { y: H + 0.04, z: -R / 2, cast: false }),
     mesh(box(W - 0.12, 0.03, D - R - 0.2), '', { y: H - 0.03, z: -R / 2 - 0.05, cast: false, mat: caseLightM }));
   [-1, 1].forEach(sd => { const e = mesh(endPlateGeo, '#ffc4d6', { x: sd * (W / 2 - 0.035) }); c.add(e); });
   const door = new THREE.Group(); door.position.set(0, H, D / 2 - R); c.add(door); st.door = door;   // the whole bowed glass hinges at the top and lifts up and out
   door.add(new THREE.Mesh(curvedGlass(W - 0.1), glassM), mesh(box(W * 0.45, 0.04, 0.05), '#ff9fbf', { y: 0.2 - H, z: R + 0.0, cast: false }));
+  // two clear sliding doors on the back of the case (the kitchen side): the rear one slides over the other when somebody takes a dessert
+  const pw = W / 2 + 0.02, ph = H - 0.2, py = 0.1 + ph / 2;
+  [[-1, -D / 2 + 0.03], [1, -D / 2 + 0.075]].forEach(([sd, z], k) => {
+    const g = new THREE.Group(); g.position.set(sd * W / 4, py, z); c.add(g);
+    g.add(mesh(box(pw, ph, 0.02), '', { mat: glassM, cast: false }), mesh(box(0.035, ph, 0.03), '#ff9fbf', { x: -sd * (pw / 2 - 0.02), cast: false }), mesh(box(0.035, ph * 0.4, 0.04), '#ff9fbf', { x: -sd * (pw / 2 - 0.02), y: 0, z: 0.015 * (k ? -1 : 1), cast: false }));
+    if (k) st.slide = g;
+  });
+  st.slideX = W / 4;
   const card = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.28), new THREE.MeshBasicMaterial({ map: cardTex.sold, transparent: true })); card.position.set(0, 0.32, D / 2 - 0.3); card.rotation.x = -0.3; card.visible = false; c.add(card); st.card = card;
 }
 // the desserts on the shelf: one for each left in stock (up to six), packed to fit the compartment
@@ -53,5 +61,5 @@ function showStock(st, force) {
 }
 const openCase = st => { if (st && st.door) st.doorT = 1; };
 function stepCases(dt) {
-  STATIONS.forEach(st => { if (!st.door || !st.stand.visible) return; st.doorT = Math.max(0, (st.doorT || 0) - dt * 1.5); st.door.rotation.x = -1.25 * Math.sin(Math.min(1, st.doorT) * PI); });
+  STATIONS.forEach(st => { if (!st.door || !st.stand.visible) return; st.doorT = Math.max(0, (st.doorT || 0) - dt * 1.5); st.door.rotation.x = -1.25 * Math.sin(Math.min(1, st.doorT) * PI); if (st.slide) st.slide.position.x = st.slideX - Math.sin(Math.min(1, st.doorT) * PI) * (st.caseW / 2 - 0.02); });
 }
