@@ -39,12 +39,24 @@ function outfitPreview() {
     return url;
   } catch (e) { console.warn('no outfit preview', e); return ''; }
 }
+// each thing in the Shop is drawn on its own, from the same code that dresses Miw (so it always matches what she wears)
+const wearIcon = w => {
+  const id = 'wear_' + w.key;
+  if (!thumbs[id] && typeof makeWear === 'function') makeThumb(id, () => {
+    const cat = { head: new THREE.Group(), body: new THREE.Group() }, root = new THREE.Group();
+    root.add(cat.head, cat.body);
+    if (w.slot === 'apron') cat.body.add(new THREE.Mesh(new THREE.CylinderGeometry(0.255, 0.255, 0.62, 28), new THREE.MeshLambertMaterial({ color: SWEATERS[0].color })));   // an apron reads on a body
+    makeWear(w.key, cat, true); if (w.slot === 'apron') cat.body.children[0].position.y = 0.33; if (w.slot === 'apron') root.rotation.x = -0.5;   // face-on, not looked down into
+    return root;
+  });
+  return thumbs[id] ? `<img src="${thumbs[id]}" alt="${w.name}">` : w.icon;
+};
 function outfitCards() {
   const owned = save.wearOwned || [], sw = save.sweaterOwned || [];
   const slotRows = (slot, title) => `<h3 class="shopspot">${title}</h3>` + ALL_WEAR().filter(w => w.slot === slot).map(w => {
     const on = wornIn(slot) === w.key, has = owned.includes(w.key);
     const act = on ? `<button data-wear="${w.key}" class="on">✓ Wearing</button>` : has ? `<button data-wear="${w.key}">Wear</button>` : `<button data-wear="${w.key}" ${save.wallet < w.cost ? 'disabled' : ''}>${w.cost} 🪙</button>`;
-    return `<div class="shoprow"><i>${w.icon}</i><span><b>${w.name}</b><small>${w.slot === 'apron' ? 'Staff outfit' : STAFF.includes(w) ? 'Staff outfit' : 'Just pretty'}</small></span>${act}</div>`;
+    return `<div class="shoprow"><i>${wearIcon(w)}</i><span><b>${w.name}</b><small>${w.slot === 'apron' ? 'Staff outfit' : STAFF.includes(w) ? 'Staff outfit' : 'Just pretty'}</small></span>${act}</div>`;
   }).join('');
   const sweaters = `<h3 class="shopspot">Sweater</h3>` + SWEATERS.map(s => {
     const on = sweaterOf().key === s.key, has = s.cost === 0 || sw.includes(s.key);
