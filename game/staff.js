@@ -1,5 +1,5 @@
 // ---------- staff: waiters you hire in the shop. They fetch what a waiting friend ordered and serve the table, so Miw can restock and run the cashier ----------
-const STAFF_COST = [120, 300];
+const STAFF_COST = [120, 300], DISH_COST = 150, STAFF_FROM = 4;   // nobody can be hired before day 4: until then Miw serves, washes up, bakes and takes the money herself
 const STAFF_LOOKS = [['frog', '#8fd18a', '🐸', 'Waiter'], ['bear', '#c8916a', '🐻', 'Second waiter']];
 const STAFF_HOME = [new THREE.Vector3(-2.6, 0, -2.0), new THREE.Vector3(2.6, 0, -2.0)];
 const staff = [];
@@ -17,7 +17,7 @@ function releaseJob(s) {
 }
 // as many waiters as you have hired, standing by the counter (called when a day starts, and after the shop is visited mid-day)
 function syncStaff(keepPlace) {
-  const n = Math.min(STAFF_COST.length, save.staff || 0);
+  const n = game.day >= STAFF_FROM ? Math.min(STAFF_COST.length, save.staff || 0) : 0;
   while (staff.length > n) { const s = staff.pop(); releaseJob(s); removeActor(s.a); }
   while (staff.length < n) {
     const [species, color] = STAFF_LOOKS[staff.length], a = makeActor(species, color);
@@ -28,6 +28,7 @@ function syncStaff(keepPlace) {
     s.trayItems = new THREE.Group(); s.trayItems.position.y = 0.02; s.tray3d.add(s.trayItems);
     staff.push(s);
   }
+  if (typeof syncBaker === 'function') syncBaker();   // the bunny appears once hired
   staff.forEach((s, i) => {
     if (keepPlace && s.a.root.position.lengthSq() > 0) return;
     releaseJob(s); s.a.target = s.a.path = s.a.onArrive = null; s.a.root.position.copy(STAFF_HOME[i]); s.a.face = 0; s.wait = 0.5;
@@ -87,17 +88,23 @@ function stepStaff(dt) {
   });
 }
 // the Staff tab of the shop
-function staffCards() {
-  const n = save.staff || 0;
-  return STAFF_COST.map((cost, i) => {
+function staffCards(day) {
+  const n = save.staff || 0, locked = day < STAFF_FROM;
+  const rows = STAFF_COST.map((cost, i) => {
     const [, , icon, name] = STAFF_LOOKS[i], has = i < n, next = i === n;
-    return `<div class="shoprow"><i>${icon}</i><span><b>${name}</b><small>Fetches orders and serves the tables for you</small></span>${has ? '<em>✓ Hired</em>' : next ? `<button data-staff="${i}" ${save.wallet < cost ? 'disabled' : ''}>${cost} 🪙</button>` : '<em>Hire the first one first</em>'}</div>`;
-  }).join('');
+    return `<div class="shoprow"><i>${icon}</i><span><b>${name}</b><small>Fetches orders and serves the tables for you</small></span>${locked ? `<em>Opens day ${STAFF_FROM}</em>` : has ? '<em>✓ Hired</em>' : next ? `<button data-staff="${i}" ${save.wallet < cost ? 'disabled' : ''}>${cost} 🪙</button>` : '<em>Hire the first one first</em>'}</div>`;
+  });
+  rows.push(`<div class="shoprow"><i>🐰</i><span><b>Dishwasher</b><small>Collects the dirty plates and washes them for you</small></span>${locked ? `<em>Opens day ${STAFF_FROM}</em>` : save.dishwasher ? '<em>✓ Hired</em>' : `<button data-dish="1" ${save.wallet < DISH_COST ? 'disabled' : ''}>${DISH_COST} 🪙</button>`}</div>`);
+  return rows.join('');
 }
 function staffBind(root, again) {
   root.querySelectorAll('button[data-staff]').forEach(b => b.onclick = () => {
     const i = +b.dataset.staff, cost = STAFF_COST[i];
     if ((save.staff || 0) !== i || save.wallet < cost) return;
     save.wallet -= cost; save.staff = i + 1; store(); sfx.fanfare(); again();
+  });
+  root.querySelectorAll('button[data-dish]').forEach(b => b.onclick = () => {
+    if (save.dishwasher || save.wallet < DISH_COST) return;
+    save.wallet -= DISH_COST; save.dishwasher = true; store(); sfx.fanfare(); again();
   });
 }
