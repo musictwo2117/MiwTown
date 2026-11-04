@@ -8,7 +8,7 @@
     ['Strawberry Macarons', 'มาการองสตรอว์เบอร์รี่'], ['Strawberry Pancakes', 'แพนเค้กสตรอว์เบอร์รี่'], ['Strawberry Cheesecake', 'ชีสเค้กสตรอว์เบอร์รี่'], ['Strawberry Donut', 'โดนัทสตรอว์เบอร์รี่'], ['Kitty Cupcake', 'คัพเค้กแมวเหมียว'], ['Pretzel Cake', 'เค้กคาราเมลเพรทเซล'],
     ['loves the ', 'ชอบ'], ['loves cheesecake', 'ชอบชีสเค้ก'], ['tips big', 'ทิปเยอะ'], ['always orders two', 'สั่งสองอย่างเสมอ'], ['in a hurry', 'ใจร้อน'], ['happy to wait', 'รอได้สบาย ๆ'],
     // the shop and the wallet
-    ['Shop', 'ร้านค้า'], ['The shop is open during the day, or after closing', 'ร้านค้าเปิดระหว่างวัน หรือหลังปิดร้าน'], ['Spend the coins you keep.', 'ใช้เหรียญที่เก็บไว้'], ['Recipes', 'สูตรขนม'], ['Counter', 'เคาน์เตอร์'], [' saved', ' เก็บไว้'], ['✓ Owned', '✓ มีแล้ว'], ['Opens day ', 'เปิดวันที่ '], ['sells for ', 'ขายได้ '],
+    ['Shop', 'ร้านค้า'], ['The shop is open during the day, or after closing', 'ร้านค้าเปิดระหว่างวัน หรือหลังปิดร้าน'], ['Spend the coins you keep.', 'ใช้เหรียญที่เก็บไว้'], ['Recipes', 'สูตรขนม'], ['Counter', 'เคาน์เตอร์'], ['Staff', 'พนักงาน'], ['Second waiter', 'พนักงานเสิร์ฟคนที่สอง'], ['Waiter', 'พนักงานเสิร์ฟ'], ['Fetches orders and serves the tables for you', 'หยิบขนมและเสิร์ฟโต๊ะให้คุณ'], ['Hire the first one first', 'จ้างคนแรกก่อน'], ['✓ Hired', '✓ จ้างแล้ว'], [' saved', ' เก็บไว้'], ['✓ Owned', '✓ มีแล้ว'], ['Opens day ', 'เปิดวันที่ '], ['sells for ', 'ขายได้ '],
     ['Dessert ·', 'ขนม ·'], ['Drink ·', 'เครื่องดื่ม ·'], ['🔒 recipe', '🔒 สูตร'], [' recipe in the shop', ' ในร้านค้า'], ['Buy the ', 'ซื้อสูตร '], [' recipe in the shop after closing 🛒', ' ในร้านค้าหลังปิดร้าน 🛒'],
     ['Bigger display case', 'ตู้โชว์ที่ใหญ่ขึ้น'], ['Display case', 'ตู้โชว์'], [' plates on the counter', ' จานบนเคาน์เตอร์'], [' plates · full', ' จาน · เต็มแล้ว'], ['✓ Max', '✓ สูงสุด'], ['On the counter (', 'บนเคาน์เตอร์ ('], ['): tap to swap', '): แตะเพื่อสลับ'], ['The counter is full: take one off first', 'เคาน์เตอร์เต็มแล้ว: เอาออกก่อนหนึ่งอย่าง'],
     ['Turn left', 'หมุนซ้าย'], ['Turn right', 'หมุนขวา'], ['Zoom in', 'ซูมเข้า'], ['Zoom out', 'ซูมออก'], ['Reset the view', 'รีเซ็ตมุมกล้อง'],
@@ -73,7 +73,7 @@
   ];
   // texts that are a whole piece of text on their own (short words that must not match inside others)
   const X = {
-    HANDS: 'มือ', Apron: 'ผ้ากันเปื้อน', Beret: 'เบเร่ต์', 'Bow tie': 'โบว์ผูกคอ', Outfit: 'ชุด', Head: 'หัว', Neck: 'คอ', Sweater: 'เสื้อสเวตเตอร์', Wear: 'สวมใส่', Bow: 'โบว์', Scarf: 'ผ้าพันคอ', Crown: 'มงกุฎ', Mint: 'มิ้นต์', Lilac: 'ลาเวนเดอร์', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
+    HANDS: 'มือ', Cashier: 'แคชเชียร์', Apron: 'ผ้ากันเปื้อน', Beret: 'เบเร่ต์', 'Bow tie': 'โบว์ผูกคอ', Outfit: 'ชุด', Head: 'หัว', Neck: 'คอ', Sweater: 'เสื้อสเวตเตอร์', Wear: 'สวมใส่', Bow: 'โบว์', Scarf: 'ผ้าพันคอ', Crown: 'มงกุฎ', Mint: 'มิ้นต์', Lilac: 'ลาเวนเดอร์', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
     Strawberry: 'สตรอว์เบอร์รี่', CHANGE: 'เงินทอน', Egg: 'ไข่', Flour: 'แป้ง', 'Cream cheese': 'ครีมชีส', 'Cookie crust': 'ฐานคุกกี้', Milk: 'นม', Butter: 'เนย', Chocolate: 'ช็อกโกแลต', Pretzel: 'เพรทเซล',
     coins: 'เหรียญ', 'happy friends': 'เพื่อนที่อิ่มสุข', 'left hungry': 'เพื่อนที่หิวกลับไป',
     Continue: 'เล่นต่อ', 'New game': 'เริ่มเกมใหม่', Volume: 'ระดับเสียง', Music: 'เพลง', 'Visual effects': 'เอฟเฟกต์ภาพ', Camera: 'มุมกล้อง', Language: 'ภาษา',

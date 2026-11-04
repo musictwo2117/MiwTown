@@ -58,6 +58,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ibtn{border:0;background:var(--card);border-radius:14px;width:40px;height:40px;font-size:18px;display:grid;place-items:center;box-shadow:0 8px 24px rgba(160,80,115,.16);text-decoration:none}
 
 /* hands */
+#cashBtn{position:fixed;left:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:6;display:flex;align-items:center;gap:7px;border:0;border-radius:20px;padding:11px 16px;background:linear-gradient(#ffe98f,#ffcf4d);box-shadow:0 5px 0 #e0a928,0 10px 24px rgba(160,110,20,.25);color:#7a4a00;font:600 17px 'Fredoka';cursor:pointer;animation:callglow 1.1s infinite}
+#cashBtn[hidden]{display:none}
+#cashBtn i{font-style:normal;font-size:22px}#cashBtn b{background:#ff5d8a;color:#fff;border-radius:11px;min-width:22px;padding:1px 6px;font-size:14px;text-align:center}#cashBtn b:empty{display:none}
+#cashBtn:active{transform:translateY(3px);box-shadow:0 2px 0 #e0a928}
+body.homing #cashBtn{display:none}
+@media (max-width:560px){#cashBtn{left:12px;bottom:calc(88px + env(safe-area-inset-bottom));padding:10px 14px;font-size:16px}}   /* on a phone it sits just above the hands bar so the two never overlap */
 #hands{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:8px 10px;display:flex;gap:8px;align-items:center;z-index:5}
 #hands>small{font:600 11px 'Nunito';color:var(--soft);writing-mode:vertical-rl;transform:rotate(180deg)}
 .slot{width:62px;height:62px;border-radius:16px;border:2px dashed var(--line);background:#fff8fa;display:grid;place-items:center;font-size:30px;position:relative;padding:0}

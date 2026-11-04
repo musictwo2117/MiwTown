@@ -4,7 +4,7 @@ function startDay(d) {
   customers.forEach(c => { removeActor(c.actor); c.bubble.remove(); });
   TABLES.forEach(t => { t.food.forEach(m => scene.remove(m)); t.food = []; t.customer = null; });
   queue.forEach(a => a.mark.remove());
-  customers = []; queue = []; hands = []; payQueue.length = 0; pay.c = null; $('pay').hidden = true;
+  customers = []; queue = []; hands = []; payQueue.length = 0; pay.c = null; $('pay').hidden = true; syncStaff();
   Object.assign(game, { day: d, running: true, paused: false, open: true, time: DAY_SECONDS, coins: 0, shown: 0, combo: 0, served: 0, missed: 0, spawnIn: 1.2 });
   miw.root.position.copy(HOME); miw.target = null; miw.path = null; miw.face = 0;
   renderHands(); dressStations(); dressTables(); showCombo(); updateBerryHud();
@@ -17,7 +17,7 @@ function startDay(d) {
 function endDay() {
   game.running = false;
   $('panel').classList.remove('wide');
-  hands.forEach(id => { if (!DESSERTS[id].drink) kitchen.stock[id]++; }); hands = []; renderHands();
+  hands.forEach(id => { if (!DESSERTS[id].drink) kitchen.stock[id]++; }); hands = []; renderHands(); staff.forEach(s => releaseJob(s));
   const goal = goalFor(game.day), won = game.coins >= goal;
   const stars = !won ? 0 : game.coins >= goal * 1.7 ? 3 : game.coins >= goal * 1.35 ? 2 : 1;
   save.total = (save.total || 0) + game.coins; save.wallet = (save.wallet || 0) + game.coins;
@@ -45,7 +45,7 @@ function daySummary(goal, won, stars) {
 // the shop: spend the coins you have kept on dishes and drinks that are open by now
 // the shop sells things by category: each tab is one category (add outfits, furniture... here as they come)
 let shopTab = 'recipes';
-const SHOP_TABS = [['recipes', 'Recipes'], ['counter', 'Counter'], ['decor', 'Decor'], ['outfit', 'Outfit']];
+const SHOP_TABS = [['recipes', 'Recipes'], ['counter', 'Counter'], ['staff', 'Staff'], ['decor', 'Decor'], ['outfit', 'Outfit']];
 function openShop(day, back, tab) {
   if (tab) shopTab = tab;
   const ids = Object.keys(DESSERTS).filter(id => DESSERTS[id].cost);
@@ -54,11 +54,12 @@ function openShop(day, back, tab) {
   $('panel').innerHTML = `
     <div class="shophead"><div><h2>🛒 Shop</h2><small>Spend the coins you keep.</small></div><div class="wallet">🪙 ${save.wallet}</div></div>
     <div class="shoptabs">${SHOP_TABS.map(([k, n]) => `<button data-tab="${k}" class="${k === shopTab ? 'on' : ''}">${n}</button>`).join('')}</div>
-    ${shopTab === 'decor' ? `<div class="shopgrid">${decorCards()}</div>` : shopTab === 'outfit' ? `<div class="shopgrid">${outfitCards()}</div>` : shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
+    ${shopTab === 'decor' ? `<div class="shopgrid">${decorCards()}</div>` : shopTab === 'outfit' ? `<div class="shopgrid">${outfitCards()}</div>` : shopTab === 'staff' ? `<div class="shopgrid">${staffCards()}</div>` : shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
       return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>`}
     <button class="go" id="backBtn">Back</button>`;
   if (shopTab === 'decor') decorBind($('panel'), () => openShop(day, back));
   if (shopTab === 'outfit') outfitBind($('panel'), () => openShop(day, back));
+  if (shopTab === 'staff') staffBind($('panel'), () => openShop(day, back));
   $('panel').querySelectorAll('.shoptabs button').forEach(b => b.onclick = () => { sfx.tap(); openShop(day, back, b.dataset.tab); });
   $('panel').querySelectorAll('.shopgrid button[data-id]').forEach(b => b.onclick = () => {
     const id = b.dataset.id, d = DESSERTS[id]; if (owns(id) || save.wallet < d.cost) return;
@@ -79,7 +80,7 @@ function shopMidDay() {
   if (menuOpen || game.paused) return;
   if (!game.running || kitchen.on) return toast('The shop is open during the day, or after closing 🛍');
   game.paused = true; $('overlay').hidden = false;
-  openShop(game.day, () => { $('panel').classList.remove('shopwide'); $('overlay').hidden = true; game.paused = false; dressStations(); updatePlates(); renderHands(); sfx.bell(); });
+  openShop(game.day, () => { $('panel').classList.remove('shopwide'); $('overlay').hidden = true; game.paused = false; syncStaff(true); dressStations(); updatePlates(); renderHands(); sfx.bell(); });
 }
 $('shopHud').onclick = shopMidDay;
 $('prepKitchen').onclick = backToKitchen;
@@ -166,8 +167,9 @@ function frame() {
     } else if (!customers.length) endDay();
     nextAction(dt);
     stepCustomers(dt);
+    stepStaff(dt);
   }
-  if (!game.paused && !menuOpen) stepActor(miw, dt);   // frozen while the shop is paused, so she can't finish a job behind the kitchen or the menu
+  if (!game.paused && !menuOpen) { stepActor(miw, dt); staff.forEach(s => stepActor(s.a, dt)); }   // frozen while the shop is paused, so she can't finish a job behind the kitchen or the menu
   STATIONS.forEach((st, i) => { st.show.rotation.y = now * 0.6 + i; });
   updateDoor(dt);
   pond[1].face += dt * 0.6; baker.hop = payQueue.some(c => c.state === 'pay'); [...pond, baker].forEach(a => stepActor(a, dt)); worldFx(now, dt);
@@ -184,6 +186,8 @@ function frame() {
   hud('time', `${s / 60 | 0}:${String(s % 60).padStart(2, '0')}`);
   hud('clockNote', game.running && !game.open ? 'closing' : '');
   hudClass('clock', 'hurry', game.running && game.open && game.time < 10);
+  { const waiting = payQueue.filter(c => c.state === 'pay').length, show = game.running && !game.paused && !menuOpen && waiting > 0 && $('pay').hidden;   // the cashier shortcut shows while someone waits to pay
+    if (hudCache.cash !== show) { hudCache.cash = show; $('cashBtn').hidden = !show; } hud('cashN', waiting > 1 ? '×' + waiting : ''); }
   // a window (the kitchen, the shop) covers the café: don't draw what nobody can see
   if ($('overlay').hidden || document.body.classList.contains('homing')) { placeLabels(); renderer.render(scene, camera); }
   keepSmooth(dt, now);

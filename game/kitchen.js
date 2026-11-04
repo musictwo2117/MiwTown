@@ -58,7 +58,7 @@ const kst = (() => {
     m.castShadow = cast; m.receiveShadow = true;
     return m;
   };
-  const GOALS = { crush: [[0.5, 3.2, 4.2], [0.5, 0.8, 0.2]], pan: [[0.5, 3.6, 3.7], [0.5, 0.6, 0.2]], dn: [[0.5, 3.5, 3.9], [0.5, 0.85, 0.25]], idle: [[0, 2.3, 5.4], [0, 1.0, 0]], mix: [[0.5, 2.9, 4.3], [0.5, 1.25, 0.3]], bake: [[0.6, 2.5, 5.3], [0.6, 0.95, 0.45]], deco: [[0.5, 3.0, 3.4], [0.5, 0.8, 0.2]] };
+  const GOALS = { crush: [[0.5, 3.2, 4.2], [0.5, 0.8, 0.2]], pan: [[0.5, 3.6, 3.7], [0.5, 0.6, 0.2]], dn: [[0.5, 3.5, 3.9], [0.5, 0.85, 0.25]], idle: [[0, 2.3, 5.4], [0, 1.0, 0]], mix: [[0.5, 2.9, 4.3], [0.5, 1.25, 0.3]], bake: [[0.6, 3.1, 6.7], [0.6, 1.6, 0.45]], deco: [[0.5, 3.0, 3.4], [0.5, 0.8, 0.2]] };
   const look = new THREE.Vector3(0, 1, 0); cam.position.set(0, 2.3, 5.4);
   const goalOf = k => GOALS[k === 'add' || k === 'stir' ? 'mix' : k === 'bake' || k === 'bake-out' ? 'bake' : k === 'deco' || k === 'done' ? 'deco' : k === 'crush' ? 'crush' : k === 'press' || k === 'pour' ? 'pan' : DN_MODES.includes(k) || TIN_MODES.includes(k) ? 'dn' : k === 'lay' ? 'pan' : k === 'drizzle' ? 'deco' : 'idle'];
   sc.add(new THREE.HemisphereLight(0xfff6ea, 0x8f7c66, 0.5));
@@ -126,7 +126,12 @@ const kst = (() => {
   const glowM = new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
   const glowP = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.2), glowM); glowP.position.set(0, 0.55, 0.045); door.add(glowP);   // the orange glow seen through the glass
   const inside = new THREE.Group(); inside.position.set(0, 0.36, 1.55); ovenG.add(inside);
-  const steam = [0, 1, 2, 3].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true })); ovenG.add(m); return m; });
+  // soft puffs of steam: they drift out of the vents on top while it bakes, and rush out of the door when it opens
+  const puffTex = canvasTex(64, 64, (x, w) => { const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.45, 'rgba(255,255,255,.4)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
+  const mkPuff = (tint, ph) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex, color: tint, transparent: true, depthWrite: false, opacity: 0 })); m.userData = { ph, dx: (Math.random() - 0.5) * 1.6 }; ovenG.add(m); return m; };
+  const steam = Array.from({ length: 18 }, (_, i) => mkPuff('#d3cdc8', i / 18));
+  const blast = Array.from({ length: 10 }, (_, i) => mkPuff('#e4ddd5', i / 10));
+  const haze = Array.from({ length: 6 }, (_, i) => mkPuff('#ffb070', i / 6));   // a warm shimmer of hot air over the door
 
   // the plate for decorating
   const decoG = new THREE.Group(); decoG.position.set(0.5, TOP, 0.2); sc.add(decoG);
@@ -200,7 +205,7 @@ const kst = (() => {
   const heatColor = p => { p = Math.max(0, Math.min(1, p)); let i = 0; while (i < HEAT.length - 2 && p > HEAT[i + 1][0]) i++; const [a, ca] = HEAT[i], [b, cb] = HEAT[i + 1]; return new THREE.Color(ca).lerp(new THREE.Color(cb), (p - a) / (b - a)); };
   const FRYC = [[0, '#ecd5a8'], [0.45, '#dcae66'], [0.69, '#c4843b'], [0.85, '#8a4f22'], [1, '#3a1f0e']];   // raw dough → golden brown → burnt
   const fryColor = p => { p = Math.max(0, Math.min(1, p)); let i = 0; while (i < FRYC.length - 2 && p > FRYC[i + 1][0]) i++; const [a, ca] = FRYC[i], [b, cb] = FRYC[i + 1]; return new THREE.Color(ca).lerp(new THREE.Color(cb), (p - a) / (b - a)); };
-  let bakeHeat = 0, lastHeat = 0.69, ovenFill = null, ovenMat = null, ovenColor = null;
+  let bakeHeat = 0, lastHeat = 0.69, ovenFill = null, ovenMat = null, ovenColor = null, ovenDome = null, ovenCakes = [];
   function plainCake() {   // the baked cheesecake before it is decorated
     const g = new THREE.Group(), c = heatColor(lastHeat), hx = col => '#' + col.getHexString();
     g.add(mesh(cyl(0.42, 0.42, 0.07, 36), '#c98b4b', { y: 0.035 }), mesh(cyl(0.41, 0.41, 0.2, 36), hx(c), { y: 0.17 }), mesh(cyl(0.405, 0.405, 0.02, 36), hx(c.clone().multiplyScalar(0.92)), { y: 0.28 }));
@@ -224,7 +229,9 @@ const kst = (() => {
     g.add(mesh(cyl(PAN_R + 0.04, PAN_R + 0.04, 0.06, 44), '#c9d0de', { y: 0.03 }), mesh(new THREE.TorusGeometry(PAN_R + 0.04, 0.025, 8, 48), '#b9c1d2', { rx: PI / 2, y: 0.56, cast: false }));
     const wall = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R + 0.04, PAN_R + 0.04, 0.5, 48, 1, true), new THREE.MeshPhongMaterial({ color: '#dde3ee', side: THREE.DoubleSide, shininess: 70 })); wall.position.y = 0.31; g.add(wall);
     g.add(mesh(cyl(PAN_R - 0.03, PAN_R - 0.03, 0.04, 40), '#c98b4b', { y: 0.08, cast: false }));
-    ovenFill = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R - 0.03, PAN_R - 0.03, 0.4, 40), new THREE.MeshPhongMaterial({ color: '#fff0cf', shininess: 40 })); ovenFill.position.y = 0.3; g.add(ovenFill);
+    const fm = new THREE.MeshPhongMaterial({ color: '#fff0cf', shininess: 40 });
+    ovenFill = new THREE.Mesh(new THREE.CylinderGeometry(PAN_R - 0.03, PAN_R - 0.03, 0.4, 40), fm); ovenFill.position.y = 0.3; g.add(ovenFill);
+    ovenDome = new THREE.Mesh(new THREE.SphereGeometry(PAN_R - 0.03, 36, 10, 0, PI * 2, 0, PI / 2), fm); ovenDome.scale.y = 0.01; ovenDome.position.y = 0.5; g.add(ovenDome);   // the crown that domes up as it rises
     return g;
   }
   const GRID = 14, covered = new Uint8Array(GRID * GRID); let coverN = 0, cellsIn = 1, toolX = 0, toolZ = 0, toolDown = false;
@@ -278,10 +285,17 @@ const kst = (() => {
   const panM = new THREE.Mesh(new THREE.LatheGeometry([[0.001, 0], [1.0, 0], [1.05, 0.04], [1.42, 0.56], [1.42, 0.6], [1.36, 0.6], [1.34, 0.54], [0.98, 0.1], [0.001, 0.1]].map(([x, y]) => new THREE.Vector2(x, y)), 56), new THREE.MeshPhongMaterial({ color: '#3b3b42', shininess: 70, specular: 0x777777, side: THREE.DoubleSide }));
   panM.position.y = 0.2; panM.scale.z = 0.75; panM.castShadow = panM.receiveShadow = true; potG.add(panM);
   potG.add(mesh(box(1.0, 0.07, 0.16), '#2a2a2f', { x: 1.9, y: 0.58 }), mesh(box(0.7, 0.1, 0.18), '#8a5a36', { x: 2.55, y: 0.58 }));   // a long handle with a wooden grip
-  const oil = new THREE.Mesh(cyl(1.17, 1.17, 0.04, 36), new THREE.MeshPhongMaterial({ color: '#d99428', shininess: 90, specular: new THREE.Color(0xffffff), transparent: true, opacity: 0.93 })); oil.position.y = 0.55; oil.scale.z = 0.75; potG.add(oil);
+  // the oil is a rippling surface; bubbles rise round each donut and pop, a ring of foam clings to it, and rings spread out where it goes in
+  const oil = new THREE.Mesh(new THREE.RingGeometry(0.001, 1.17, 44, 14).rotateX(-PI / 2), new THREE.MeshPhongMaterial({ color: '#d99428', shininess: 110, specular: new THREE.Color(0xffffff), transparent: true, opacity: 0.94, side: THREE.DoubleSide })); oil.position.y = 0.56; oil.scale.z = 0.75; potG.add(oil);
+  const oilBase = oil.geometry.attributes.position.array.slice();
+  const OIL_Y = 0.575, bubbles = Array.from({ length: 44 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshPhongMaterial({ color: '#fff3cf', shininess: 120, specular: new THREE.Color(0xffffff), transparent: true, opacity: 0.7, depthWrite: false })); m.visible = false; potG.add(m); return { m, age: 9, life: 0.5, x: 0, z: 0, size: 1 }; });
+  const ripples = Array.from({ length: 8 }, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.012, 6, 36), new THREE.MeshBasicMaterial({ color: '#fff1c4', transparent: true, opacity: 0, depthWrite: false })); m.rotation.x = PI / 2; m.position.y = OIL_Y; m.visible = false; potG.add(m); return { m, age: 9, x: 0, z: 0 }; });
+  const startRipple = (x, z) => { const r = ripples.find(q => q.age >= 1) || ripples[0]; r.age = 0; r.x = x; r.z = z; r.m.position.set(x, OIL_Y, z); r.m.visible = true; };
+  let bubbleAcc = 0;
   const fryLight = new THREE.PointLight('#ff9a40', 0, 3.4, 2); fryLight.position.set(0, 0.45, 0); potG.add(fryLight);
   const fryers = DN_SPOTS.map(([x, z]) => { const d = makeDonut(); d.position.set(x * 0.88, 1.6, z * 0.88); potG.add(d); return d; });
-  let sideA = 0, flipT = 1, dipTime = 0;
+  const foams = fryers.map(d => { const m = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.035, 6, 28), new THREE.MeshBasicMaterial({ color: '#fff4d0', transparent: true, opacity: 0, depthWrite: false })); m.rotation.x = PI / 2; m.position.set(d.position.x, OIL_Y, d.position.z); m.visible = false; potG.add(m); return m; });
+  let sideA = 0, flipT = 1, dipTime = 0, flipSplash = 0;
   // the glaze bowl, with the tray of donuts held over it
   const glzG = new THREE.Group(); dnG.add(glzG);
   glzG.add(mesh(cyl(1.3, 1.15, 0.5, 36), '#fbf8f1', { y: 0.25, s: [1, 1, 0.75] }));
@@ -374,18 +388,20 @@ const kst = (() => {
     const g = new THREE.Group(), cake = new THREE.Mesh(sph(0.27, 16), cupCakeM); cake.position.y = 0.34; cake.scale.y = 0.8; cake.castShadow = true; cake.receiveShadow = true;
     g.add(mesh(cyl(0.3, 0.22, 0.26, 20), '#f4a6c0', { y: 0.21 }), cake);
     const frost = new THREE.Group(); frost.position.y = 0.5; frost.visible = false;
-    frost.add(mesh(sph(0.25, 14), '#ffd1e0', { s: [1, 0.5, 1] }), mesh(sph(0.19, 12), '#ffe3ec', { y: 0.1, s: [1, 0.55, 1] }), mesh(sph(0.12, 10), '#fff2f6', { y: 0.19, s: [1, 0.6, 1] }), mesh(sph(0.045, 8), '#ffd1e0', { y: 0.27 }));
-    const ears = new THREE.Group(); ears.position.y = 0.76; ears.visible = false;
+    // the frosting is piped as a spiral of beads from the rim up to a peak, so it can be drawn one bead at a time
+    const FN = 34, beads = Array.from({ length: FN }, (_, i) => { const u = i / (FN - 1), a = u * PI * 2 * 3.3, r = 0.25 * (1 - 0.8 * u), b = mesh(sph(0.082 - 0.026 * u, 8), i % 2 ? '#ffd1e0' : '#ffc2d6', { x: Math.cos(a) * r, y: 0.03 + u * 0.27, z: Math.sin(a) * r, s: [1, 0.85, 1], cast: false }); b.visible = false; frost.add(b); return b; });
+    const peak = mesh(new THREE.ConeGeometry(0.055, 0.14, 8), '#ffd1e0', { y: 0.37, cast: false }); peak.visible = false; frost.add(peak);
+    const ears = new THREE.Group(); ears.position.y = 0.99; ears.visible = false;
     [-1, 1].forEach(sd => ears.add(mesh(new THREE.ConeGeometry(0.075, 0.16, 4), '#5a3a2a', { x: sd * 0.12, y: 0.06, rz: -sd * 0.3 })));
     ears.add(mesh(sph(0.035, 8), '#ff7aa8', { y: -0.06, z: 0.16 }));
     g.add(frost, ears);
-    return { g, cake, frost, ears, f: 0, ft: 0, fr: 0, frt: 0, tp: 0, tpt: 0 };
+    return { g, cake, frost, beads, peak, FN, ears, f: 0, ft: 0, fr: 0, frt: 0, tp: 0, tpt: 0 };
   }
   const tinCups = TIN_SPOTS.map(([x, z]) => { const c = makeCupcake(); c.g.position.set(x, 0.08, z); tinG.add(c.g); return c; });
   tinG.add(mesh(box(2.8, 0.08, 1.5), '#b9b1a4', { y: 0.04 }));
   function tinGroup() {   // the tin of six sponges for the oven
     const g = new THREE.Group(); g.add(mesh(box(2.8, 0.08, 1.5), '#b9b1a4', { y: 0.04 }));
-    TIN_SPOTS.forEach(([x, z]) => { const c = makeCupcake(); c.g.position.set(x, 0.08, z); g.add(c.g); });
+    ovenCakes = []; TIN_SPOTS.forEach(([x, z]) => { const c = makeCupcake(); c.g.position.set(x, 0.08, z); g.add(c.g); ovenCakes.push(c.cake); });
     return g;
   }
   const tinTool = new THREE.Group(); tinG.add(tinTool);   // the scoop for the batter, or the piping bag for the frosting
@@ -445,7 +461,7 @@ const kst = (() => {
     if (kind === 'griddle') { gdPhase = 'idle'; gdT = 0; gdN = 0; bakeHeat = 0; sideA = 0; gdStack.forEach(m => { m.visible = false; }); }
     if (kind === 'fry') { bakeHeat = 0; sideA = 0; flipT = 1; dipTime = 0; fryers.forEach(d => { d.rotation.set(0, 0, 0); d.position.y = 1.6; d.userData.splashed = false; d.userData.body.material.color.set('#f3d2a2'); }); }
     if (kind === 'glaze') { trayY = 1.15; trayRot = PI; glazeK = 0; sprinkles.splice(0).forEach(m => m.parent && m.parent.remove(m)); trayDonuts.forEach(d => { d.userData.gl.visible = false; d.userData.dr.visible = false; }); }
-    if (kind === 'bake') { bakeHeat = 0; ovenFill = null; ovenMat = null; ovenColor = null; }
+    if (kind === 'bake') { bakeHeat = 0; ovenFill = null; ovenMat = null; ovenColor = null; ovenDome = null; ovenCakes = []; }
     if (kind === 'pipe') { mcDown = -1; mcSpots.forEach(s => { s.size = 0; s.done = false; s.filled = false; s.cream.visible = s.top.visible = false; }); }
     if (kind === 'sandwich') { mcFilled = 0; mcSpots.forEach(s => { s.filled = false; s.fillT = 1; s.cream.visible = s.top.visible = false; }); }
     if (TIN_MODES.includes(kind)) {
@@ -848,7 +864,7 @@ const kst = (() => {
       if (drzN % 4 === 0) tone(600 + drzN * 6, 0, 0.05, 'triangle', 0.04);
       return drzN;
     },
-    flip() { sideA = bakeHeat; flipT = 0; hop = 0.5; },
+    flip() { sideA = bakeHeat; flipT = 0; hop = 0.5; flipSplash = 1; },
     pourBatter() { if (mode !== 'griddle') return; gdPhase = 'cooking'; gdT = 0; gdSpread = 0; bakeHeat = 0; sideA = 0; hop = 0.25; gdPaintH = -1; for (let i = 0; i < 8; i++) emit(gdG.localToWorld(V3(GD_X, 0.6, 0)), V3((Math.random() - 0.5) * 1.2, 0.5 + Math.random(), (Math.random() - 0.5) * 1.2), 0.5, '#f6e7c4', 0.035, 6); },
     flipCake() { if (mode !== 'griddle') return; gdPhase = 'flipping'; gdT = 0; sideA = bakeHeat; hop = 0.5; },
     plateCake() { if (mode !== 'griddle') return; gdPhase = 'plating'; gdT = 0; },
@@ -998,16 +1014,23 @@ const kst = (() => {
       if (tinG.visible) {
         const k = Math.min(1, dt * 7);
         tinCups.forEach((c, i) => {
-          c.f += (c.ft - c.f) * k; c.fr += (c.frt - c.fr) * k; c.tp += (c.tpt - c.tp) * Math.min(1, dt * 6);
+          c.f += (c.ft - c.f) * k; c.fr = Math.min(c.frt, c.fr + dt * 0.8); c.tp += (c.tpt - c.tp) * Math.min(1, dt * 6);   // the frosting is piped at a steady pace
           c.cake.visible = c.f > 0.03; c.cake.scale.y = 0.04 + 0.76 * c.f;
-          c.frost.visible = c.fr > 0.04; c.frost.scale.setScalar(0.15 + 0.85 * c.fr); c.frost.rotation.y = (1 - c.fr) * 5;
-          c.ears.visible = c.tp > 0.04; c.ears.position.y = 0.76 + (1 - c.tp) * 0.7; c.ears.scale.setScalar(0.3 + 0.7 * c.tp);
+          const nb = c.fr * c.FN; c.frost.visible = c.fr > 0.01;
+          c.beads.forEach((b, j) => { const v = Math.max(0, Math.min(1, nb - j)); b.visible = v > 0; b.scale.set(v, 0.85 * v, v); });
+          c.peak.visible = c.fr > 0.97; if (c.peak.visible) c.peak.rotation.z = 0.25;
+          if (c.frt > 0 && c.fr < c.frt && Math.floor(nb / 4) !== c.lastTick) { c.lastTick = Math.floor(nb / 4); tone(500 + nb * 9, 0, 0.04, 'triangle', 0.035); }   // a squeaky squeeze
+          c.ears.visible = c.tp > 0.04; c.ears.position.y = 0.99 + (1 - c.tp) * 0.7; c.ears.scale.setScalar(0.3 + 0.7 * c.tp);
         });
         toolK = Math.min(1, toolK + dt * 2.2);
-        const sp = TIN_SPOTS[toolI], hov = 1.0 - 0.45 * Math.sin(toolK * PI);
-        tinTool.position.x += (sp[0] - tinTool.position.x) * Math.min(1, dt * 9); tinTool.position.z += (sp[1] - tinTool.position.z) * Math.min(1, dt * 9); tinTool.position.y += (hov - tinTool.position.y) * Math.min(1, dt * 12);
+        const sp = TIN_SPOTS[toolI], hov = 1.0 - 0.45 * Math.sin(toolK * PI), piping = mode === 'frost' ? tinCups.findIndex(c => c.fr < c.frt - 0.001) : -1;
+        let tx = sp[0], tz = sp[1], ty = hov;
+        if (piping >= 0) { const c = tinCups[piping], bp = c.beads[Math.min(c.FN - 1, Math.floor(c.fr * c.FN))].position; tx = TIN_SPOTS[piping][0] + bp.x; tz = TIN_SPOTS[piping][1] + bp.z; ty = 0.08 + 0.5 + bp.y + 0.1; bagT.rotation.y += dt * 6; }   // the bag follows the swirl round and up
+        else if (mode === 'frost') { const lastI = tinCups.findIndex(c => c.fr >= 0.97 && c.fr >= c.frt - 0.001 && c.frt > 0); if (lastI >= 0 && toolK < 0.5) ty = 1.0; }
+        const sm = piping >= 0 ? 16 : 9;
+        tinTool.position.x += (tx - tinTool.position.x) * Math.min(1, dt * sm); tinTool.position.z += (tz - tinTool.position.z) * Math.min(1, dt * sm); tinTool.position.y += (ty - tinTool.position.y) * Math.min(1, dt * 12);
         tinTool.visible = mode !== 'topping'; scoopT.visible = mode === 'scoop'; bagT.visible = mode === 'frost';
-        scoopT.rotation.z = -0.7 * Math.sin(toolK * PI); bagT.rotation.z = 0.35 + 0.2 * Math.sin(toolK * PI * 3);
+        scoopT.rotation.z = -0.7 * Math.sin(toolK * PI); bagT.rotation.z = piping >= 0 ? 0.3 : 0.35 + 0.2 * Math.sin(toolK * PI * 3);
       }
       dnG.visible = DN_MODES.includes(mode); boardG.visible = mode === 'knead' || mode === 'roll' || mode === 'cut'; potG.visible = mode === 'fry'; glzG.visible = mode === 'glaze' || mode === 'sprinkle';
       if (boardG.visible) {
@@ -1076,8 +1099,36 @@ const kst = (() => {
           if (k >= 1 && Math.random() < 0.5) emit(potG.localToWorld(V3(d.position.x + (Math.random() - 0.5) * 0.55, 0.57, d.position.z + (Math.random() - 0.5) * 0.4)), V3(0, 0.3, 0), 0.5, '#fff1c4', 0.022, -0.1, 0.4);   // bubbles round the dough
         });
         if (dipTime > 0.9 && Math.random() < 0.35) tone(1800 + Math.random() * 2200, 0, 0.018, 'square', 0.012);   // the sizzle
-        oil.material.color.set(h > 0.82 ? '#b9691d' : '#d99428');
-        if (Math.random() < 0.6) emit(potG.localToWorld(V3((Math.random() - 0.5) * 2.2, 0.62, (Math.random() - 0.5) * 1.2)), V3(0, 0.5, 0), 0.5, '#fff6d8', 0.03, -0.1);
+        // ----- oil: ripples from the dips, bubbles that rise round each donut and pop, foam, and spitting oil as it gets hotter -----
+        const hot = 0.3 + 0.7 * Math.min(1, h * 1.3);
+        const pp = oil.geometry.attributes.position, sunk = fryers.map(d => k01((dipTime - fryers.indexOf(d) * 0.12 - 0.5) / 0.4));
+        for (let i = 0; i < pp.count; i++) {
+          const x = oilBase[i * 3], z = oilBase[i * 3 + 2] * 0.75; let y = 0.008 * Math.sin(x * 5 + t * 2.4) + 0.006 * Math.sin(z * 7 - t * 2.1) * hot;
+          for (let k = 0; k < 6; k++) { const dx = x - fryers[k].position.x, dz = z - fryers[k].position.z, d2 = dx * dx + dz * dz; if (d2 < 0.5) y += sunk[k] * (-0.012 * Math.exp(-d2 / 0.05) + 0.01 * Math.sin(Math.sqrt(d2) * 22 - t * (6 + 8 * h)) * Math.exp(-d2 * 3)); }   // a ripple spreads from each floating donut
+          pp.array[i * 3 + 1] = y;
+        }
+        pp.needsUpdate = true; oil.geometry.computeVertexNormals();
+        if (flipSplash > 0) { flipSplash = 0; fryers.forEach((d, i) => { startRipple(d.position.x, d.position.z); for (let n = 0; n < 9; n++) emit(potG.localToWorld(V3(d.position.x + (Math.random() - 0.5) * 0.5, 0.6, d.position.z + (Math.random() - 0.5) * 0.4)), V3((Math.random() - 0.5) * 1.6, 1.6 + Math.random() * 1.2, (Math.random() - 0.5) * 1.6), 0.8, '#f6c35a', 0.03 + Math.random() * 0.03, 9); }); }
+        fryers.forEach((d, i) => { const m = foams[i], f = sunk[i]; m.visible = f > 0.05; m.material.opacity = f * (0.25 + 0.5 * hot); const sc = 1 + 0.06 * Math.sin(t * 5 + i) + 0.1 * hot; m.scale.set(sc, sc, 1); m.position.set(d.position.x, OIL_Y, d.position.z); });
+        bubbleAcc += dt * (dipTime > 0.9 ? 10 + 55 * hot : 0);
+        while (bubbleAcc >= 1) {
+          bubbleAcc -= 1; const b = bubbles.find(q => q.age >= q.life); if (!b) break;
+          const d = fryers[(Math.random() * 6) | 0], a = Math.random() * PI * 2, r = 0.2 + Math.random() * 0.22;
+          b.age = 0; b.life = 0.35 + Math.random() * 0.45; b.size = 0.5 + Math.random() * 1.1; b.x = d.position.x + Math.cos(a) * r; b.z = d.position.z + Math.sin(a) * r * 0.75; b.m.visible = true;
+        }
+        bubbles.forEach(b => {
+          if (b.age >= b.life) { b.m.visible = false; return; }
+          b.age += dt; const u = b.age / b.life;
+          if (u >= 1) {   // pop: a few tiny drops fly up
+            b.m.visible = false; if (Math.random() < 0.5 + 0.4 * hot) emit(potG.localToWorld(V3(b.x, OIL_Y, b.z)), V3((Math.random() - 0.5) * 0.8, 0.9 + Math.random() * 0.9 + hot, (Math.random() - 0.5) * 0.8), 0.5, '#f0b84a', 0.012 + Math.random() * 0.014, 7);
+            if (Math.random() < 0.08) startRipple(b.x, b.z); return;
+          }
+          b.m.position.set(b.x, OIL_Y + 0.01 + 0.02 * u, b.z); b.m.scale.setScalar(b.size * (0.3 + 0.7 * Math.sin(Math.min(1, u * 1.4) * PI * 0.5))); b.m.material.opacity = 0.75 * (1 - u * u);
+        });
+        ripples.forEach(r => { if (r.age >= 1) { r.m.visible = false; return; } r.age += dt / 0.9; const u = Math.min(1, r.age); r.m.scale.setScalar(0.4 + u * 2.2); r.m.scale.z = 1; r.m.material.opacity = 0.55 * (1 - u); });
+        if (hot > 0.7 && Math.random() < dt * 5 * hot) { const d = fryers[(Math.random() * 6) | 0]; for (let n = 0; n < 4; n++) emit(potG.localToWorld(V3(d.position.x, 0.62, d.position.z)), V3((Math.random() - 0.5) * 2.2, 2.0 + Math.random() * 1.6, (Math.random() - 0.5) * 2.0), 0.9, '#f2b640', 0.025 + Math.random() * 0.02, 10); }   // hot oil spits
+        oil.material.color.set(h > 0.82 ? '#9a4e12' : '#c97c1e');
+
         if (h > 0.88 && Math.random() < 0.4) emit(potG.localToWorld(V3((Math.random() - 0.5) * 2, 0.8, 0)), V3((Math.random() - 0.5) * 0.4, 0.7, 0), 0.9, '#4a4a4a', 0.09, -0.3, 0.8);
       }
       if (mode === 'glaze' || mode === 'sprinkle') {
@@ -1112,11 +1163,17 @@ const kst = (() => {
         ripple(t, dt);
       }
       if (mode === 'bake' || mode === 'bake-out') {
+        const rise = ease(k01(bakeHeat / 0.6));   // the batter climbs while it is still pale, then browns
         if (ovenFill || ovenMat) {
-          if (ovenMat) ovenMat.color.copy(ovenColor ? ovenColor(bakeHeat) : heatColor(bakeHeat)); else { ovenFill.material.color.copy(heatColor(bakeHeat)); ovenFill.scale.y = 1 + 0.1 * Math.min(1, bakeHeat * 1.4); }   // it puffs up as it bakes
+          if (ovenMat) ovenMat.color.copy(ovenColor ? ovenColor(bakeHeat) : heatColor(bakeHeat)); else { const sy = 0.8 + 0.4 * rise; ovenFill.material.color.copy(heatColor(bakeHeat)); ovenFill.scale.y = sy; ovenFill.position.y = 0.1 + 0.2 * sy; if (ovenDome) { ovenDome.scale.set(1, 0.02 + 0.2 * rise, 1); ovenDome.position.y = 0.1 + 0.4 * sy; } }   // it puffs up as it bakes, with a crown
           if (bakeHeat > 0.88 && Math.random() < 0.4) emit(ovenG.localToWorld(V3((Math.random() - 0.5) * 1.2, 1.5, 0.9)), V3((Math.random() - 0.5) * 0.4, 0.7, 0), 0.9, '#4a4a4a', 0.09, -0.3, 0.8);
         }
-        steam.forEach((m, i) => { const k = ((t * 0.45) + i / 4) % 1; m.position.set(-0.6 + i * 0.4, 2.0 + k * 0.9, 0.2); m.scale.setScalar(0.6 + k); m.material.opacity = 0.55 * (1 - k); });
+        if (ovenCakes.length) ovenCakes.forEach(c => { c.scale.set(1 + 0.12 * rise, 0.4 + 0.6 * rise, 1 + 0.12 * rise); });   // each cupcake rises out of its paper case and mushrooms at the top
+        const wet = Math.min(1, ovenHot) * (0.3 + 0.7 * Math.min(1, bakeHeat * 1.4)), outK = mode === 'bake-out' ? k01(modeT / 1.4) : 0;
+        steam.forEach((m, i) => { const u = m.userData, k = ((t * 0.32) + u.ph) % 1; m.position.set(-0.7 + (i % 6) * 0.28 + Math.sin(t * 1.3 + i) * 0.12 * k, 2.02 + k * 1.2, 0.0 + (i % 3) * 0.2); m.scale.setScalar(0.45 + k * 1.7); m.material.opacity = Math.min(1, wet * 1.05) * Math.sin(k * PI); });
+        blast.forEach((m, i) => { const u = m.userData, k = k01(outK * 1.15 - u.ph * 0.25); m.position.set((u.ph - 0.5) * 1.5 + u.dx * 0.2 * k, 0.75 + k * 1.0 + u.ph * 0.3, 0.85 + k * (0.7 + u.ph)); m.scale.setScalar(0.4 + k * 1.5); m.material.opacity = mode === 'bake-out' ? 0.8 * Math.sin(k * PI) : 0; });
+        haze.forEach((m, i) => { const u = m.userData, k = ((t * 0.5) + u.ph) % 1; m.position.set((u.ph - 0.5) * 1.8, 0.8 + k * 1.2, 0.95); m.scale.setScalar(0.8 + k * 0.7); m.material.opacity = (doorA > 0.35 ? Math.min(1, ovenHot + 0.0) * 0 : 0) + (mode === 'bake-out' ? 0.14 * Math.sin(k * PI) * (1 - outK * 0.6) : 0); });
+        if (mode === 'bake' && ovenHot > 0.6 && Math.random() < dt * 2.4) tone(1800 + Math.random() * 1800, 0, 0.014, 'square', 0.01);   // a little crackle
         // the door starts open: the tray slides in, the door shuts; to take it out the door opens and the tray slides back out
         let dT, tT;
         if (mode === 'bake') { tT = k01((modeT - 0.15) / 0.85); dT = modeT < 1.0 ? OPEN : OPEN * (1 - ease(k01((modeT - 1.0) / 0.55))); }
@@ -1130,7 +1187,7 @@ const kst = (() => {
         rodM.color.set('#6b4a3a').lerp(new THREE.Color(hotC), Math.min(1, ovenHot * fl));
         ovenLight.intensity = ovenHot * 2.8 * fl; ovenLight.color.set(over ? '#ff5a30' : '#ff8a3c');
         glowM.opacity = closed ? ovenHot * (0.4 + 0.18 * fl) : 0;
-        if (mode === 'bake') insideModel.scale.setScalar(insideBase * (1 + (ovenFill ? 0.04 : ovenMat ? 0.08 : WHOLE[id] ? 0.35 : 0.18) * Math.min(1, Math.max(0, modeT - 1.5) / 4)));   // it rises while it bakes
+        if (mode === 'bake') insideModel.scale.setScalar(insideBase * (1 + (ovenFill || ovenCakes.length ? 0 : ovenMat ? 0.08 : WHOLE[id] ? 0.35 : 0.18) * Math.min(1, Math.max(0, modeT - 1.5) / 4)));   // it rises while it bakes
         else if (modeT > 1.5) { mode = null; if (nextDeco) { const nd = nextDeco; enter(nd.kind, nd.id); } }
       }
       if (mode === 'done') { decoG.rotation.y += dt * 4; hold.position.y = 0.08 + Math.abs(Math.sin(modeT * 6)) * 0.08 * Math.max(0, 1 - modeT / 1.2); if (modeT > 1.6) { mode = null; decoG.rotation.y = 0; hold.position.y = 0.08; } }
@@ -1483,7 +1540,7 @@ function renderStage() {
       if (n < 0) { st.miss++; sfx.nope(); return; }
       if (!st.t0) st.t0 = performance.now();
       st.n = n; sfx.tap(); el.querySelector('.khint').textContent = `${HINT[st.kind]} (${n}/6)`; el.querySelector('.kpb i').style.width = n / 6 * 100 + '%';
-      if (n >= 6) { const secs = (performance.now() - st.t0) / 1000, g = Math.max(1, (secs < LIM[0] ? 3 : secs < LIM[1] ? 2 : 1) - (st.miss > 3 ? 1 : 0)); setTimeout(() => { if (kitchen.step === st) last ? finishBatch(st.id, g) : nextStep(g); }, 650); }
+      if (n >= 6) { const secs = (performance.now() - st.t0) / 1000, g = Math.max(1, (secs < LIM[0] ? 3 : secs < LIM[1] ? 2 : 1) - (st.miss > 3 ? 1 : 0)); setTimeout(() => { if (kitchen.step === st) last ? finishBatch(st.id, g) : nextStep(g); }, st.kind === 'frost' ? 1500 : 650); }
     };
   } else if (st.kind === 'lay') {
     kst.set('lay', st.id); showDemo('tap');
