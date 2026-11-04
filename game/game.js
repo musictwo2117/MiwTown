@@ -843,6 +843,7 @@ function nextAction(dt) {
       miw.face = act.st.face ?? PI;
       if (hands.length >= HAND_MAX) { toast('Tray is full! Serve something first 🙌'); sfx.nope(); }
       else if (!stockOf(act.st.id)) { toast(`${DESSERTS[act.st.id].name} ran out! Tap its plate twice to bake more 🍳`); sfx.nope(); }
+      else if (DESSERTS[act.st.id].drink && typeof openDrink === 'function') { sfx.tap(); openCase(act.st); openDrink(act.st.id, () => { hands.push(act.st.id); renderHands(); updatePlates(); sfx.pick(); }); }   // a drink is made first: pour it, drop things in, shake it
       else { if (!DESSERTS[act.st.id].drink) kitchen.stock[act.st.id]--; hands.push(act.st.id); openCase(act.st); renderHands(); updatePlates(); sfx.pick(); miwPause = 0.15;
         if (!stockOf(act.st.id)) toast(`${DESSERTS[act.st.id].name} just sold out! Tap its plate twice to bake more 🍳`); }
     } else if (act.kind === 'table') {

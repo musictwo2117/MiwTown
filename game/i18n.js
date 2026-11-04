@@ -23,6 +23,10 @@
     ['Total price', 'ราคาสินค้าทั้งหมด'], ['QR payment', 'จ่ายผ่าน QR'], ['Exact money', 'จ่ายพอดี'], ['Customer paid', 'ลูกค้าให้มา'], ['Paid by QR', 'จ่ายด้วย QR'], ['Give the change', 'ทอนเงิน'], ['Clear', 'ล้าง'],
     ['✓ Wearing', '✓ สวมอยู่'], ['Flower crown', 'พวงมาลัยดอกไม้'], ['Party hat', 'หมวกปาร์ตี้'], ['Sunny yellow', 'เหลืองสดใส'], ['Blossom pink', 'ชมพูบานเย็น'], ['Sky blue', 'ฟ้าใส'], ['Her sweater', 'เสื้อของเธอ'],
     ['Chef hat', 'หมวกเชฟ'], ['Pink apron', 'ผ้ากันเปื้อนสีชมพู'], ['Mint apron', 'ผ้ากันเปื้อนสีมิ้นต์'], ['Sky apron', 'ผ้ากันเปื้อนสีฟ้า'], ['Staff outfit', 'ชุดพนักงาน'],
+    ['Hold to pour the milk tea, let go at the line!', 'กดค้างเพื่อเทชานม ปล่อยตอนถึงเส้น!'], ['Tap to drop in the tapioca pearls!', 'แตะเพื่อใส่ไข่มุก!'], ['Put the lid on and shake it up!', 'ปิดฝาแล้วเขย่าเลย!'],
+    ['Hold to pour the hot cocoa, let go at the line!', 'กดค้างเพื่อเทโกโก้ร้อน ปล่อยตอนถึงเส้น!'], ['Hold to swirl the whipped cream, let go at the line!', 'กดค้างเพื่อบีบวิปครีม ปล่อยตอนถึงเส้น!'], ['Tap to drop in the marshmallows!', 'แตะเพื่อใส่มาร์ชเมลโลว์!'],
+    ['Tap to drop in the ice!', 'แตะเพื่อใส่น้ำแข็ง!'], ['Hold to pour the soda, let go at the line!', 'กดค้างเพื่อเทโซดา ปล่อยตอนถึงเส้น!'], ['Add a lemon slice, then a straw!', 'ใส่เลมอนฝานแล้วใส่หลอด!'], ['Hold to swirl', 'กดค้างเพื่อบีบ'],
+    ['Perfect drink!', 'เครื่องดื่มสมบูรณ์แบบ!'], ['Nice drink!', 'เครื่องดื่มอร่อย!'],
     // the step-by-step kitchen
     ['Tap fast to crush the cookies!', 'แตะรัว ๆ เพื่อทุบคุกกี้!'], ['Smash!', 'ทุบ!'], ['Press the crumbs flat: drag over the whole pan!', 'กดเศษคุกกี้ให้แน่น: ลากให้ทั่วถาด!'],
     ['Hold to pour, let go in the green. Past the red it overflows!', 'กดค้างเพื่อเทแป้ง ปล่อยตอนอยู่ในโซนเขียว เลยแดงจะล้น!'], ['Hold to pour', 'กดค้างเพื่อเท'],
@@ -73,7 +77,7 @@
   ];
   // texts that are a whole piece of text on their own (short words that must not match inside others)
   const X = {
-    HANDS: 'มือ', Cashier: 'แคชเชียร์', Dishes: 'ล้างจาน', Apron: 'ผ้ากันเปื้อน', Beret: 'เบเร่ต์', 'Bow tie': 'โบว์ผูกคอ', Outfit: 'ชุด', Head: 'หัว', Neck: 'คอ', Sweater: 'เสื้อสเวตเตอร์', Wear: 'สวมใส่', Bow: 'โบว์', Scarf: 'ผ้าพันคอ', Crown: 'มงกุฎ', Mint: 'มิ้นต์', Lilac: 'ลาเวนเดอร์', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
+    HANDS: 'มือ', Skip: 'ข้าม', 'Drop!': 'ใส่!', 'Add!': 'ใส่!', Cashier: 'แคชเชียร์', Dishes: 'ล้างจาน', Apron: 'ผ้ากันเปื้อน', Beret: 'เบเร่ต์', 'Bow tie': 'โบว์ผูกคอ', Outfit: 'ชุด', Head: 'หัว', Neck: 'คอ', Sweater: 'เสื้อสเวตเตอร์', Wear: 'สวมใส่', Bow: 'โบว์', Scarf: 'ผ้าพันคอ', Crown: 'มงกุฎ', Mint: 'มิ้นต์', Lilac: 'ลาเวนเดอร์', Change: 'เงินทอน', OK: 'ตกลง', closing: 'ปิดร้าน', Sound: 'เสียง', Menu: 'เมนู', later: 'ไว้ก่อน', 'sold out': 'หมดแล้ว', Empty: 'ว่าง',
     Strawberry: 'สตรอว์เบอร์รี่', CHANGE: 'เงินทอน', Egg: 'ไข่', Flour: 'แป้ง', 'Cream cheese': 'ครีมชีส', 'Cookie crust': 'ฐานคุกกี้', Milk: 'นม', Butter: 'เนย', Chocolate: 'ช็อกโกแลต', Pretzel: 'เพรทเซล',
     coins: 'เหรียญ', 'happy friends': 'เพื่อนที่อิ่มสุข', 'left hungry': 'เพื่อนที่หิวกลับไป',
     Continue: 'เล่นต่อ', 'New game': 'เริ่มเกมใหม่', Volume: 'ระดับเสียง', Music: 'เพลง', 'Visual effects': 'เอฟเฟกต์ภาพ', Camera: 'มุมกล้อง', Language: 'ภาษา',
