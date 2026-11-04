@@ -44,7 +44,7 @@ const onCounter = id => DESSERTS[id].drink ? unlocked(id, game.day) : shelfIds()
 // ---------- saved progress (this browser only) ----------
 const SAVE_KEY = 'miw-cheesecake-rush';
 const SLOT_KEY = n => `${SAVE_KEY}-slot-${n}`, SET_KEY = `${SAVE_KEY}-settings`;
-const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [], decor: {}, decorOwned: [], wear: {}, wearOwned: [], sweater: 'yellow', sweaterOwned: [] });   // wallet: coins kept from every day, spent in the shop
+const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [], decor: {}, decorOwned: [], wear: {}, wearOwned: [], sweater: 'yellow', sweaterOwned: [], staff: 0 });   // wallet: coins kept from every day, spent in the shop
 let save = defaultSave(), slot = 0, menuOpen = false;   // the slot is picked on the home screen (home.js)
 let settings = { muted: false, music: true, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
@@ -818,6 +818,16 @@ function autoServe(t) {
   fetch.forEach(id => { const st = STATIONS.find(q => q.id === id); enqueue({ kind: 'station', st, at: st.pick }); });
   enqueue({ kind: 'table', t, at: t.serve, auto: true });
 }
+// the cashier shortcut: a big button for when friends queue at the register and the counter is hard to tap. Miw drops what she was doing and goes straight there.
+function goCashier() {
+  wakeAudio();
+  if (!game.running || game.paused || menuOpen || pay.c) return;
+  if (!payQueue.some(c => c.state === 'pay')) { toast('Nobody is waiting to pay yet 💤'); sfx.nope(); return; }
+  if (queue[0] && queue[0].kind === 'register') return;
+  miw.target = miw.path = miw.onArrive = null;
+  const act = { kind: 'register', at: REG.back }; act.mark = label('mark', ''); queue.unshift(act); numberQueue(); sfx.tap();
+}
+$('cashBtn').onclick = goCashier;
 function enqueue(act) {
   act.mark = label('mark', '');
   queue.push(act); numberQueue(); sfx.tap();
@@ -860,6 +870,7 @@ function spawn() {
   const all = dessertIds().filter(id => onCounter(id)), avail = {};
   all.forEach(id => { avail[id] = stockOf(id) + hands.filter(h => h === id).length; });
   customers.forEach(c => { if (['in', 'think', 'wait'].includes(c.state)) c.order.forEach((id, i) => { if (!c.served[i] && avail[id] !== undefined) avail[id]--; }); });
+  if (typeof staff !== 'undefined') staff.forEach(s => s.tray.forEach(id => { if (avail[id] !== undefined) avail[id]++; }));   // what the waiters are carrying is already taken off the shelf
   const have = () => all.filter(id => avail[id] > 0);
   if (!have().length) {   // nothing left to promise: they wait outside until there is, and the player is told
     if (performance.now() - (spawn.warnedAt || -1e9) > 12000) { spawn.warnedAt = performance.now(); toast('🍰 Nothing left to sell! Tap a sold-out plate twice to bake more'); }
@@ -886,21 +897,22 @@ function drawBubble(c) {
   c.bubble.innerHTML = `<i class="ring" style="--p:${p.toFixed(3)};--c:${col}"></i>` +
     c.order.map((id, i) => `<span class="it${c.served[i] ? ' done' : ''}">${icon(id)}${id === SPECIES[c.species].fav ? '<span class="fav">💗</span>' : ''}</span>`).join('');
 }
-function serve(t) {
+function serve(t, tray = hands) {   // tray: Miw's hands, or a waiter's tray
   const c = t.customer;
   if (!c || c.state !== 'wait') return;
   let gave = false;
   c.order.forEach((id, i) => {
     if (c.served[i]) return;
-    const k = hands.indexOf(id);
+    const k = tray.indexOf(id);
     if (k < 0) return;
-    hands.splice(k, 1); c.served[i] = gave = true;
+    tray.splice(k, 1); c.served[i] = gave = true;
     const m = dessertModel(id); m.scale.setScalar(0.85);
     m.position.set(t.g.position.x + 0.25 - i * 0.45, 1.09, t.g.position.z + (i ? 0.3 : 0));
     scene.add(m); t.food.push(m);
   });
-  if (!gave) { toast(`${EMOJI[c.species]} wants ${c.order.filter((_, i) => !c.served[i]).map(id => DESSERTS[id].name).join(' + ')}`); sfx.nope(); return; }
-  renderHands(); drawBubble(c); sfx.serve();
+  if (!gave) { if (tray !== hands) return; toast(`${EMOJI[c.species]} wants ${c.order.filter((_, i) => !c.served[i]).map(id => DESSERTS[id].name).join(' + ')}`); sfx.nope(); return; }
+  if (tray === hands) renderHands();
+  drawBubble(c); sfx.serve();
   if (!c.served.every(Boolean)) return;
   // paid in full: the dessert's price, a tip for being quick, more for a favorite or a bear, and a combo bonus
   const sp = SPECIES[c.species], base = c.order.reduce((s, id) => s + priceOf(id), 0);
@@ -994,7 +1006,7 @@ addEventListener('keydown', e => {
 $('payOk').onclick = finishPay;
 $('payX').onclick = closePay;
 function leave(c, happy, why) {
-  c.state = 'out'; c.actor.hop = c.actor.shake = false;
+  c.state = 'out'; c.claim = null; c.actor.hop = c.actor.shake = false;
   c.bubble.remove();
   c.actor.root.position.y = 0; c.actor.seated = false;
   if (c.t.customer === c) { c.t.food.forEach(m => scene.remove(m)); c.t.food = []; c.t.customer = null; }
