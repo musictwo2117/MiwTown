@@ -207,7 +207,7 @@ for (let j = 0; j < GD; j++) for (let i = 0; i < GW; i++) { const x = i - 10.5, 
       tufts.push({ x, y: topY(c), z, ry, s: [s, s, s] }, { x, y: topY(c), z, ry: ry + PI / 2, s: [s, s, s] });
     }
   });
-  inst(new THREE.PlaneGeometry(0.95, 0.75).translate(0, 0.37, 0), new THREE.MeshLambertMaterial({ map: tuftTex, alphaTest: 0.5, alphaToCoverage: true, side: THREE.DoubleSide }), tufts);
+  window.grassTufts = { items: tufts, mesh: inst(new THREE.PlaneGeometry(0.95, 0.75).translate(0, 0.37, 0), new THREE.MeshLambertMaterial({ map: tuftTex, alphaTest: 0.5, alphaToCoverage: true, side: THREE.DoubleSide }), tufts) };   // kept, so decorations can clear the grass round their feet
 
   // flower beds
   const flowers = [];

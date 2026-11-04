@@ -3,7 +3,7 @@
 const DECOR_SPOTS = [
   { id: 'entrance', name: 'Left corner', at: [-6.4, 0, 1.2] },
   { id: 'lamp', name: 'Counter side', at: [-6.7, 0, -2.6] },
-  { id: 'wall', name: 'Wall', at: [-1.6, 1.9, -4.78] },
+  { id: 'wall', name: 'Wall', at: [-6.56, 2.4, -6.45], ry: Math.PI / 2 },   // flat against the kitchen's left wall (it used to hang in mid air at the open front of the kitchen)
   { id: 'cozy', name: 'Cozy corner', at: [6.5, 0, 3.4] },
   { id: 'rug', name: 'Floor', at: [0, 0.03, 1.4] },
   { id: 'garden', name: 'Front garden', at: [3.6, 0, 5.3] },
@@ -46,14 +46,31 @@ function decorBuild(it) {
   m.g.position.set(-c.x, -b.min.y, -c.z);   // put it right on its spot, whatever its model's own origin (room furniture sits where it stands in the room)
   return g;
 }
+// the grass tufts are tall enough to hide the feet of what stands in them: take away the ones under each decoration (and put the rest back)
+function clearGrass(spots) {
+  const gt = window.grassTufts; if (!gt) return;
+  const mt = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+  gt.items.forEach((it, i) => {
+    const gone = spots.some(sp => Math.hypot(it.x - sp.x, it.z - sp.z) < sp.r);
+    q.setFromEuler(e.set(0, it.ry, 0)); p.set(it.x, it.y, it.z); gt.mesh.setMatrixAt(i, mt.compose(p, q, gone ? sc.set(0.0001, 0.0001, 0.0001) : sc.set(...it.s)));
+  });
+  gt.mesh.instanceMatrix.needsUpdate = true;
+}
 function dressDecor() {
-  decorG.clear(); decorBlocks.length = 0;
+  decorG.clear(); decorBlocks.length = 0; const bare = [];
   DECOR_SPOTS.forEach(sp => {
     const id = decorOf(sp.id); if (!id) return;
     const it = DECOR_ITEMS[id], g = decorBuild(it); if (!g) return;
-    g.position.set(...sp.at); decorG.add(g);
+    g.position.set(...sp.at); g.rotation.y = sp.ry || 0; decorG.add(g);
+    if (!it.rug && sp.at[1] === 0) {   // something standing on the floor gets a soft contact shadow and a little stone pad, so it sits on the ground instead of hovering over the grass
+      g.updateMatrixWorld(true); const bx = new THREE.Box3().setFromObject(g), w = bx.max.x - bx.min.x, d = bx.max.z - bx.min.z, r = Math.max(0.35, Math.max(w, d) / 2), asp = Math.max(0.55, Math.min(1.2, d / w + 0.25));
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.05, r * 1.12, 0.06, 32), new THREE.MeshLambertMaterial({ color: '#efe2cc' })); pad.position.set(sp.at[0], 0.02, sp.at[2]); pad.scale.z = asp; pad.receiveShadow = true; decorG.add(pad);
+      const sh = new THREE.Mesh(blobGeo, blobMat); sh.position.set(sp.at[0], 0.075, sp.at[2]); sh.scale.set(r * 0.95, 1, r * 0.95 * asp); decorG.add(sh);
+      bare.push({ x: sp.at[0], z: sp.at[2], r: r * 1.2 + 0.25 });
+    }
     if (it.block) decorBlocks.push({ x: sp.at[0], z: sp.at[2], r: it.block });
   });
+  clearGrass(bare);
 }
 // each item's picture in the Shop is its own model (the rugs are drawn flat, tipped up a little so they read as rugs)
 const decorThumb = id => makeThumb('decor_' + id, () => {
