@@ -148,6 +148,7 @@ function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.1), now = clock.elapsedTime;
   if (typeof homeTick === 'function') homeTick(now);
+  if (typeof dmk !== 'undefined' && dmk.on && !menuOpen) { dmk.update(dt, now); if (drinkRun && drinkRun.watch) drinkRun.watch(); }
   if (kitchen.on && !menuOpen) {
     kst.update(dt, now); tickKitchen(dt, now);
     kitchen.left -= dt;
