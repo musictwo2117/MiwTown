@@ -33,8 +33,8 @@ const dmk = (() => {
   cam.position.set(0, 2.35, 5.9); cam.lookAt(0, 1.5, 0);
   sc.add(new THREE.HemisphereLight(0xfff4ea, 0xd9b0b4, 0.66));
   const sun = new THREE.DirectionalLight(0xffe6c4, 0.72); sun.position.set(-3, 6, 4.5); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -3.5; sun.shadow.camera.right = 3.5; sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -2; sun.shadow.camera.near = 1; sun.shadow.camera.far = 16;
-  sun.shadow.bias = -0.0008; sun.shadow.radius = 3; sc.add(sun);
+  sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -6; sun.shadow.camera.right = 6; sun.shadow.camera.top = 6; sun.shadow.camera.bottom = -4; sun.shadow.camera.near = 1; sun.shadow.camera.far = 20;
+  sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03; sun.shadow.radius = 3; sc.add(sun);
   const lamp = new THREE.PointLight('#ffd9a0', 0.35, 9, 2); lamp.position.set(2.4, 3, 2.6); sc.add(lamp);
   const mats = {};
   const dm = (geo, color, o = {}) => {
@@ -44,7 +44,15 @@ const dmk = (() => {
     m.castShadow = o.cast !== false; m.receiveShadow = o.recv !== false; return m;
   };
   // the bar: a counter top, a pastel wall and a shelf with a few bottles
-  sc.add(dm(new THREE.BoxGeometry(11, 0.5, 3.6), '#f0d4b4', { y: 0.35, z: 0.2 }), dm(new THREE.BoxGeometry(11.2, 0.1, 3.7), '#ffc4d6', { y: 0.55, z: 0.2 }),
+  // a wooden counter top (planks drawn on a canvas), a pink trim along its front edge, and the wall behind
+  const wood = (() => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d'); let q = 5; const rnd = () => (q = (q * 16807) % 2147483647) / 2147483647;
+    const tones = ['#e9cda9', '#e3c49d', '#efd5b6', '#dfbf98'];
+    for (let i = 0; i < 8; i++) { x.fillStyle = tones[i % 4]; x.fillRect(0, i * 32, 512, 32); for (let k = 0; k < 26; k++) { x.strokeStyle = 'rgba(190,140,95,' + (0.08 + rnd() * 0.16) + ')'; x.lineWidth = 1 + rnd() * 1.5; const y = i * 32 + 3 + rnd() * 26, x0 = rnd() * 512; x.beginPath(); x.moveTo(x0, y); x.lineTo(x0 + 60 + rnd() * 200, y + (rnd() - 0.5) * 3); x.stroke(); } x.fillStyle = 'rgba(160,112,72,.28)'; x.fillRect(0, i * 32, 512, 1.5); }
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+  })();
+  const top = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.1, 3.7), new THREE.MeshPhongMaterial({ map: wood, shininess: 25, specular: 0x222222 })); top.position.set(0, 0.55, 0.2); top.receiveShadow = true; top.castShadow = false;
+  sc.add(dm(new THREE.BoxGeometry(11, 0.4, 3.5), '#e0bd96', { y: 0.3, z: 0.2 }), top, dm(new THREE.BoxGeometry(11.2, 0.13, 0.08), '#ffc4d6', { y: 0.5, z: 2.07 }),
     dm(new THREE.BoxGeometry(14, 7, 0.1), '#ffd0e1', { y: 3, z: -1.7, cast: false }), dm(new THREE.BoxGeometry(6, 0.1, 0.5), '#e8b886', { y: 2.7, z: -1.4 }));
   ['#f6a5bd', '#9fd8b0', '#f7e36a', '#b9a6f5', '#ffd6a5', '#a8dcf5'].forEach((c, i) => { const b = dm(new THREE.CylinderGeometry(0.16, 0.2, 0.7 + (i % 2) * 0.15, 14), c, { op: 0.9, shin: 80, x: -2.4 + i * 0.95, y: 3.1 + (i % 2) * 0.07, z: -1.4, cast: true }); sc.add(b); sc.add(dm(new THREE.CylinderGeometry(0.07, 0.09, 0.2, 10), '#ffffff', { x: -2.4 + i * 0.95, y: 3.55 + (i % 2) * 0.15, z: -1.4 })); });
   const rig = new THREE.Group(); rig.position.y = TOP; sc.add(rig);
@@ -73,7 +81,7 @@ const dmk = (() => {
       cupG.add(dm(new THREE.TorusGeometry(rt, 0.018, 8, 36), '#ffffff', { rx: Math.PI / 2, y: h, shin: 90, cast: false }));
     }
     const lr = drink === 'cocoa' ? cr - 0.02 : cr * 0.86;
-    liq = dm(new THREE.CylinderGeometry(lr, lr * 0.86, 1, 32), liquid, { op: drink === 'cocoa' ? null : 0.92, shin: 90, spec: 0xffffff, own: true, cast: false }); liq.visible = false; cupG.add(liq);
+    liq = dm(new THREE.CylinderGeometry(lr, lr * 0.86, 1, 32), liquid, { op: drink === 'cocoa' ? null : 0.92, shin: 90, spec: 0xffffff, own: true, cast: false }); liq.visible = false; liq.castShadow = true; cupG.add(liq);
     surf = dm(new THREE.CircleGeometry(lr, 32).rotateX(-Math.PI / 2), liquid, { shin: 110, spec: 0xffffff, own: true, cast: false }); surf.visible = false; cupG.add(surf);
     // a ring that marks how full to pour, set per step
     marker = dm(new THREE.TorusGeometry(cr + 0.02, 0.016, 6, 40), '#ffffff', { rx: Math.PI / 2, own: true, cast: false }); marker.material.emissive = new THREE.Color('#ffffff'); marker.material.emissiveIntensity = 0.7; marker.visible = false; cupG.add(marker);
