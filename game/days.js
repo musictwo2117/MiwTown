@@ -54,7 +54,7 @@ function openShop(day, back, tab) {
   $('panel').innerHTML = `
     <div class="shophead"><div><h2>🛒 Shop</h2><small>Spend the coins you keep.</small></div><div class="wallet">🪙 ${save.wallet}</div></div>
     <div class="shoptabs">${SHOP_TABS.map(([k, n]) => `<button data-tab="${k}" class="${k === shopTab ? 'on' : ''}">${n}</button>`).join('')}</div>
-    ${shopTab === 'decor' ? `<div class="shopgrid">${decorCards()}</div>` : shopTab === 'outfit' ? `<div class="shopgrid">${outfitCards()}</div>` : shopTab === 'staff' ? `<div class="shopgrid">${staffCards()}</div>` : shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
+    ${shopTab === 'decor' ? `<div class="shopgrid">${decorCards()}</div>` : shopTab === 'outfit' ? `<div class="shopgrid">${outfitCards()}</div>` : shopTab === 'staff' ? `<div class="shopgrid">${staffCards(day)}</div>` : shopTab === 'counter' ? `<div class="shopgrid">${c.upgrade}</div>${c.pick}` : `<div class="shopgrid">${ids.map(id => { const d = DESSERTS[id], has = owns(id), soon = d.day > day;
       return `<div class="shoprow"><i>${icon(id)}</i><span><b>${d.name}</b><small>${d.drink ? 'Drink' : 'Dessert'} · sells for ${d.price} 🪙</small></span>${has ? '<em>✓ Owned</em>' : soon ? `<em>Opens day ${d.day}</em>` : `<button data-id="${id}" ${save.wallet < d.cost ? 'disabled' : ''}>${d.cost} 🪙</button>`}</div>`; }).join('')}</div>`}
     <button class="go" id="backBtn">Back</button>`;
   if (shopTab === 'decor') decorBind($('panel'), () => openShop(day, back));
@@ -190,7 +190,7 @@ function frame() {
   hudClass('clock', 'hurry', game.running && game.open && game.time < 10);
   { const waiting = payQueue.filter(c => c.state === 'pay').length, show = game.running && !game.paused && !menuOpen && waiting > 0 && $('pay').hidden;   // the cashier shortcut shows while someone waits to pay
     if (hudCache.cash !== show) { hudCache.cash = show; $('cashBtn').hidden = !show; } hud('cashN', waiting > 1 ? '×' + waiting : '');
-    const dirty = dirtyTables().length, showDish = game.running && !game.paused && !menuOpen && dirty > 0 && dish.state === 'idle';   // the pager shows while plates wait to be washed
+    const dirty = dirtyTables().length, showDish = game.running && !game.paused && !menuOpen && dirty > 0 && dish.state === 'idle' && !queue.some(a => a.kind === 'dish' || a.kind === 'wash');   // the pager shows while plates wait to be washed
     if (hudCache.dishB !== showDish) { hudCache.dishB = showDish; $('dishBtn').hidden = !showDish; } hud('dishN', dirty > 1 ? '×' + dirty : '');
     hud('plates', `🍽 ${dish.plates}/${dish.total}`); hudClass('plates', 'low', dish.plates <= 1); }
   // a window (the kitchen, the shop) covers the café: don't draw what nobody can see

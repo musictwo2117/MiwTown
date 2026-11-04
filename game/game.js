@@ -44,7 +44,7 @@ const onCounter = id => DESSERTS[id].drink ? unlocked(id, game.day) : shelfIds()
 // ---------- saved progress (this browser only) ----------
 const SAVE_KEY = 'miw-cheesecake-rush';
 const SLOT_KEY = n => `${SAVE_KEY}-slot-${n}`, SET_KEY = `${SAVE_KEY}-settings`;
-const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [], decor: {}, decorOwned: [], wear: {}, wearOwned: [], sweater: 'yellow', sweaterOwned: [], staff: 0 });   // wallet: coins kept from every day, spent in the shop
+const defaultSave = () => ({ day: 1, best: 0, total: 0, wallet: 0, recipes: [], caseLv: 0, shelf: [], off: [], decor: {}, decorOwned: [], wear: {}, wearOwned: [], sweater: 'yellow', sweaterOwned: [], staff: 0, dishwasher: false });   // wallet: coins kept from every day, spent in the shop
 let save = defaultSave(), slot = 0, menuOpen = false;   // the slot is picked on the home screen (home.js)
 let settings = { muted: false, music: true, vol: 0.8, fancy: true, cam: 'low' };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch {}
@@ -854,6 +854,10 @@ function nextAction(dt) {
       if (act.auto && cust && cust.state === 'wait' && cust.served.filter(Boolean).length > before) autoServe(act.t);
     } else if (act.kind === 'field') {
       miw.face = PI / 2; harvest(4); miwPause = 0.3;
+    } else if (act.kind === 'dish') {
+      miw.face = Math.atan2(act.t.g.position.x - miw.root.position.x, act.t.g.position.z - miw.root.position.z); dishCollect(act.t); miwPause = 0.3;
+    } else if (act.kind === 'wash') {
+      dishWashStart();
     } else if (act.kind === 'register') {
       miw.face = 0; openPay();   // facing the customer across the counter
     }

@@ -16,6 +16,21 @@ const suds = Array.from({ length: 10 }, () => { const m = new THREE.Mesh(new THR
 baker.tray3d = new THREE.Group(); baker.tray3d.position.set(0, 0.95, 0.5); baker.root.add(baker.tray3d); baker.tray3d.visible = false;
 baker.tray3d.add(mesh(cyl(0.4, 0.36, 0.04, 24), '#ffffff'));
 baker.stack = new THREE.Group(); baker.stack.position.y = 0.04; baker.tray3d.add(baker.stack);
+const bunnyWashes = () => !!save.dishwasher && game.day >= STAFF_FROM;   // from day 4 the bunny can be hired; until then Miw washes up herself
+// Miw's own little stack of dirty plates, carried on a second tray beside the one for desserts
+miw.dishTray = new THREE.Group(); miw.dishTray.position.set(0.5, 0.95, 0.35); miw.root.add(miw.dishTray); miw.dishTray.visible = false;
+miw.dishTray.add(mesh(cyl(0.3, 0.27, 0.04, 20), '#ffffff'));
+miw.dishStack = new THREE.Group(); miw.dishStack.position.y = 0.04; miw.dishTray.add(miw.dishStack);
+function renderMiwStack() {
+  miw.dishStack.clear(); miw.dishTray.visible = dish.carried > 0 && dish.state !== 'collect' && dish.state !== 'return' && dish.state !== 'wash';
+  for (let i = 0; i < Math.min(dish.carried, 8); i++) miw.dishStack.add(mesh(cyl(0.22, 0.19, 0.04, 14), '#ffffff', { y: i * 0.045, cast: false }), mesh(cyl(0.13, 0.13, 0.012, 10), '#d9b38c', { y: i * 0.045 + 0.025, cast: false }));
+}
+// Miw's way of washing up: go to each dirty table, pick the plates up, carry them to the sink and wash them there
+function dishCollect(t) { if (!t.dirtyN) return; dish.carried += t.dirtyN; clearDirty(t); renderMiwStack(); sfx.pick(); }
+function dishWashStart() {
+  if (dish.carried <= 0) { toast('No plates to wash ✨'); return; }
+  dish.state = 'selfwash'; dish.washT = 1.2 + 0.9 * dish.carried; miwPause = dish.washT + 0.2; miw.face = PI; miw.dishTray.visible = false;
+}
 function renderBakerStack() {
   baker.stack.clear(); baker.tray3d.visible = dish.carried > 0;
   for (let i = 0; i < Math.min(dish.carried, 8); i++) baker.stack.add(mesh(cyl(0.24, 0.21, 0.04, 16), '#ffffff', { y: i * 0.045, x: (i % 2) * 0.03, cast: false }), mesh(cyl(0.14, 0.14, 0.012, 12), '#d9b38c', { y: i * 0.045 + 0.025, cast: false }));
@@ -35,9 +50,11 @@ function dirtyTable(t, n) {
 }
 const dirtyTables = () => TABLES.filter(t => t.g.visible && t.dirtyN);
 // a new day: everything is clean again and the bunny is back at the prep table
+// the bunny only shows up once it is hired (from day 4): until then there is nobody in the kitchen to wash up
+function syncBaker() { const on = bunnyWashes(); baker.root.visible = on; baker.blob.visible = on; }
 function resetDishes() {
-  TABLES.forEach(clearDirty); dish.total = platesTotal(); dish.plates = dish.total; dish.state = 'idle'; dish.queue = []; dish.carried = 0; dish.washT = 0; dish.wait = 0;
-  baker.kitchenWalker = true; baker.target = baker.path = baker.onArrive = null; baker.root.position.copy(BAKER_HOME); baker.face = 0; renderBakerStack(); showRack();
+  TABLES.forEach(clearDirty); renderMiwStack(); dish.total = platesTotal(); dish.plates = dish.total; dish.state = 'idle'; dish.queue = []; dish.carried = 0; dish.washT = 0; dish.wait = 0;
+  syncBaker(); baker.kitchenWalker = true; baker.target = baker.path = baker.onArrive = null; baker.root.position.copy(BAKER_HOME); baker.face = 0; renderBakerStack(); showRack();
 }
 // the pager: the bunny comes out, takes every dirty plate off the tables, and washes them
 function callDishes() {
@@ -45,10 +62,22 @@ function callDishes() {
   if (!game.running || game.paused || menuOpen) return;
   if (dish.state !== 'idle') { toast('The bunny is already on it 🐰'); return; }
   const dirty = dirtyTables(); if (!dirty.length) { toast('No dirty plates yet ✨'); sfx.nope(); return; }
+  if (!bunnyWashes()) {   // nobody hired: Miw does it, one table after another, then the sink
+    if (queue.some(a => a.kind === 'dish' || a.kind === 'wash')) { toast('Already on your list 🍽'); return; }
+    if (queue.length + dirty.length + 1 > QUEUE_MAX) { toast('One thing at a time! 🙈'); return; }
+    dirty.sort((a, b) => a.g.position.x - b.g.position.x).forEach(t => enqueue({ kind: 'dish', t, at: t.serve })); enqueue({ kind: 'wash', at: SINK_SPOT.clone() });
+    return;
+  }
   dish.queue = dirty.sort((a, b) => a.g.position.x - b.g.position.x); dish.state = 'collect'; dish.carried = 0; dish.wait = 0.2; sfx.bell();
 }
 function stepDishes(dt) {
   if (dish.wait > 0) { dish.wait -= dt; return; }
+  if (dish.state === 'selfwash') {   // Miw is at the sink
+    dish.washT -= dt;
+    if (Math.random() < dt * 8) { const s = suds.find(q => q.age >= q.life); if (s) { s.age = 0; s.life = 0.9 + Math.random() * 0.6; s.x = 2.55 + (Math.random() - 0.5) * 0.6; s.z = -7.45 + (Math.random() - 0.5) * 0.25; s.m.visible = true; } }
+    if (Math.random() < dt * 5) tone(1400 + Math.random() * 900, 0, 0.02, 'sine', 0.012);
+    if (dish.washT <= 0) { dish.plates = Math.min(dish.total, dish.plates + dish.carried); dish.carried = 0; renderMiwStack(); showRack(); toast('🍽 Clean plates ready!'); sfx.coin(); dish.state = 'idle'; }
+  }
   suds.forEach(s => {   // soap bubbles drift up over the basin
     if (s.age >= s.life) { s.m.visible = false; return; }
     s.age += dt; const u = s.age / s.life; s.m.position.set(s.x + Math.sin(u * 6 + s.x * 9) * 0.05, 1.5 + u * 0.35, s.z); s.m.scale.setScalar(0.6 + 0.6 * Math.sin(u * PI)); s.m.material.opacity = 0.8 * (1 - u * u);
@@ -73,3 +102,4 @@ function stepDishes(dt) {
 }
 const bakerHops = () => dish.state === 'wash' || payQueue.some(c => c.state === 'pay');
 $('dishBtn').onclick = callDishes;
+syncBaker();
