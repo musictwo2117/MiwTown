@@ -377,7 +377,7 @@ const GATE = new THREE.Vector3(7.0, 0, 5.2);
   scene.add(mesh(cyl(0.13, 0.16, 2.2, 12), '#fff6ef', { x: GATE.x + d * 0.7, y: 1.1, z: GATE.z - d * 0.7 }));
   scene.add(mesh(sph(0.2, 12), '#ff9fbf', { x: GATE.x + d * 0.7, y: 2.25, z: GATE.z - d * 0.7 }));
 });
-const arch = mesh(new THREE.TorusGeometry(1.2, 0.09, 8, 28, PI), '#ff9fbf', { x: GATE.x, y: 2.2, z: GATE.z, ry: -PI / 4 });
+const arch = mesh(new THREE.TorusGeometry(0.84, 0.09, 8, 28, PI), '#ff9fbf', { x: GATE.x, y: 2.2, z: GATE.z, ry: PI / 4 });   // springs from the tops of the two posts (they stand 0.84 from the middle, along the same line)
 scene.add(arch);
 
 // lamp posts by the gate
