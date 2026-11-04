@@ -170,7 +170,7 @@ function frame() {
     stepStaff(dt);
     stepDishes(dt);
   }
-  if (!game.paused && !menuOpen) { stepActor(miw, dt); staff.forEach(s => stepActor(s.a, dt)); }   // frozen while the shop is paused, so she can't finish a job behind the kitchen or the menu
+  if (!game.paused && !menuOpen) { stepActor(miw, dt); staff.forEach(s => stepActor(s.a, dt)); miwWashPose(); }   // frozen while the shop is paused, so she can't finish a job behind the kitchen or the menu
   STATIONS.forEach((st, i) => { if (DESSERTS[st.id].drink) st.show.rotation.y = now * 0.6 + i; });   // the cups on the bar still turn; the case holds still
   stepCases(dt);
   updateDoor(dt);
@@ -190,7 +190,7 @@ function frame() {
   hudClass('clock', 'hurry', game.running && game.open && game.time < 10);
   { const waiting = payQueue.filter(c => c.state === 'pay').length, show = game.running && !game.paused && !menuOpen && waiting > 0 && $('pay').hidden;   // the cashier shortcut shows while someone waits to pay
     if (hudCache.cash !== show) { hudCache.cash = show; $('cashBtn').hidden = !show; } hud('cashN', waiting > 1 ? '×' + waiting : '');
-    const dirty = dirtyTables().length, showDish = game.running && !game.paused && !menuOpen && dirty > 0 && dish.state === 'idle' && !queue.some(a => a.kind === 'dish' || a.kind === 'wash');   // the pager shows while plates wait to be washed
+    const dirty = dirtyTables().length, showDish = game.running && !game.paused && !menuOpen && (dirty > 0 || (dish.carried > 0 && !bunnyWashes())) && dish.state === 'idle' && !wash.open && !queue.some(a => a.kind === 'dish' || a.kind === 'wash');   // the pager shows while plates wait to be washed
     if (hudCache.dishB !== showDish) { hudCache.dishB = showDish; $('dishBtn').hidden = !showDish; } hud('dishN', dirty > 1 ? '×' + dirty : '');
     hud('plates', `🍽 ${dish.plates}/${dish.total}`); hudClass('plates', 'low', dish.plates <= 1); }
   // a window (the kitchen, the shop) covers the café: don't draw what nobody can see
