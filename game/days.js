@@ -78,6 +78,11 @@ function openShop(day, back, tab) {
 // the Shop button in the corner: pause the café, look round the shop, then carry on
 function shopMidDay() {
   if (menuOpen || game.paused) return;
+  if (prep.on) {   // before opening, with the shelves in view: look round the shop, then carry on getting ready
+    $('overlay').hidden = false;
+    openShop(game.day, () => { $('panel').classList.remove('shopwide'); $('overlay').hidden = true; syncStaff(true); dressStations(); updatePlates(); renderHands(); sfx.bell(); });
+    return;
+  }
   if (!game.running || kitchen.on) return toast('The shop is open during the day, or after closing 🛍');
   game.paused = true; $('overlay').hidden = false;
   openShop(game.day, () => { $('panel').classList.remove('shopwide'); $('overlay').hidden = true; game.paused = false; syncStaff(true); dressStations(); updatePlates(); renderHands(); sfx.bell(); });
