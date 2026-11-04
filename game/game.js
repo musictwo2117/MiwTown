@@ -663,7 +663,7 @@ const miw = makeActor('miw', '#ffd9c4');
 miw.speed = 4.6;
 const HOME = new THREE.Vector3(0, 0, -2.0);
 miw.root.position.copy(HOME);
-miw.tray = new THREE.Group(); miw.tray.position.set(0, 0.95, 0.5); miw.root.add(miw.tray);
+miw.tray = new THREE.Group(); miw.tray.position.set(0, 0.36, 0.95);   // low and out in front: the big round head reaches to about 0.66 ahead and down to 0.43, so a tray at face height pokes into it miw.root.add(miw.tray);
 miw.tray.add(mesh(cyl(0.42, 0.38, 0.04, 24), '#ffffff'));
 miw.trayItems = new THREE.Group(); miw.trayItems.position.y = 0.02; miw.tray.add(miw.trayItems);
 

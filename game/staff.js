@@ -23,7 +23,7 @@ function syncStaff(keepPlace) {
     const [species, color] = STAFF_LOOKS[staff.length], a = makeActor(species, color);
     a.grow = 1; a.root.scale.setScalar(1); a.staff = true; a.speed = 3.6; a.face = 0;
     const s = { a, tray: [], job: null, wait: 0, hat: false };
-    s.tray3d = new THREE.Group(); s.tray3d.position.set(0, 0.95, 0.5); a.root.add(s.tray3d); s.tray3d.visible = false;
+    s.tray3d = new THREE.Group(); s.tray3d.position.set(0, 0.36, 0.95); a.root.add(s.tray3d); s.tray3d.visible = false;
     s.tray3d.add(mesh(cyl(0.4, 0.36, 0.04, 24), '#ffffff'));
     s.trayItems = new THREE.Group(); s.trayItems.position.y = 0.02; s.tray3d.add(s.trayItems);
     staff.push(s);
